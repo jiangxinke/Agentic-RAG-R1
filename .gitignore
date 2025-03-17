@@ -1,0 +1,6 @@
+# 忽略所有 `.log` 文件
+*.log
+
+# 忽略目录
+grpo_finetuned_model/
+__pycache__/
