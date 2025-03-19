@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,4"
 
 import numpy as np
 import torch
@@ -17,10 +17,12 @@ from rl_prompt import *
 from answer_extractor import *
 from custom_reward_function import *
 from grpo_trainer import *
+from grpo_trainer_mu_GPU import *
 
 from generation_interrupt_new import CustomModel
 # from generation_interrupt_new import LLMGenerationManager, GenerationConfig
 
+import datetime
 
 def main():
     """
@@ -39,6 +41,9 @@ def main():
     # Determine the device (GPU if available, otherwise CPU) from the model's parameters.
     set_random_seed(42)
 
+    now = datetime.datetime.now()
+    abbr = str(now)
+    mu_gpu = True       # TODO support mu gpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -47,7 +52,6 @@ def main():
                                               # to generate the <reasoning> and <answer> tags
                                               # so several iterations of SFT to teach it these tags
                                               # are recommended before RL
-    output_dir = "math_solver_model"
 
     # Load the pre-trained causal language model.
     # - torch_dtype specifies the precision (bfloat16 for efficiency on supported hardware).
@@ -84,6 +88,11 @@ def main():
     model.config.pad_token_id = tokenizer.eos_token_id
     model.config.eos_token_id = tokenizer.eos_token_id
 
+    if mu_gpu:
+        num_gpus = torch.cuda.device_count()
+        print(f"Detected {num_gpus} GPUs")
+        device_ids = list(range(num_gpus)) if num_gpus > 1 else None
+
     # -------------------------------
     # Step 0: INITIAL EVALUATION
     # -------------------------------
@@ -113,8 +122,8 @@ def main():
     # Define RL training configuration.
     training_config = {
         'num_iterations' : 1,                # epoch 
-        'steps_per_iteration': 150,          # Total number of RL training steps.
-        'batch_size': 1,                     # Number of samples per training step.
+        'steps_per_iteration': 3,          # Total number of RL training steps.
+        'batch_size': 2,                     # Number of samples per training step.
         'num_generations': 4,                # Number of completions generated per prompt.
         'max_completion_length': 5000,        # Maximum token length for each generated completion.
         'beta': 0.04,                         # KL divergence penalty coefficient.
@@ -126,26 +135,35 @@ def main():
     # Fine-tune the model using GRPO RL training.
     custom_model = CustomModel(model, tokenizer)    
 
-    model = train_with_grpo(
-        model=custom_model,
-        tokenizer=tokenizer,
-        train_data=train_data,
-        **training_config
-    )
+    if mu_gpu:
+        model = train_with_grpo_mu_GPU(
+            model=custom_model,
+            tokenizer=tokenizer,
+            train_data=train_data,
+            device_ids=device_ids,
+            **training_config
+        )
+    else:
+        model = train_with_grpo(
+            model=custom_model,
+            tokenizer=tokenizer,
+            train_data=train_data,
+            **training_config
+        )
 
     # -------------------------------
     # Step 2: FINAL EVALUATION & SAVING
     # -------------------------------
     print("\nFinal model evaluation after GRPO RL finetuning:")
     # Evaluate the final model performance using the evaluation dataset.
-    post_grpo_accuracy = evaluate_model(model, tokenizer, eval_data, device)        # TODO
+    post_grpo_accuracy = evaluate_model(model, tokenizer, eval_data, device)       
     print(f"Post-GRPO Accuracy: {post_grpo_accuracy:.2f}%")
     # print(f"Total Improvement: {post_grpo_accuracy - pre_grpo_accuracy:.2f}%")
 
     print("\nSaving GRPO finetuned model...")
     # Save the final finetuned model and tokenizer to disk.
-    model.save_pretrained("grpo_finetuned_model")
-    tokenizer.save_pretrained("grpo_finetuned_model")
+    model.save_pretrained(f"save/{abbr}/grpo_finetuned_model")
+    tokenizer.save_pretrained(f"save/{abbr}/grpo_finetuned_model")
 
 if __name__ == "__main__":
     main()

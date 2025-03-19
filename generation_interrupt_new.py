@@ -26,10 +26,61 @@ class CustomModel(PreTrainedModel):
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
+        self.max_length_for_gather = 4000
         # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
-    def forward(self, input_ids, attention_mask=None):
-        return self.model(input_ids=input_ids, attention_mask=attention_mask)
+    # def forward(self, input_ids, attention_mask=None):
+    #     return self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+    def forward(self, input_ids, attention_mask=None, logits_to_keep=None, obtain_logits=False, **kwargs):
+        """
+        这里是 DataParallel 并行时会自动调用的入口。
+        """
+        # 可在此直接写生成逻辑，或调用自定义的 generate_with_think_interruption()
+        if not obtain_logits:
+            generated_output = self.generate_with_think_interruption(
+                input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=1000,
+                do_sample=True,
+                temperature=0.7,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+            )
+            return generated_output
+        else:   # 第二次采样，只是获得logits
+            return self.model(input_ids=input_ids, attention_mask=attention_mask, logits_to_keep=logits_to_keep + 1).logits
+
+
+    def padding_and_truncate(self, all_outputs, device):
+        # 2) 初始化一个列表来收集处理后的张量
+        final_outputs = []
+        for out_tensor in all_outputs:
+            if out_tensor is None:
+                # 如果有的条目尚未生成，就给一个空tensor
+                out_tensor = torch.empty(0, dtype=torch.long, device=device)
+
+            # 如果太长，先截断
+            if out_tensor.size(0) > self.max_length_for_gather:
+                out_tensor = out_tensor[:self.max_length_for_gather]
+
+            # 构造一个 shape=[max_length_for_gather] 的张量，用于容纳最终序列
+            padded_tensor = torch.full(
+                (self.max_length_for_gather,),
+                fill_value=(self.tokenizer.eos_token_id or 0),  # 用什么值填充，可自行决定
+                dtype=torch.long,
+                device=device
+            )
+
+            # 将实际内容拷贝到 padded_tensor 的前 out_tensor.size(0) 部分
+            padded_tensor[: out_tensor.size(0)] = out_tensor
+
+            # 把这个处理好的固定长度序列放进 final_outputs
+            final_outputs.append(padded_tensor)
+
+        # 3) 堆叠成为 [batch_size, max_length_for_gather] 的 2D 张量
+        padded_outputs = torch.stack(final_outputs, dim=0)
+        return padded_outputs
 
     def generate_with_think_interruption(
         self,
@@ -114,7 +165,7 @@ class CustomModel(PreTrainedModel):
                         new_text = new_text[:end_index + len("</search>")]
 
                         # **拼接 observation**
-                        new_text += f"\n<observation>{search_result}</observation>\n"
+                        new_text += f"\n<observation>\n{search_result}\n</observation>\n"
 
                         # 重新编码：将历史 token 与新生成的文本拼接
                         history_ids = current_input_ids[i]
@@ -146,11 +197,8 @@ class CustomModel(PreTrainedModel):
                     current_attention_mask = inputs["attention_mask"].to(device)
             else:
                 break 
-
-        # 对所有输出进行对齐，填充值使用 eos_token_id
-        padded_outputs = pad_sequence(all_outputs, batch_first=True, padding_value=eos_token_id)
-        # 后处理：确保每个生成文本按照要求截断和补全
-        # final_outputs = self._postprocess_responses(padded_outputs)
+        
+        padded_outputs = self.padding_and_truncate(all_outputs, device)
 
         # 取第一个样本并打印格式
         for item_output in padded_outputs:
