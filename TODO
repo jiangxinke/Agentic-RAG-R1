@@ -1,4 +1,4 @@
-- Support multi-gpu
+- Support multi-gpu--grpo_trainer_mu_GPU的loss.backward总是出现段错误
 - Load Xiaobei CKP
 - 清洗一份args代码出来
 - 注意balance

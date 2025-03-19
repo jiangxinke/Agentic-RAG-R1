@@ -79,6 +79,15 @@ def train_with_grpo_mu_GPU(model, tokenizer, train_data, num_iterations=1,
                     beta=beta,
                     epsilon=epsilon
                 )
+                # Optimization step
+                optimizer.zero_grad()
+
+                print("@@@"*30, "\nRUN Here")
+                loss.backward()     # FIXME 这一行一致没解决
+                print("DDD"*30, "\nRUN Here")
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
+                optimizer.step()
+
                 print(f"Iteration {iteration+1}/{num_iterations+1}, Step {step+1}/{steps_per_iteration + 1}, "
                       f"GRPO iter {grpo_iter+1}/{mu}, loss: {loss:.4f}")
                 for i in range(torch.cuda.device_count()):
@@ -578,15 +587,5 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     per_token_loss = surrogate_loss - beta * kl_div
     loss = -((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
     print(loss.item())
-    # Optimization step
-    optimizer.zero_grad()
 
-    print("@@@"*30, "\nRUN Here")
-    # loss.backward()
-    print("DDD"*30, "\nRUN Here")
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
-    print("uuu"*30, "\nRUN Here")
-    optimizer.step()
-    print("!!!"*30, "\nRUN Here")
-    
-    return loss.item()
+    return loss

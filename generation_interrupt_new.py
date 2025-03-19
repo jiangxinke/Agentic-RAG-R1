@@ -26,7 +26,7 @@ class CustomModel(PreTrainedModel):
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
-        self.max_length_for_gather = 4000
+        self.max_length_for_gather = 4000       # 不能太短了，太短了全是eos token
         # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
     # def forward(self, input_ids, attention_mask=None):
@@ -56,10 +56,6 @@ class CustomModel(PreTrainedModel):
         # 2) 初始化一个列表来收集处理后的张量
         final_outputs = []
         for out_tensor in all_outputs:
-            if out_tensor is None:
-                # 如果有的条目尚未生成，就给一个空tensor
-                out_tensor = torch.empty(0, dtype=torch.long, device=device)
-
             # 如果太长，先截断
             if out_tensor.size(0) > self.max_length_for_gather:
                 out_tensor = out_tensor[:self.max_length_for_gather]
@@ -67,7 +63,7 @@ class CustomModel(PreTrainedModel):
             # 构造一个 shape=[max_length_for_gather] 的张量，用于容纳最终序列
             padded_tensor = torch.full(
                 (self.max_length_for_gather,),
-                fill_value=(self.tokenizer.eos_token_id or 0),  # 用什么值填充，可自行决定
+                fill_value=self.tokenizer.eos_token_id,  
                 dtype=torch.long,
                 device=device
             )
