@@ -83,7 +83,16 @@ def train_with_grpo_mu_GPU(model, tokenizer, train_data, num_iterations=1,
                 optimizer.zero_grad()
 
                 print("@@@"*30, "\nRUN Here")
-                loss.backward()     # FIXME 这一行一致没解决
+
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print(f"!!! WARNING: Loss is NaN or Inf at step {step}, skipping backward")
+                    return loss.item()  # 直接跳过这个 batch，避免反向传播 NaN
+
+                print(f"Loss at step {step}: {loss.item()}")  # 确保 loss 在合理范围
+
+                torch.cuda.synchronize()    # 这样可以确保所有 GPU 在进入 backward() 之前已经完成了 forward()。
+                new_loss = loss + 1
+                new_loss.backward()     # FIXME 这一行一致没解决
                 print("DDD"*30, "\nRUN Here")
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
                 optimizer.step()
