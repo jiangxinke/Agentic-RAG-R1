@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
 
 import numpy as np
 import torch
@@ -122,10 +122,10 @@ def main():
     # Define RL training configuration.
     training_config = {
         'num_iterations' : 1,                # epoch 
-        'steps_per_iteration': 3,          # Total number of RL training steps.
+        'steps_per_iteration': 3,            # Total number of RL training steps.
         'batch_size': 2,                     # Number of samples per training step.
-        'num_generations': 4,                # Number of completions generated per prompt.
-        'max_completion_length': 5000,        # Maximum token length for each generated completion.
+        'num_generations': 2,                # Number of completions generated per prompt.
+        'max_completion_length': 500,        # Maximum token length for each generated completion.
         'beta': 0.04,                         # KL divergence penalty coefficient.
         'learning_rate': 5e-6,                # Learning rate for RL fine-tuning.
         'mu': 1,

@@ -91,8 +91,8 @@ def train_with_grpo_mu_GPU(model, tokenizer, train_data, num_iterations=1,
                 print(f"Loss at step {step}: {loss.item()}")  # 确保 loss 在合理范围
 
                 torch.cuda.synchronize()    # 这样可以确保所有 GPU 在进入 backward() 之前已经完成了 forward()。
-                new_loss = loss + 1
-                new_loss.backward()     # FIXME 这一行一致没解决
+                loss = loss.mean()
+                loss.backward()     # FIXME 这一行一致没解决
                 print("DDD"*30, "\nRUN Here")
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
                 optimizer.step()
