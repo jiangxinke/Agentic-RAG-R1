@@ -4,3 +4,6 @@
 # 忽略目录
 grpo_finetuned_model/
 __pycache__/
+
+logs/
+save/
