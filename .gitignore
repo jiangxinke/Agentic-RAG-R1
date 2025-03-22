@@ -3,7 +3,15 @@
 
 # 忽略目录
 grpo_finetuned_model/
-__pycache__/
+
+# 忽略所有路径下的 Python 缓存文件
+**/__pycache__/
+*.py[cod]
+*$py.class
 
 logs/
-save/
+checkpoint/
+output/
+
+
+tmp.py

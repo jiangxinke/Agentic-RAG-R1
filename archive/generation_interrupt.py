@@ -1,7 +1,7 @@
 from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
 import torch
 
-from web_search import * 
+from utils.web_search import * 
 
 class ThinkTagStoppingCriteria(StoppingCriteria):
     def __init__(self, tokenizer, think_token="</search>"):

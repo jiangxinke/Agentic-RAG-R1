@@ -1,5 +1,5 @@
-from answer_extractor import *
-from retrieval_quality_evaluator import *
+from utils.answer_extractor import *
+from utils.retrieval_quality_evaluator import *
 
 def correctness_reward(prompts, completions, answer, **kwargs):
     """

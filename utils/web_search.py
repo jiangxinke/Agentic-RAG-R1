@@ -71,6 +71,6 @@ def web_search(query: str, count: int = 10):
     return searcher.search(query, count)
 
 if __name__ == "__main__":
-    results = web_search("酶是蛋白质吗？", count = 10)
+    results = web_search("haha？", count = 10)
     for result in results:
         print(result)

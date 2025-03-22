@@ -1,3 +1,4 @@
+import logging
 import random
 import numpy as np
 import torch
@@ -61,3 +62,47 @@ def optimize_model_memory(model):
         model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
     return model
+
+
+def print_memory_usage():
+    """
+    Print detailed GPU memory usage, including PyTorch and system-level statistics
+    """
+    print("\n=== GPU Memory Usage ===")
+
+    # PyTorch memory statistics
+    print("\nPyTorch Memory Statistics:")
+    for i in range(torch.cuda.device_count()):
+        print(f"\nGPU {i}:")
+        print(f"  Allocated Memory: {torch.cuda.memory_allocated(i) / 1024**3:.2f} GB")
+        print(f"  Reserved Memory: {torch.cuda.memory_reserved(i) / 1024**3:.2f} GB")
+        print(f"  Peak Memory: {torch.cuda.max_memory_allocated(i) / 1024**3:.2f} GB")
+
+    # System-level memory statistics
+    import subprocess
+
+    try:
+        nvidia_smi = subprocess.check_output(["nvidia-smi"], universal_newlines=True)
+        print("\nSystem-level Memory Statistics (nvidia-smi):")
+        print(nvidia_smi)
+    except:
+        print("\nFailed to get nvidia-smi output")
+
+    print("=" * 50)
+
+def setup_logging(log_dir):
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(
+            "\n"
+            "==Time: %(asctime)s.%(msecs)03d || Level: %(levelname)s || Location: %(filename)s:%(lineno)d\n"
+            "==Log Message: %(message)s\n"
+        ),
+        handlers=[
+            logging.FileHandler(log_dir / "training.log"),
+            logging.StreamHandler(),
+        ],
+    )
+    return logging.getLogger(__name__)

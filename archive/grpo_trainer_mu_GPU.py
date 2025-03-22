@@ -1,16 +1,16 @@
-from custom_reward_function import *
-from answer_extractor import *
+from utils.answer_extractor import *
+from utils.retrieval_quality_evaluator import RetrievalQualityEvaluator
+from grpo.custom_reward_function import *
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 import copy
 import random
-from protoco import DataProto
-from tqdm import tqdm
+from utils.protoco import DataProto
 
 
-def train_with_grpo(
+def train_with_grpo_mu_GPU(
     model,
     tokenizer,
     train_data,
@@ -24,6 +24,7 @@ def train_with_grpo(
     mu=3,
     epsilon=0.2,
     reward_function=combined_reward,
+    device_ids=None,
 ):
     """
     Iterative Group Relative Policy Optimization algorithm.
@@ -46,66 +47,86 @@ def train_with_grpo(
     Returns:
         The fine-tuned policy model.
     """
-    # Initialize policy model
-    policy_model = model
-    device = next(policy_model.parameters()).device
+    assert (
+        device_ids is not None and len(device_ids) > 1
+    ), "This code needs at least 2 GPU cores to run!"
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    import torch.nn as nn
 
-    # Outer loop for iterations with reward model updates
-    for iteration in range(1, num_iterations + 1):
-        print(f"\nStarting iteration {iteration}/{num_iterations}")
+    # Wrap model with DataParallel if multiple GPUs are available.
 
-        # Create reference model for KL constraint
-        reference_model = copy.deepcopy(policy_model)
-        reference_model.eval()
-        for param in reference_model.parameters():
+    model = nn.DataParallel(model, device_ids=device_ids)
+    print(f"Model wrapped with DataParallel across GPUs: {device_ids}")
+
+    # Outer loop: iterative GRPO updates.
+    for iteration in range(1, 1 + num_iterations):
+        print(f"\nIteration {iteration+1}/{num_iterations}")
+
+        # Create a reference model (deep copy) and set it to eval mode.
+        ref_model = copy.deepcopy(model.module)
+        ref_model.eval()
+        for param in ref_model.parameters():
             param.requires_grad = False
-        reference_model = reference_model.to(device)
+        print("Reference model created.")
 
-        # Initialize optimizer
-        optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
-        policy_model.train()
+        # Reinitialize the optimizer for this iteration.
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+        model.train()
 
-        # Inner loop for policy updates
+        # Inner loop: your original training steps.
         for step in range(1, steps_per_iteration + 1):
-            # Sample batch of prompts
             batch_samples = random.sample(train_data, batch_size)
-
-            # Set old policy for this step
             with torch.no_grad():
-                # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
-                    policy_model,
-                    reference_model,
+                    model,  # model is policy_model
+                    ref_model,
                     tokenizer,
                     batch_samples,
                     num_generations,
                     max_completion_length,
                 )
-
-            # Multiple GRPO updates per batch of generations
             for grpo_iter in range(1, mu + 1):
-                loss_value = maximize_grpo_objective(
-                    policy_model,
-                    reference_model,
+                loss = maximize_grpo_objective(
+                    model,
+                    ref_model,
                     rollout_data,
                     tokenizer,
                     reward_function,
                     optimizer,
-                    beta,
-                    epsilon,
+                    beta=beta,
+                    epsilon=epsilon,
                 )
+                # Optimization step
+                optimizer.zero_grad()
+
+                print("@@@" * 30, "\nRUN Here")
+
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print(
+                        f"!!! WARNING: Loss is NaN or Inf at step {step}, skipping backward"
+                    )
+                    return loss.item()  # 直接跳过这个 batch，避免反向传播 NaN
+
+                print(f"Loss at step {step}: {loss.item()}")  # 确保 loss 在合理范围
+
+                torch.cuda.synchronize()  # 这样可以确保所有 GPU 在进入 backward() 之前已经完成了 forward()。
+                loss = loss.mean()
+                loss.backward()  # FIXME 这一行一致没解决
+                print("DDD" * 30, "\nRUN Here")
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
+                optimizer.step()
+
                 print(
-                    f"Iteration {iteration}/{num_iterations}, Step {step}/{steps_per_iteration}, "
-                    f"GRPO update {grpo_iter}/{mu}, Loss: {loss_value:.4f}"
+                    f"Iteration {iteration+1}/{num_iterations+1}, Step {step+1}/{steps_per_iteration + 1}, "
+                    f"GRPO iter {grpo_iter+1}/{mu}, loss: {loss:.4f}"
                 )
-
-        # Optional: Update reward model here if using reward model training
-        # This is not implemented in the original code but present in the pseudocode
-        print(
-            f"Completed iteration {iteration}. Reward model update would happen here."
-        )
-
-    return policy_model
+                for i in range(torch.cuda.device_count()):
+                    print(
+                        f"GPU {i} Usage: {torch.cuda.memory_allocated(i) / 1024**2:.2f} MiB, "
+                        f"Utilization: {torch.cuda.utilization(i)}%"
+                    )
+                # Uncomment to see the GPU utilization stats
+    return model.module
 
 
 def evaluate_model(model, tokenizer, eval_examples, device):
@@ -141,7 +162,7 @@ def evaluate_model(model, tokenizer, eval_examples, device):
     print("EVALUATION ON", total, "EXAMPLES")
     print("=" * 50)
 
-    for example in tqdm(eval_examples, desc="Evaluating"):
+    for example in eval_examples:
         # Build the full prompt using the same method as training.
         full_prompt = example["prompt"]
         expected = example["answer"]
@@ -153,23 +174,19 @@ def evaluate_model(model, tokenizer, eval_examples, device):
         ).to(device)
         # FIXME （这里的generate需要做处理）
         prompt_ids = inputs["input_ids"].to(device)
-        attention_mask = inputs["attention_mask"].to(device)
-
         prompt_ids = prompt_ids.repeat_interleave(1, dim=0)
-        attention_mask = attention_mask.repeat_interleave(1, dim=0)
-        # todo，需要专门针对infer写
 
-        with torch.no_grad():
-            output = model.generate(
-                input_ids=prompt_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=1000,
-                do_sample=True,
-                temperature=0.7,
-                pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-            )
-        response = tokenizer.decode(output[0], skip_special_tokens=True)
+        # todo，需要专门针对infer写
+        outputs = model(
+            prompt_ids,
+            attention_mask=inputs["attention_mask"].to(device),
+            max_new_tokens=1000,
+            do_sample=True,
+            temperature=0.7,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         # Extract the predicted answer from the model output.
         try:
@@ -278,12 +295,15 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
         4. Finally, we use the selective_log_softmax to compute log probabilities only for those tokens.
     """
     # Run the model forward pass and obtain logits.
-    logits = model(
+    # print("$$$"*30, "\nRUN Here")
+    logits = model(  # FIXME
         input_ids=input_ids,
         attention_mask=attention_mask,
-        logits_to_keep=logits_to_keep + 1,
-        obtain_logits=True,  # Request one extra logit for proper alignment.
+        logits_to_keep=logits_to_keep
+        + 1,  # Request one extra logit for proper alignment.
+        obtain_logits=True,
     )  # Shape: (batch_size, total_seq_len, vocab_size)
+    # print("$$$"*30)
 
     # Remove the last logit as it does not have a corresponding target token.
     logits = logits[:, :-1, :]  # New shape: (batch_size, total_seq_len - 1, vocab_size)
@@ -301,7 +321,7 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
     return selective_log_softmax(logits, input_ids)
 
 
-# def create_completion_mask(completion_ids, eos_token_id):   # FIXME here
+# def create_completion_mask(completion_ids, eos_token_id):
 #     """
 #     Create a binary mask for the generated completion tokens so that tokens after the first EOS are ignored.
 
@@ -446,7 +466,6 @@ def generate_completions(
     )  # Save the prompt length to later separate prompt from completion.
 
     # Repeat each prompt num_generations times.
-    ## FIXME 旧版代码
     prompt_ids = prompt_ids.repeat_interleave(
         num_generations, dim=0
     )  # New shape: (batch_size*num_generations, prompt_seq_len)
@@ -526,6 +545,7 @@ def generate_rollout_data(
         logits_to_keep = completion_ids.size(1)
 
         # Compute old_log_probs from the current model, with gradients disabled.
+        # 在 PPO/强化学习场景下，两次调用同一个模型是常见做法：第一次做采样(rollout)，第二次计算 log_probs(评估)。
         old_log_probs = compute_log_probabilities(
             model, input_ids, attention_mask, logits_to_keep
         )
@@ -638,10 +658,14 @@ def maximize_grpo_objective(
     avg_reward = rewards.mean().item()
     print(f"Average Reward: {avg_reward:.4f}")
 
+    # print("+++"*30, "\nRUN Here")
+
     # Compute advantages using group-relative normalization
     batch_size = rollout_data["batch_size"]
     num_generations = rollout_data["num_generations"]
     advantages = compute_group_relative_advantages(rewards, num_generations)
+
+    # print("---"*30, "\nRUN Here")
 
     # Compute surrogate loss with clipping
     surrogate1 = ratio * advantages
@@ -661,10 +685,5 @@ def maximize_grpo_objective(
         (per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)
     ).mean()
     print(loss.item())
-    # Optimization step
-    optimizer.zero_grad()
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
-    optimizer.step()
 
-    return loss.item()
+    return loss

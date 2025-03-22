@@ -1,4 +1,10 @@
+exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
+# exp: "xiaobeir1-Qwen2.5-7B-Instruct"
+
 random_seed: 42
+
+evaluation_before_grpo: True
+evaluation_after_grpo: False
 
 model:
   name: "Qwen/Qwen2.5-0.5B-Instruct"
@@ -18,17 +24,17 @@ lora_config:
 
 dataset:
   name: "medmcqa"
-  num_eval_examples: 1000
+  num_eval_examples: 100
 
 training:
   mu_gpu: False
   num_iterations: 1
-  steps_per_iteration: 3
+  steps_per_iteration: 1
   batch_size: 2
   num_generations: 2
   max_completion_length: 500
   beta: 0.04
-  learning_rate: 5e-6
+  learning_rate: 0.000005
   mu: 1
   epsilon: 0.1
 
