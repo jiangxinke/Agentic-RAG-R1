@@ -25,7 +25,7 @@ lora_config:
 dataset:
   # name: "medmcqa"
   name: "medqa"
-  num_eval_examples: 3
+  num_eval_examples: 50
 
 training:
   mu_gpu: False

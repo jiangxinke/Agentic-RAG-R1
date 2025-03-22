@@ -55,9 +55,7 @@ def train_with_grpo(
     device = next(policy_model.parameters()).device
 
     # Outer loop for iterations with reward model updates
-    for iteration in tqdm(
-        range(1, num_iterations + 1), desc="GRPO Iterations", position=0, leave=True
-    ):
+    for iteration in tqdm(range(1, num_iterations + 1), desc="GRPO Iterations", position=0, leave=True):
         tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
 
         # Create reference model for KL constraint
@@ -72,61 +70,30 @@ def train_with_grpo(
         policy_model.train()
 
         # Inner loop for policy updates
-        pbar = tqdm(
-            range(1, steps_per_iteration + 1),
-            desc=f"step {iteration})",
-            position=1,
-            leave=False,
-        )
+        pbar = tqdm(range(1, steps_per_iteration + 1), desc=f"step {iteration})", position=1, leave=False)
         for step in pbar:
             # Sample batch of prompts
             batch_samples = random.sample(train_data, batch_size)
 
-            # torch.cuda.empty_cache()  # 清理缓存
+            # FIXME torch.cuda.empty_cache()  # 清理缓存
             # Set old policy for this step
             logging.info(f"==> in generate rollout data")
             with torch.no_grad():
                 # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
-                    policy_model,
-                    reference_model,
-                    tokenizer,
-                    batch_samples,
-                    num_generations,
-                    max_completion_length,
+                    policy_model, reference_model, tokenizer, batch_samples, num_generations, max_completion_length
                 )
 
             # Multiple GRPO updates per batch of generations
             logging.info(f"==> in grpo update")
             for grpo_iter in range(1, mu + 1):
                 loss_value = maximize_grpo_objective(
-                    policy_model,
-                    reference_model,
-                    rollout_data,
-                    tokenizer,
-                    reward_function,
-                    optimizer,
-                    beta,
-                    epsilon,
+                    policy_model, reference_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon
                 )
             print(f"Iteration {iteration}, Step {step}, Loss: {loss_value:.4f}")
             pbar.set_postfix({"Loss": f"{loss_value:.4f}"})
 
-            for i in range(4):
-                if torch.cuda.is_available() and i < torch.cuda.device_count():
-                    memory_allocated = torch.cuda.memory_allocated(i) / (
-                        1024**3
-                    )  # Convert to GB
-                    memory_reserved = torch.cuda.memory_reserved(i) / (
-                        1024**3
-                    )  # Convert to GB
-                    print(
-                        f"GPU {i}: Allocated: {memory_allocated:.2f}GB, Reserved: {memory_reserved:.2f}GB"
-                    )
-
-        tqdm.write(
-            f"Completed iteration {iteration}. Reward model update would happen here."
-        )
+        tqdm.write(f"Completed iteration {iteration}. Reward model update would happen here.")
 
     return policy_model
 
@@ -168,9 +135,7 @@ def evaluate_model(model, tokenizer, eval_examples, device):
         expected = example["answer"]
         question = example["question"]
         # Tokenize the full prompt and generate a response from the model.
-        inputs = tokenizer(
-            full_prompt, return_tensors="pt", padding=True, padding_side="left"
-        ).to(device)
+        inputs = tokenizer(full_prompt, return_tensors="pt", padding=True, padding_side="left").to(device)
         prompt_ids = inputs["input_ids"].to(device)
         attention_mask = inputs["attention_mask"].to(device)
 
@@ -242,11 +207,9 @@ def selective_log_softmax(logits, input_ids):
         3. torch.gather collects the log probability at the index specified in input_ids for each position.
         4. Finally, squeeze(-1) removes the extra dimension, returning a tensor with the same shape as input_ids.
     """
-    # TODO many memory usage
+    # FIXME use many memory usage
     # Convert raw logits into log probabilities along the vocabulary axis.
-    log_probs = F.log_softmax(
-        logits, dim=-1
-    )  # Shape: (batch_size, seq_len, vocab_size)
+    log_probs = F.log_softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
 
     # Reshape input_ids from (batch_size, seq_len) to (batch_size, seq_len, 1) for gathering.
     # Then, gather the log probability for each token in input_ids.
@@ -279,7 +242,7 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
         4. Finally, we use the selective_log_softmax to compute log probabilities only for those tokens.
     """
     # Run the model forward pass and obtain logits.
-    # TODO many memory usage
+    # FIXME use many memory usage
     logits = model(
         input_ids=input_ids,
         attention_mask=attention_mask,
@@ -295,11 +258,9 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
     input_ids = input_ids[:, -logits_to_keep:]  # Shape: (batch_size, logits_to_keep)
 
     # Also slice the logits to keep only those corresponding to the completion tokens.
-    logits = logits[
-        :, -logits_to_keep:, :
-    ]  # Shape: (batch_size, logits_to_keep, vocab_size)
+    logits = logits[:, -logits_to_keep:, :]  # Shape: (batch_size, logits_to_keep, vocab_size)
 
-    # TODO many memory usage
+    # FIXME use many memory usage
     # Compute and return the log probabilities for the selected tokens.
     return selective_log_softmax(logits, input_ids)
 
@@ -344,9 +305,7 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
 #     return completion_mask
 
 
-def create_completion_mask(
-    completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id
-):
+def create_completion_mask(completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id):
     """
     Create a binary mask for the generated completion tokens so that tokens after the first EOS or
     between <observation> and </observation> are ignored. The <observation> and </observation> tags
@@ -382,9 +341,7 @@ def create_completion_mask(
     eos_idx[mask_exists] = is_eos.int().argmax(dim=1)[mask_exists]
 
     # Create a tensor of indices [0, 1, 2, ..., seq_len-1] and replicate it for each sequence in the batch.
-    sequence_indices = torch.arange(
-        is_eos.size(1), device=completion_ids.device
-    ).expand(is_eos.size(0), -1)
+    sequence_indices = torch.arange(is_eos.size(1), device=completion_ids.device).expand(is_eos.size(0), -1)
 
     # Build the mask based on EOS.
     completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
@@ -408,9 +365,7 @@ def create_completion_mask(
     return final_mask
 
 
-def generate_completions(
-    model, tokenizer, prompts, num_generations=4, max_completion_length=32
-):
+def generate_completions(model, tokenizer, prompts, num_generations=4, max_completion_length=32):
     """
     Generate multiple completions for each prompt and create corresponding attention masks.
 
@@ -441,12 +396,8 @@ def generate_completions(
     tokenizer.padding_side = "left"
     inputs = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
     prompt_ids = inputs["input_ids"].to(device)  # Shape: (batch_size, prompt_seq_len)
-    prompt_mask = inputs["attention_mask"].to(
-        device
-    )  # Shape: (batch_size, prompt_seq_len)
-    prompt_length = prompt_ids.size(
-        1
-    )  # Save the prompt length to later separate prompt from completion.
+    prompt_mask = inputs["attention_mask"].to(device)  # Shape: (batch_size, prompt_seq_len)
+    prompt_length = prompt_ids.size(1)  # Save the prompt length to later separate prompt from completion.
 
     # Repeat each prompt num_generations times.
     ## FIXME 旧版代码
@@ -469,9 +420,7 @@ def generate_completions(
     )
 
     # Remove the prompt portion from the generated output to isolate the completion tokens.
-    completion_ids = outputs[
-        :, prompt_length:
-    ]  # Shape: (batch_size*num_generations, completion_seq_len)
+    completion_ids = outputs[:, prompt_length:]  # Shape: (batch_size*num_generations, completion_seq_len)
 
     # Create a binary mask that ignores tokens beyond the first EOS token.
     observation_start_token_id = tokenizer("<observation>").input_ids[0]
@@ -487,9 +436,7 @@ def generate_completions(
     return prompt_ids, prompt_mask, completion_ids, completion_mask
 
 
-def generate_rollout_data(
-    model, ref_model, tokenizer, batch_samples, num_generations, max_completion_length
-):
+def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_generations, max_completion_length):
     """
     Generate rollouts and compute static log probabilities for both the old policy (current model)
     and the reference model. Gradients are disabled so that these remain fixed.
@@ -509,14 +456,8 @@ def generate_rollout_data(
     device = next(model.parameters()).device
 
     # Extract prompts and answers.
-    prompts = [
-        sample["prompt"] if isinstance(sample, dict) else sample[0]
-        for sample in batch_samples
-    ]
-    answers = [
-        sample["answer"] if isinstance(sample, dict) else sample[1]
-        for sample in batch_samples
-    ]
+    prompts = [sample["prompt"] if isinstance(sample, dict) else sample[0] for sample in batch_samples]
+    answers = [sample["answer"] if isinstance(sample, dict) else sample[1] for sample in batch_samples]
     # Generate completions and associated masks.
     # We generate once, and then use the same completions to compute both sets of log probabilities.
     with torch.no_grad():
@@ -527,21 +468,14 @@ def generate_rollout_data(
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)
 
-        # TODO many GPU memory
+        # FIXME many GPU memory
         # Compute old_log_probs from the current model, with gradients disabled.
-        old_log_probs = compute_log_probabilities(
-            model, input_ids, attention_mask, logits_to_keep
-        )
+        old_log_probs = compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep)
 
         # Compute ref_log_probs from the reference model, which remains static.
-        ref_log_probs = compute_log_probabilities(
-            ref_model, input_ids, attention_mask, logits_to_keep
-        )
+        ref_log_probs = compute_log_probabilities(ref_model, input_ids, attention_mask, logits_to_keep)
 
-    formatted_completions = [
-        [{"content": tokenizer.decode(ids, skip_special_tokens=True)}]
-        for ids in completion_ids
-    ]
+    formatted_completions = [[{"content": tokenizer.decode(ids, skip_special_tokens=True)}] for ids in completion_ids]
 
     repeated_prompts = [p for p in prompts for _ in range(num_generations)]
     repeated_answers = [a for a in answers for _ in range(num_generations)]
@@ -589,9 +523,7 @@ def compute_group_relative_advantages(rewards, num_generations):
     return advantages.unsqueeze(1)  # Add dimension for token-wise operations
 
 
-def maximize_grpo_objective(
-    model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon
-):
+def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon):
     """
     Update the policy model by maximizing the GRPO objective.
 
@@ -617,9 +549,7 @@ def maximize_grpo_objective(
     logits_to_keep = rollout_data["logits_to_keep"]
 
     # Compute current log probabilities
-    current_log_probs = compute_log_probabilities(
-        model, input_ids, attention_mask, logits_to_keep
-    )
+    current_log_probs = compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep)
 
     # Compute policy ratio
     ratio = torch.exp(current_log_probs - old_log_probs)
@@ -653,17 +583,11 @@ def maximize_grpo_objective(
     surrogate_loss = torch.min(surrogate1, surrogate2)
 
     # Compute KL divergence penalty
-    kl_div = (
-        torch.exp(ref_log_probs - current_log_probs)
-        - (ref_log_probs - current_log_probs)
-        - 1
-    )
+    kl_div = torch.exp(ref_log_probs - current_log_probs) - (ref_log_probs - current_log_probs) - 1
 
     # Combine losses
     per_token_loss = surrogate_loss - beta * kl_div
-    loss = -(
-        (per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)
-    ).mean()
+    loss = -((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
     print(loss.item())
     # Optimization step
     optimizer.zero_grad()

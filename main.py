@@ -111,20 +111,14 @@ def main():
 
         # 过滤条目 predicted 是 None 的
         evaluation_results = [
-            item
-            for item in evaluation_results
-            if item["predicted"] is not None and item["predicted"] != ""
+            item for item in evaluation_results if item["predicted"] is not None and item["predicted"] != ""
         ]
 
-        evaluation_before_grpo_filtered = (
-            output_dir / "evaluation_before_grpo_filtered.json"
-        )
+        evaluation_before_grpo_filtered = output_dir / "evaluation_before_grpo_filtered.json"
         with open(evaluation_before_grpo_filtered, "w") as f:
             json.dump(evaluation_results, f, indent=2)
 
-        correct, total, pre_grpo_accuracy = evaluate_with_llm(
-            LLM_EVAL_PROMPT, evaluation_results
-        )
+        correct, total, pre_grpo_accuracy = evaluate_with_llm(LLM_EVAL_PROMPT, evaluation_results)
 
         logger.info(f"Initial accuracy: {correct}/{total} = {pre_grpo_accuracy:.2f}%")
         results["pre_grpo_correct"] = correct
@@ -133,8 +127,6 @@ def main():
 
         with open(output_dir / "results.json", "w") as f:
             json.dump(results, f, indent=2)
-
-    exit()
 
     # 4. GRPO fine-tuning
     logger.info("Starting GRPO fine-tuning...")
@@ -165,13 +157,10 @@ def main():
     train_func = train_with_grpo_mu_GPU if config.training.mu_gpu else train_with_grpo
     # Run training
     model = train_func(
-        model=custom_model,
-        tokenizer=tokenizer,
-        train_data=train_data,
-        device_ids=device_ids,
-        **training_config,
+        model=custom_model, tokenizer=tokenizer, train_data=train_data, device_ids=device_ids, **training_config
     )
 
+    exit()
     # 5. Final evaluation
     if config.evaluation_after_grpo:
         logger.info("Evaluating fine-tuned model...")
