@@ -1,19 +1,20 @@
 from utils.answer_extractor import *
 from utils.retrieval_quality_evaluator import *
 
+
 def correctness_reward(prompts, completions, answer, **kwargs):
     """
     Assigns a reward based on the correctness of the model's answer.
-    
+
     Args:
         prompts (list[str]): List of prompt texts.
         completions (list[list[dict]]): List of completion dictionaries.
         answer (list[str]): List of expected answers.
         **kwargs: Additional keyword arguments.
-        
+
     Returns:
         list[float]: Reward scores based on answer correctness.
-        
+
     Explanation:
         1. Extracts the text content from each completion.
         2. Processes each response to extract the answer portion.
@@ -23,7 +24,7 @@ def correctness_reward(prompts, completions, answer, **kwargs):
         4. Returns a list of reward scores.
     """
     # Extract the content from each completion's first element
-    responses = [completion[0]['content'] for completion in completions]
+    responses = [completion[0]["content"] for completion in completions]
 
     # Extract answers from model outputs
     extracted = [extract_answer_from_model_output(r) for r in responses]
@@ -49,14 +50,14 @@ def correctness_reward(prompts, completions, answer, **kwargs):
 def format_reward(completions, **kwargs):
     """
     Assigns a reward for adhering to the desired XML format.
-    
+
     Args:
         completions (list[list[dict]]): List of completion dictionaries.
         **kwargs: Additional keyword arguments.
-        
+
     Returns:
         list[float]: Reward scores based on format compliance.
-        
+
     Explanation:
         1. Extracts the text content from each completion.
         2. Assigns points based on the presence of required XML tags:
@@ -67,29 +68,36 @@ def format_reward(completions, **kwargs):
         3. Returns a list of format compliance scores.
     """
     # Extract the content from each completion's first element
-    responses = [completion[0]['content'] for completion in completions]
+    responses = [completion[0]["content"] for completion in completions]
     rewards = []
     format_scores = []
 
     for response in responses:
         score = 0.0
-        if "<reasoning>" in response: score += 0.2
-        if "</reasoning>" in response: score += 0.2
-        if "<search>" in response: score += 0.2
-        if "</search>" in response: score += 0.2
-        if "<answer>" in response: score += 0.2
-        if "</answer>" in response: score += 0.2
+        if "<reasoning>" in response:
+            score += 0.2
+        if "</reasoning>" in response:
+            score += 0.2
+        if "<search>" in response:
+            score += 0.2
+        if "</search>" in response:
+            score += 0.2
+        if "<answer>" in response:
+            score += 0.2
+        if "</answer>" in response:
+            score += 0.2
         rewards.append(score)
         format_scores.append(score)
 
     return rewards
+
 
 def rag_reward(prompts, completions):
     # list; list
     extract_observation = [extract_observation_from_text(str(item_completion)) for item_completion in completions]
 
     from langchain_openai import ChatOpenAI
-    
+
     llm = ChatOpenAI(
         model="qwen2.5:72b",
         base_url="http://8289.model.mingxingtech.com:10032/v1",
@@ -109,18 +117,19 @@ def rag_reward(prompts, completions):
 
     return rag_reward
 
+
 def combined_reward(prompts, completions, answer):
     """
     Combines correctness and format rewards to provide a comprehensive evaluation.
-    
+
     Args:
         prompts (list[str]): List of prompt texts.
         completions (list[list[dict]]): List of completion dictionaries.
         answer (list[str]): List of expected answers.
-        
+
     Returns:
         list[float]: Combined rewards for each prompt-completion pair.
-        
+
     Explanation:
         1. Calculates individual reward components:
            - Correctness rewards (range: 0.0 to 2.0)

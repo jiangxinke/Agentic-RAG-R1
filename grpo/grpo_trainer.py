@@ -1,15 +1,15 @@
 import logging
-from grpo.custom_reward_function import combined_reward
-from utils.answer_extractor import *
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 import copy
 import random
-from utils.protoco import DataProto
 from tqdm import tqdm
 
+from grpo.custom_reward_function import combined_reward
+from utils.answer_extractor import extract_answer_from_model_output
+from utils.protoco import DataProto
 from utils.utils import print_memory_usage
 
 # def create_completion_mask(completion_ids, eos_token_id):   # FIXME here
