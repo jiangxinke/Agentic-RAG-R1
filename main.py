@@ -4,6 +4,9 @@ import logging
 import pdb
 from pathlib import Path
 
+from data.prompt import LLM_EVAL_PROMPT
+from utils.evaluate import evaluate_with_llm
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 import datetime
@@ -108,15 +111,24 @@ def main():
 
         # 过滤条目 predicted 是 None 的
         evaluation_results = [
-            item for item in evaluation_results if item["predicted"] is not None
+            item
+            for item in evaluation_results
+            if item["predicted"] is not None and item["predicted"] != ""
         ]
 
-        evaluation_before_grpo_filtered = output_dir / "evaluation_before_grpo_filtered.json"
+        evaluation_before_grpo_filtered = (
+            output_dir / "evaluation_before_grpo_filtered.json"
+        )
         with open(evaluation_before_grpo_filtered, "w") as f:
             json.dump(evaluation_results, f, indent=2)
 
-        pre_grpo_accuracy = 0
-        logger.info(f"Initial accuracy: {pre_grpo_accuracy:.2f}%")
+        correct, total, pre_grpo_accuracy = evaluate_with_llm(
+            LLM_EVAL_PROMPT, evaluation_results
+        )
+
+        logger.info(f"Initial accuracy: {correct}/{total} = {pre_grpo_accuracy:.2f}%")
+        results["pre_grpo_correct"] = correct
+        results["pre_grpo_total"] = total
         results["pre_grpo_accuracy"] = pre_grpo_accuracy
 
         with open(output_dir / "results.json", "w") as f:

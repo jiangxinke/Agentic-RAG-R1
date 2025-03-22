@@ -23,8 +23,9 @@ lora_config:
   task_type: "CAUSAL_LM"
 
 dataset:
-  name: "medmcqa"
-  num_eval_examples: 100
+  # name: "medmcqa"
+  name: "medqa"
+  num_eval_examples: 3
 
 training:
   mu_gpu: False

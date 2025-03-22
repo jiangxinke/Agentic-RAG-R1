@@ -1,6 +1,6 @@
 from datasets import load_dataset
 
-from data.rl_prompt import *
+from data.prompt import *
 
 
 def prepare_dataset(split="train", name="gsm8k"):
@@ -8,6 +8,8 @@ def prepare_dataset(split="train", name="gsm8k"):
         return prepare_dataset_gsm8k(split)
     elif name == "medmcqa":
         return prepare_dataset_medmcqa(split)
+    elif name == "medqa":
+        return prepare_dataset_medqa(split)
     else:
         raise ValueError(f"Unknown dataset name: {name}")
 
@@ -73,3 +75,44 @@ def prepare_dataset_medmcqa(split="train"):
         formatted_data.append(formatted_example)
 
     return formatted_data
+
+
+def prepare_dataset_medqa(split="train"):
+    # med_qa_zh_4options_bigbio_qa_train 这个 subset
+    data = load_dataset("fzkuji/MedQA", "med_qa_zh_4options_bigbio_qa")[split]
+
+    formatted_data = []
+
+    for example in data:
+        question = example["question"]
+        choices = example["choices"]
+        answer = example["answer"][0]
+
+        # 将选项拼接成 A [0] B [1] ... 的格式
+        options_text = ""
+        for i, choice in enumerate(choices):
+            option_letter = chr(65 + i)  # 65 是 ASCII 中 'A' 的编码
+            options_text += f"{option_letter}. {choice}\n"
+
+        prompt_str = "\n".join(
+            [
+                SYSTEM_PROMPT.strip(),
+                f"""Question: {question}
+            Options:
+            {options_text}""",
+            ]
+        )
+
+        formatted_data.append(
+            {
+                "prompt": prompt_str,
+                "question": question + "\n" + options_text,
+                "answer": str(answer),
+            }
+        )
+
+    return formatted_data
+
+
+if __name__ == "__main__":
+    data = prepare_dataset_medqa(split="train")
