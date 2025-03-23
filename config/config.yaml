@@ -3,8 +3,8 @@ exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
 
 random_seed: 42
 
-evaluation_before_grpo: True
-evaluation_after_grpo: False
+evaluation_before_grpo: False
+evaluation_after_grpo: True
 
 model:
   name: "Qwen/Qwen2.5-0.5B-Instruct"
@@ -29,8 +29,8 @@ dataset:
 
 training:
   mu_gpu: False
-  num_iterations: 1
-  steps_per_iteration: 1
+  num_iterations: 2
+  steps_per_iteration: 100
   batch_size: 2
   num_generations: 2
   max_completion_length: 500

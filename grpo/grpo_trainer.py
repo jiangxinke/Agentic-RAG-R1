@@ -148,12 +148,10 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
 
     # Repeat each prompt num_generations times.
     ## FIXME 旧版代码
-    prompt_ids = prompt_ids.repeat_interleave(
-        num_generations, dim=0
-    )  # New shape: (batch_size*num_generations, prompt_seq_len)
-    prompt_mask = prompt_mask.repeat_interleave(
-        num_generations, dim=0
-    )  # New shape: (batch_size*num_generations, prompt_seq_len)
+    # New shape: (batch_size*num_generations, prompt_seq_len)
+    prompt_ids = prompt_ids.repeat_interleave(num_generations, dim=0)
+    # New shape: (batch_size*num_generations, prompt_seq_len)
+    prompt_mask = prompt_mask.repeat_interleave(num_generations, dim=0)
 
     # Generate new tokens for each prompt. The output includes the original prompt and the generated tokens.
     outputs = model(  # old 方法是直接generate
@@ -288,6 +286,7 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
         prompt_ids, prompt_mask, completion_ids, completion_mask = generate_completions(
             model, tokenizer, prompts, num_generations, max_completion_length
         )
+        # FIXME gjr question 这里是想 不观察到 observation 只观察到 最终输出结果来计算概率这些吗？
         input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)
@@ -419,7 +418,7 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
     optimizer.step()
 
-    return loss.item()
+    return loss.item(), avg_reward
 
 
 def train_with_grpo(
@@ -486,7 +485,7 @@ def train_with_grpo(
 
             # FIXME torch.cuda.empty_cache()  # 清理缓存
             # Set old policy for this step
-            logging.info(f"==> in generate rollout data")
+            # logging.info(f"==> in generate rollout data")
             with torch.no_grad():
                 # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
@@ -494,13 +493,15 @@ def train_with_grpo(
                 )
 
             # Multiple GRPO updates per batch of generations
-            logging.info(f"==> in grpo update")
+            # logging.info(f"==> in grpo update")
             for grpo_iter in range(1, mu + 1):
-                loss_value = maximize_grpo_objective(
+                loss_value, avg_reward = maximize_grpo_objective(
                     policy_model, reference_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon
                 )
-            print(f"Iteration {iteration}, Step {step}, Loss: {loss_value:.4f}")
-            pbar.set_postfix({"Loss": f"{loss_value:.4f}"})
+            logging.info(
+                f"Iteration {iteration}/{num_iterations} , Step {step}/{steps_per_iteration}, Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}"
+            )
+            pbar.set_postfix({"Loss": f"{loss_value:.4f}", "Avg Reward": f"{avg_reward:.4f}"})
 
         tqdm.write(f"Completed iteration {iteration}. Reward model update would happen here.")
 

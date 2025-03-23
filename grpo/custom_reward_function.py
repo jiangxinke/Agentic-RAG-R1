@@ -30,6 +30,7 @@ def correctness_reward(prompts, completions, answer, **kwargs):
     extracted = [extract_answer_from_model_output(r) for r in responses]
 
     rewards = []
+    # TODO math
     for r, a in zip(extracted, answer):
         if r == a:  # Exact match case
             rewards.append(2.0)

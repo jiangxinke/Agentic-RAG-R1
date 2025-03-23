@@ -160,13 +160,28 @@ def main():
         model=custom_model, tokenizer=tokenizer, train_data=train_data, device_ids=device_ids, **training_config
     )
 
-    exit()
     # 5. Final evaluation
     if config.evaluation_after_grpo:
         logger.info("Evaluating fine-tuned model...")
-        post_grpo_accuracy = evaluate_model(model, tokenizer, eval_data, device)
-        logger.info(f"Final accuracy: {post_grpo_accuracy:.2f}%")
+        evaluation_results = evaluate_model(model, tokenizer, eval_data, device)
+        evaluation_after_grpo = output_dir / "evaluation_after_grpo.json"
+        with open(evaluation_after_grpo, "w") as f:
+            json.dump(evaluation_results, f, indent=2)
 
+        # 过滤条目 predicted 是 None 的
+        evaluation_results = [
+            item for item in evaluation_results if item["predicted"] is not None and item["predicted"] != ""
+        ]
+
+        evaluation_after_grpo_filtered = output_dir / "evaluation_after_grpo_filtered.json"
+        with open(evaluation_after_grpo_filtered, "w") as f:
+            json.dump(evaluation_results, f, indent=2)
+
+        correct, total, post_grpo_accuracy = evaluate_with_llm(LLM_EVAL_PROMPT, evaluation_results)
+
+        logger.info(f"Final accuracy: {correct}/{total} = {post_grpo_accuracy:.2f}%")
+        results["post_grpo_correct"] = correct
+        results["post_grpo_total"] = total
         results["post_grpo_accuracy"] = post_grpo_accuracy
 
         if config.evaluation_before_grpo:
