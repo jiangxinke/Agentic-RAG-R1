@@ -1,6 +1,7 @@
 # 忽略所有 `.log` 文件
 *.log
 tmp.*
+repo.tar.gz
 
 # 忽略目录
 grpo_finetuned_model/
