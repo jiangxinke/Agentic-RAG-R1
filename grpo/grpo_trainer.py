@@ -1,4 +1,5 @@
 import logging
+from time import time
 
 import numpy as np
 import torch
@@ -11,6 +12,8 @@ from grpo.custom_reward_function import combined_reward
 from utils.answer_extractor import extract_answer_from_model_output
 from utils.protoco import DataProto
 from utils.utils import print_memory_usage
+from accelerate import Accelerator
+
 
 # def create_completion_mask(completion_ids, eos_token_id):   # FIXME here
 #     """
@@ -154,6 +157,9 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
     prompt_mask = prompt_mask.repeat_interleave(num_generations, dim=0)
 
     # Generate new tokens for each prompt. The output includes the original prompt and the generated tokens.
+    import pdb
+
+    pdb.set_trace()
     outputs = model(  # old 方法是直接generate
         prompt_ids,
         attention_mask=prompt_mask,
@@ -163,7 +169,9 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
         pad_token_id=tokenizer.pad_token_id,
         eos_token_id=tokenizer.eos_token_id,
     )
+    import pdb
 
+    pdb.set_trace()
     # Remove the prompt portion from the generated output to isolate the completion tokens.
     completion_ids = outputs[:, prompt_length:]  # Shape: (batch_size*num_generations, completion_seq_len)
 
@@ -276,10 +284,16 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
     """
     tokenizer.padding_side = "left"
     device = next(model.parameters()).device
+    import pdb
 
+    pdb.set_trace()
     # Extract prompts and answers.
-    prompts = [sample["prompt"] if isinstance(sample, dict) else sample[0] for sample in batch_samples]
-    answers = [sample["answer"] if isinstance(sample, dict) else sample[1] for sample in batch_samples]
+    # prompts = [sample["prompt"] if isinstance(sample, dict) else sample[0] for sample in batch_samples]
+    # answers = [sample["answer"] if isinstance(sample, dict) else sample[1] for sample in batch_samples]
+    prompts = batch_samples["prompt"]
+    questions = batch_samples["question"]
+    answers = batch_samples["answer"]
+
     # Generate completions and associated masks.
     # We generate once, and then use the same completions to compute both sets of log probabilities.
     with torch.no_grad():
@@ -295,6 +309,7 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
         # Compute old_log_probs from the current model, with gradients disabled.
         old_log_probs = compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep)
 
+        # FIXME RuntimeError: 'weight' must be 2-D
         # Compute ref_log_probs from the reference model, which remains static.
         ref_log_probs = compute_log_probabilities(ref_model, input_ids, attention_mask, logits_to_keep)
 
@@ -346,7 +361,9 @@ def compute_group_relative_advantages(rewards, num_generations):
     return advantages.unsqueeze(1)  # Add dimension for token-wise operations
 
 
-def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon):
+def maximize_grpo_objective(
+    model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+):
     """
     Update the policy model by maximizing the GRPO objective.
 
@@ -414,18 +431,83 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     print(loss.item())
     # Optimization step
     optimizer.zero_grad()
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
+    # loss.backward()
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
+    accelerator.backward(loss)
     optimizer.step()
 
     return loss.item(), avg_reward
 
 
+# def copy_policy_to_reference(accelerator, policy_model, reference_model):
+#     # reference_model = copy.deepcopy(policy_model)
+#     # 获取 policy_model 的完整参数（ZeRO-3 需通过 Accelerator 处理）
+#     policy_state_dict = accelerator.get_state_dict(policy_model)
+#     # 加载到 reference_model
+#     accelerator.unwrap_model(reference_model).load_state_dict(policy_state_dict)
+#     return reference_model
+
+
+def initialize_model(model, tokenizer, device):
+    # 构造一个 dummy 输入（根据模型输入要求调整形状和内容）
+    dummy_input = tokenizer("Hello, world!", return_tensors="pt").input_ids.to(device)
+    # 执行一次前向传播触发参数初始化
+    with torch.no_grad():
+        _ = model(dummy_input)
+    return model
+
+
+# def copy_policy_to_reference(accelerator, policy_model, reference_model):
+#     # 获取 policy_model 的完整参数（例如 ZeRO-3 模式下需要 Accelerator 处理）
+#     policy_state_dict = accelerator.get_state_dict(policy_model)
+
+#     # 创建一个新的 state_dict，调整键名（这里示例为去除前缀 "model."）
+#     adjusted_state_dict = {}
+#     for key, value in policy_state_dict.items():
+#         # 如果键以 "model." 开头，则去掉这个前缀
+#         if key.startswith("model."):
+#             new_key = key[len("model."):]
+#         else:
+#             new_key = key
+#         adjusted_state_dict[new_key] = value
+
+#     # 加载调整后的参数到 reference_model
+#     accelerator.unwrap_model(reference_model).load_state_dict(adjusted_state_dict)
+#     return reference_model
+
+
+# def copy_policy_to_reference(accelerator, policy_model, reference_model):
+#     # 假设0号GPU是主设备
+#     # accelerator.broadcast(policy_model.state_dict(), src=0)
+#     # 然后将这些参数加载到reference model
+#     # reference_model.load_state_dict(policy_model.state_dict(), strict=False)
+
+#     # 尝试使用 accelerator.get_state_dict；如果返回 None，则直接调用 state_dict()
+#     policy_state_dict = accelerator.get_state_dict(policy_model)
+
+#     # 创建一个新的 state_dict，调整键名（这里示例为去除前缀 "model."）
+#     adjusted_state_dict = {}
+#     for key, value in policy_state_dict.items():
+#         # 如果键以 "model." 开头，则去掉这个前缀
+#         if key.startswith("module."):
+#             new_key = key[len("module.") :]
+#         else:
+#             new_key = key
+#         adjusted_state_dict[new_key] = value
+
+#     # 加载状态字典
+#     reference_model.load_state_dict(adjusted_state_dict)
+
+#     accelerator.wait_for_everyone()
+#     return reference_model
+
+
 def train_with_grpo(
     model,
     tokenizer,
-    train_data,
     device_ids=None,
+    accelerator=None,
+    dataloader=None,
     num_iterations=1,
     steps_per_iteration=500,
     batch_size=4,
@@ -464,24 +546,30 @@ def train_with_grpo(
 
     # Outer loop for iterations with reward model updates
     for iteration in tqdm(range(1, num_iterations + 1), desc="GRPO Iterations", position=0, leave=True):
+        torch.cuda.empty_cache()
+        logging.info("empty cache!!!")
         tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
 
         # Create reference model for KL constraint
         reference_model = copy.deepcopy(policy_model)
-        reference_model.eval()
         for param in reference_model.parameters():
             param.requires_grad = False
-        reference_model = reference_model.to(device)
+        reference_model = reference_model.to(accelerator.device)
+        reference_model.eval()
 
         # Initialize optimizer
         optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
+
         policy_model.train()
+        policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
 
         # Inner loop for policy updates
-        pbar = tqdm(range(1, steps_per_iteration + 1), desc=f"step {iteration})", position=1, leave=False)
-        for step in pbar:
+        # pbar = tqdm(range(1, steps_per_iteration + 1), desc=f"step {iteration}", position=1, leave=False)
+        step = 0
+        for batch in dataloader:
+            print(f"==step:{step}/{len(dataloader)}==")
             # Sample batch of prompts
-            batch_samples = random.sample(train_data, batch_size)
+            # batch_samples = random.sample(train_data, batch_size)
 
             # FIXME torch.cuda.empty_cache()  # 清理缓存
             # Set old policy for this step
@@ -489,26 +577,40 @@ def train_with_grpo(
             with torch.no_grad():
                 # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
-                    policy_model, reference_model, tokenizer, batch_samples, num_generations, max_completion_length
+                    policy_model,
+                    reference_model,
+                    tokenizer,
+                    batch,
+                    num_generations,
+                    max_completion_length,
                 )
 
             # Multiple GRPO updates per batch of generations
             # logging.info(f"==> in grpo update")
             for grpo_iter in range(1, mu + 1):
                 loss_value, avg_reward = maximize_grpo_objective(
-                    policy_model, reference_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon
+                    policy_model,
+                    reference_model,
+                    rollout_data,
+                    tokenizer,
+                    reward_function,
+                    optimizer,
+                    beta,
+                    epsilon,
+                    accelerator,
                 )
+            step += 1
             logging.info(
-                f"Iteration {iteration}/{num_iterations} , Step {step}/{steps_per_iteration}, Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}"
+                f"Iteration {iteration}/{num_iterations} , Step {step}, Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}"
             )
-            pbar.set_postfix({"Loss": f"{loss_value:.4f}", "Avg Reward": f"{avg_reward:.4f}"})
+            # pbar.set_postfix({"Loss": f"{loss_value:.4f}", "Avg Reward": f"{avg_reward:.4f}"})
 
         tqdm.write(f"Completed iteration {iteration}. Reward model update would happen here.")
 
     return policy_model
 
 
-def evaluate_model(model, tokenizer, eval_examples, device):
+def evaluate_model(model, tokenizer, eval_dataloader, device):
     """
     Evaluates the model on a set of examples and prints detailed results.
 
@@ -531,7 +633,7 @@ def evaluate_model(model, tokenizer, eval_examples, device):
         4. Returns the model to training mode.
     """
     model.eval()
-    total = len(eval_examples)
+    total = len(eval_dataloader)
     print("\n" + "=" * 50)
     print("EVALUATION ON", total, "EXAMPLES")
     print("=" * 50)
@@ -539,18 +641,18 @@ def evaluate_model(model, tokenizer, eval_examples, device):
     # Create a list to store evaluation results
     evaluation_results = []
 
-    for example in tqdm(eval_examples, desc="Evaluating"):
+    for batch in tqdm(eval_dataloader, desc="Evaluating"):
         # Build the full prompt using the same method as training.
-        full_prompt = example["prompt"]
-        expected = example["answer"]
-        question = example["question"]
+        full_prompt = batch["prompt"]
+        expected = batch["answer"]
+        question = batch["question"]
         # Tokenize the full prompt and generate a response from the model.
         inputs = tokenizer(full_prompt, return_tensors="pt", padding=True, padding_side="left").to(device)
         prompt_ids = inputs["input_ids"].to(device)
         attention_mask = inputs["attention_mask"].to(device)
 
-        prompt_ids = prompt_ids.repeat_interleave(1, dim=0)
-        attention_mask = attention_mask.repeat_interleave(1, dim=0)
+        # prompt_ids = prompt_ids.repeat_interleave(1, dim=0)
+        # attention_mask = attention_mask.repeat_interleave(1, dim=0)
 
         with torch.no_grad():
             output = model.generate(

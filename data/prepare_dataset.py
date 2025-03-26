@@ -1,20 +1,21 @@
 from datasets import load_dataset
 
 from data.prompt import *
+from datasets import load_dataset, Dataset
 
 
-def prepare_dataset(split="train", name="gsm8k"):
+def prepare_dataset(split="train", name="gsm8k", eval_size=10):
     if name == "gsm8k":
-        return prepare_dataset_gsm8k(split)
+        return prepare_dataset_gsm8k(split, eval_size)
     elif name == "medmcqa":
-        return prepare_dataset_medmcqa(split)
+        return prepare_dataset_medmcqa(split, eval_size)
     elif name == "medqa":
-        return prepare_dataset_medqa(split)
+        return prepare_dataset_medqa(split, eval_size)
     else:
         raise ValueError(f"Unknown dataset name: {name}")
 
 
-def prepare_dataset_gsm8k(split="train"):
+def prepare_dataset_gsm8k(split="train", eval_size=10):
     """Load and prepare the GSM8K dataset for training with string prompts."""
     data = load_dataset("openai/gsm8k", "main")[split]
     formatted_data = []
@@ -77,7 +78,7 @@ def prepare_dataset_medmcqa(split="train"):
     return formatted_data
 
 
-def prepare_dataset_medqa(split="train"):
+def prepare_dataset_medqa(split="train", eval_size=10):
     # med_qa_zh_4options_bigbio_qa_train 这个 subset
     data = load_dataset("fzkuji/MedQA", "med_qa_zh_4options_bigbio_qa")[split]
 
@@ -111,7 +112,13 @@ def prepare_dataset_medqa(split="train"):
             }
         )
 
-    return formatted_data
+    eval_data = formatted_data[:eval_size]
+    train_data = formatted_data[eval_size:]
+
+    train_dataset = Dataset.from_list(train_data)
+    eval_dataset = Dataset.from_list(eval_data)
+
+    return train_dataset, eval_dataset
 
 
 if __name__ == "__main__":

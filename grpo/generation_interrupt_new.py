@@ -1,3 +1,4 @@
+import logging
 from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -7,21 +8,24 @@ import re
 from utils.web_search import web_search
 
 
+# TODO any
 class ThinkTagStoppingCriteria(StoppingCriteria):
     def __init__(self, tokenizer, think_token="</search>"):
-        self.tokenizer = tokenizer
-        self.think_token = think_token
-        self.think_token_id = tokenizer.encode(think_token, add_special_tokens=False)[0]
+        super().__init__()
+        # 目标序列
+        self.target_ids_1 = [522, 1836, 29]
+        self.target_ids_2 = [522, 1836, 397]
 
-    def __call__(self, input_ids, scores):
-        # TODO try
-        try:
-            last_token = input_ids[0][-1]
-            if last_token == self.think_token_id:
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        # 只检查 input_ids[0]
+        sample = input_ids[0]
+        # 确保序列长度至少有 3
+        if sample.size(0) >= 3:
+            # 取末尾 3 个 token
+            tail_slice = sample[-3:]
+            # 转成 Python list 后比对
+            if tail_slice.tolist() == self.target_ids_1 or tail_slice.tolist() == self.target_ids_2:
                 return True
-        except Exception as e:
-            print(f"Error in stopping criteria: {e}")
-            return False
         return False
 
 
@@ -50,6 +54,9 @@ class CustomModel(PreTrainedModel):
         """
         这里是 DataParallel 并行时会自动调用的入口。
         """
+        import pdb
+
+        pdb.set_trace()
         # 可在此直接写生成逻辑，或调用自定义的 generate_with_think_interruption()
         if not obtain_logits:
             generated_output = self.generate_with_think_interruption(
@@ -128,124 +135,161 @@ class CustomModel(PreTrainedModel):
         max_iterations=3,
     ):
         """
-        多轮生成过程：
-          1. 初始输入 prompt_ids 与 attention_mask（若未提供，则全部为有效 token）。
-          2. 每轮调用 model.generate 时，传入当前的 input_ids 和 attention_mask。
-          3. 生成的输出剔除 prompt 部分后进行解码，得到 new_text。
-          4. 如果 new_text 中检测到 "</search>" 且当前迭代未达到 max_iterations - 1，
-             同时注意未出现 eos token（通过将 eos_token_id 解码为字符串进行检查），
-             则提取 "<search>...</search>" 之间的查询，调用 searcher 进行查询，
-             将返回的搜索结果以 "<search result>...</search result>" 拼接到 new_text 后，
-             然后将历史 token 与新文本重新编码后拼接，构成新的输入。
-          5. 更新后的文本重新通过 tokenizer 生成 input_ids 和 attention_mask（均使用 left padding），
-             用于下一轮生成。
-          6. 如果未触发检索，则认为当前样本生成完成，将该样本输出保存。
-          7. 最终使用 pad_sequence 对所有输出进行对齐，并调用 _postprocess_responses 进行文本后处理。
+        多轮生成逻辑：用文本字符串来检测 <search> / </search>、<answer> / </answer> 等标签。
+        1) 初始输入 prompt_ids 与 attention_mask
+        2) 调用 self.model.generate
+        3) 解码到文本后判断:
+           - 若检测到 '</answer>' => 截断到此并终止
+           - 若检测到 '<search>' & '</search>' => 提取查询，做搜索，用字符串插入 <observation> ... </observation>
+        4) 重新编码作为下一轮输入
+        5) 重复直至 max_iterations 或检测到 eos/answer_end
         """
-        stopping_criteria = StoppingCriteriaList([ThinkTagStoppingCriteria(self.tokenizer)])
-        batch_size = prompt_ids.size(0)
         device = prompt_ids.device
+        batch_size = prompt_ids.size(0)
 
-        # 初始化 current_input_ids 与 attention_mask
+        if attention_mask is None:
+            attention_mask = torch.ones_like(prompt_ids, dtype=torch.long)
+
         current_input_ids = prompt_ids.clone()
-        current_attention_mask = attention_mask.clone() if attention_mask is not None else torch.ones_like(prompt_ids)
+        current_attention_mask = attention_mask.clone()
 
-        all_outputs = [None] * batch_size
-        # TODO think
+        # 标记还需要继续生成的样本
         should_generate = torch.ones(batch_size, dtype=torch.bool, device=device)
+        all_outputs = [None] * batch_size
 
-        # 如果 eos_token_id 不为空，将其解码为字符串用于后续判断
-        eos_token_str = (
-            self.tokenizer.decode([eos_token_id], skip_special_tokens=False) if eos_token_id is not None else ""
-        )
+        stopping_criteria = StoppingCriteriaList([ThinkTagStoppingCriteria(self.tokenizer)])
 
         for iteration in range(max_iterations):
             if should_generate.any():
+                active_indices = torch.nonzero(should_generate).squeeze(dim=1)
+                import pdb
+
+                pdb.set_trace()
+                # # 只对还在生成的样本进行 generate
+                # if iteration == 0:
+                #     for i in current_input_ids:
+                #         print("*" * 100)
+                #         print(self.tokenizer.decode(i, skip_special_tokens=False))
+                #         print("*" * 100)
                 outputs = self.model.generate(
                     current_input_ids,
                     attention_mask=current_attention_mask,
-                    max_new_tokens=max_new_tokens,
+                    # max_new_tokens=max_new_tokens,
+                    max_new_tokens=200,
                     do_sample=do_sample,
                     temperature=temperature,
                     pad_token_id=pad_token_id,
                     eos_token_id=eos_token_id,
                     stopping_criteria=stopping_criteria,
                 )
+                import pdb
 
-                prompt_list = []
-                true_indices = torch.nonzero(should_generate).squeeze(dim=1)
-                for i in range(outputs.shape[0]):
-                    j = true_indices[i]  # 映射回原始 batch 中的索引
+                pdb.set_trace()
+
+                new_prompt_list = []
+
+                for i in range(outputs.size(0)):
+                    batch_idx = active_indices[i]
                     sample_output = outputs[i]
-                    # 截取新生成的部分（排除 prompt 部分）
-                    new_tokens = sample_output[current_input_ids.size(1) :]
+
+                    # 截取新生成的部分
+                    old_len = current_input_ids.size(1) - 1
+                    new_tokens = sample_output[old_len:]
+
+                    # 解码本轮新增文本
                     new_text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
-                    # print(new_text)
+                    # logging.info(f"[Iteration {iteration}] New text => {new_text}")
 
-                    # 只有当检测到 "</search>"、未检测到 eos token，
-                    # 且当前迭代还未达到 max_iterations - 1 时才执行检索
-                    if "</search>" in new_text and "<search>" in new_text and iteration < max_iterations - 1:
-                        # print(f"样本 {j} 检测到 </search>")
-                        # 截取 <search> ... </search> 之间的内容
-                        start_index = new_text.find("<search>") + len("<search>")
-                        end_index = new_text.find("</search>")
-                        query = new_text[start_index:end_index].strip()
-                        # 进行 Web 搜索
+                    # print("new_tokens:" + "*"*100)
+                    # for i in new_tokens:
+                    #     print(i)
+                    # print("new_tokens:" + "*"*100)
+
+                    # ------- 1) 检查是否出现 '</answer>' -------
+                    # 如果出现，就截断到 '</answer>' 并结束
+                    if "</answer>" in new_text:
+                        # 找到第一个 </answer> 的位置
+                        end_idx = new_text.index("</answer>") + len("</answer>")
+                        truncated_text = new_text[:end_idx]
+
+                        # 拼回历史
+                        history_text = self.tokenizer.decode(sample_output[:old_len], skip_special_tokens=False)
+                        final_text = history_text + truncated_text
+
+                        # 再编码成 token 用于保存
+                        final_ids = self.tokenizer.encode(final_text, return_tensors="pt")[0].to(device)
+
+                        all_outputs[batch_idx] = final_ids
+                        should_generate[batch_idx] = False
+                        continue
+
+                    # ------- 2) 若没出现 '</answer>'，再检查 <search> ... </search> -------
+                    if "<search>" in new_text and "</search>" in new_text and (iteration < max_iterations - 1):
+                        # 找到 <search> ... </search>
+                        start_idx = new_text.index("<search>") + len("<search>")
+                        end_idx = new_text.index("</search>")
+                        query = new_text[start_idx:end_idx].strip()
+
+                        # 调用搜索
                         try:
-                            search_result = str(web_search(query, count=3))
+                            search_result = web_search(query, count=1)
                         except Exception as e:
-                            search_result = "检索当前query报错，请重新执行"
+                            search_result = f"检索出错: {str(e)}"
 
-                        # **截断 new_text，仅保留 </search> 之前的内容**
-                        new_text = new_text[: end_index + len("</search>")]
+                        # 在文本层面截断到 </search> 后，插入 <observation> ... </observation>
+                        # 先保留到 </search>（含）
+                        search_end_str = "</search>"
+                        sub_text = new_text[: new_text.index(search_end_str) + len(search_end_str)]
 
-                        # **拼接 observation**
-                        new_text += f"\n<observation>\n{search_result}\n</observation>\n"
+                        # 拼接 observation
+                        appended_text = f"{sub_text}\n<observation>\n{search_result}\n</observation>\n"
 
-                        # 重新编码：将历史 token 与新生成的文本拼接
-                        history_ids = current_input_ids[i]
-                        new_input_ids = self.tokenizer.encode(new_text, return_tensors="pt").to(device)
-                        updated_input_ids = torch.cat([history_ids, new_input_ids[0]], dim=-1)
+                        # 拼回历史文本
+                        history_text = self.tokenizer.decode(sample_output[:old_len], skip_special_tokens=False)
+                        updated_text = history_text + appended_text
 
-                        prompt_list.append(updated_input_ids)
-
-                    elif (eos_token_str == "" or eos_token_str not in new_text[-1]) and iteration < max_iterations - 1:
-                        # 重新编码：将历史 token 与新生成的文本拼接, 继续生成
-                        history_ids = current_input_ids[i]
-                        new_input_ids = self.tokenizer.encode(new_text, return_tensors="pt").to(device)
-                        updated_input_ids = torch.cat([history_ids, new_input_ids[0]], dim=-1)
-
-                        prompt_list.append(updated_input_ids)
-
+                        # 重新编码
+                        updated_ids = self.tokenizer.encode(updated_text, return_tensors="pt")[0].to(device)
+                        new_prompt_list.append(updated_ids)
                     else:
-                        # 如果检测到 eos token 或未出现检索标记，则认为生成完成
-                        should_generate[j] = False
-                        all_outputs[j] = outputs[i]
+                        # ------- 3) 如果没出现 <search> ... </search> 或已经是最后一次，则继续生成或结束 -------
+                        # 检查是否出现 eos
+                        # （如果 eos_token_id 在 new_tokens 里，说明模型可能终止了）
+                        eos_found = False
+                        if eos_token_id is not None:
+                            eos_found = (new_tokens == eos_token_id).any().item()
 
+                        if iteration < max_iterations - 1 and not eos_found:
+                            # 拼回历史，继续下一轮
+                            history_ids = sample_output[:old_len]
+                            updated_input_ids = torch.cat([history_ids, new_tokens], dim=-1)
+                            new_prompt_list.append(updated_input_ids)
+                        else:
+                            # 已出现 eos 或不再进行下一轮 => 生成完成
+                            all_outputs[batch_idx] = sample_output
+                            should_generate[batch_idx] = False
+
+                # 若仍有样本要下一轮生成
                 if should_generate.any():
-                    # 对更新后的 prompt_list 重新进行 batch 化：调用 tokenizer 生成 input_ids 与 attention_mask，
-                    # 注意 padding_side 保持为 "left" 与初始一致
-                    new_prompt_list = [self.tokenizer.decode(ids, skip_special_tokens=False) for ids in prompt_list]
+                    # 重新将 new_prompt_list 组装
+                    prompt_texts = [self.tokenizer.decode(ids, skip_special_tokens=False) for ids in new_prompt_list]
                     inputs = self.tokenizer(
-                        new_prompt_list,
+                        prompt_texts,
                         return_tensors="pt",
                         padding=True,
                         padding_side="left",
                     )
                     current_input_ids = inputs["input_ids"].to(device)
                     current_attention_mask = inputs["attention_mask"].to(device)
+                else:
+                    break
             else:
                 break
+        for i in all_outputs:
+            print("*" * 100)
+            print(self.tokenizer.decode(i, skip_special_tokens=False))
+            print("*" * 100)
 
+        # 对所有输出做对齐
         padded_outputs = self.padding_and_truncate(all_outputs, device)
-
-        # 取第一个样本并打印格式
-        # for item_output in padded_outputs:
-        #     print("****" * 20)
-        #     print(
-        #         "First output:",
-        #         self.tokenizer.decode(item_output, skip_special_tokens=True),
-        #     )
-        #     print("****" * 20)
-
         return padded_outputs
