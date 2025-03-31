@@ -90,19 +90,15 @@ def print_memory_usage():
 
     print("=" * 50)
 
-def setup_logging(log_dir):
+
+def setup_logging(log_dir, level=logging.INFO):
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logging.basicConfig(
-        level=logging.INFO,
-        format=(
-            "\n"
-            "==Time: %(asctime)s.%(msecs)03d || Level: %(levelname)s || Location: %(filename)s:%(lineno)d\n"
-            "==Log Message: %(message)s\n"
-        ),
+        level=level,
+        format=("[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s"),
         handlers=[
             logging.FileHandler(log_dir / "training.log"),
             logging.StreamHandler(),
         ],
     )
-    return logging.getLogger(__name__)

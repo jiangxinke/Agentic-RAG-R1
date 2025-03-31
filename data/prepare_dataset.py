@@ -113,7 +113,7 @@ def prepare_dataset_medqa(split="train", eval_size=10):
         )
 
     eval_data = formatted_data[:eval_size]
-    train_data = formatted_data[eval_size:]
+    train_data = formatted_data[eval_size:]      # fixme here
 
     train_dataset = Dataset.from_list(train_data)
     eval_dataset = Dataset.from_list(eval_data)

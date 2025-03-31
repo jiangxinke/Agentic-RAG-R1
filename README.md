@@ -8,6 +8,13 @@
 - 检查evaluation代码
 
 
+- 将reference model不报错embedding 2D
+- 将reference model实现zero 3优化
+
+~~any~~
+modelsaver 间隔 10 个 iter 保存一次
+demo
+
 <!-- - Load Xiaobei CKP -->
 <!-- - 注意balance -->
 

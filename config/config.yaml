@@ -1,14 +1,27 @@
-exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
-# exp: "xiaobeir1-Qwen2.5-7B-Instruct"
+# exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
+exp: "xiaobeir1-Qwen2.5-7B-Instruct"
+# exp: "xiaobeir1-Qwen2.5-32B-Instruct"
+# exp: "xiaobeir1-Qwen2.5-14B-Instruct"
+# exp: "internlm/internlm2_5-1_8b"
+# exp: "meta-llama/Llama-3.1-8B-Instruct"
+
+load_from_checkpoint: False
+checkpoint_path: "/home/haoyu.zhang/jxk/gjr/r1/checkpoint/xiaobeir1-Qwen2.5-14B-Instruct/tmp"
+
 
 random_seed: 42
 
 evaluation_before_grpo: False
-evaluation_after_grpo: True
+evaluation_after_grpo: False
+
 
 model:
-  name: "Qwen/Qwen2.5-0.5B-Instruct"
-  # name: "Qwen/Qwen2.5-7B-Instruct"
+  # name: "Qwen/Qwen2.5-0.5B-Instruct"
+  name: "Qwen/Qwen2.5-7B-Instruct"
+  # name: "Qwen/Qwen2.5-14B-Instruct"
+  # name: "Qwen/Qwen2.5-32B-Instruct"
+  # name: "internlm/internlm2_5-1_8b"
+  # name: "meta-llama/Llama-3.1-8B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
 
@@ -16,8 +29,9 @@ lora_config:
   r: 8
   lora_alpha: 32
   target_modules:
-    - "q_proj"
-    - "v_proj"
+    - "q_proj"    # qwen
+    - "v_proj"    # qwen
+    # - "all-linear"
   lora_dropout: 0.1
   bias: "none"
   task_type: "CAUSAL_LM"
@@ -25,15 +39,19 @@ lora_config:
 dataset:
   # name: "medmcqa"
   name: "medqa"
-  num_eval_examples: 50
+  num_eval: 1000
 
+# steps all 800
+# dataset 28000 / 5 / 2 = 2800
 training:
-  mu_gpu: False
-  num_iterations: 2
-  steps_per_iteration: 100
-  batch_size: 2
-  num_generations: 2
-  max_completion_length: 500
+  use_lora: True
+  continue_training: True
+  current_step: 60
+  num_iterations: 6
+  steps_per_iteration: 400
+  batch_size: 1
+  num_generations: 8
+  max_completion_length: 100
   beta: 0.04
   learning_rate: 0.000005
   mu: 1

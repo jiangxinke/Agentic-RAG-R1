@@ -1,5 +1,6 @@
 import logging
-from time import time
+import os
+import time
 
 import numpy as np
 import torch
@@ -8,51 +9,13 @@ import copy
 import random
 from tqdm import tqdm
 
-from grpo.custom_reward_function import combined_reward
+from trl import SFTTrainer
+
+from grpo.reward_function import combined_reward
 from utils.answer_extractor import extract_answer_from_model_output
 from utils.protoco import DataProto
 from utils.utils import print_memory_usage
 from accelerate import Accelerator
-
-
-# def create_completion_mask(completion_ids, eos_token_id):   # FIXME here
-#     """
-#     Create a binary mask for the generated completion tokens so that tokens after the first EOS are ignored.
-
-#     Args:
-#         completion_ids (torch.Tensor): Tensor of shape (batch_size, seq_len) with generated token ids.
-#         eos_token_id (int): The token id representing the end-of-sequence.
-
-#     Returns:
-#         torch.Tensor: A mask tensor of shape (batch_size, seq_len) with 1s for tokens up to and including the first EOS
-#                       and 0s for tokens following the first EOS.
-
-#     Explanation:
-#         1. First, a boolean mask (is_eos) is created indicating where in the sequence the EOS token appears.
-#         2. An index tensor (eos_idx) is initialized, assuming that no EOS is found (defaulting to the sequence length).
-#         3. For sequences where EOS exists, eos_idx is updated to the position (index) of the first EOS.
-#         4. A sequence index tensor is created that contains indices for each position in the sequence.
-#         5. The final mask is computed by comparing the sequence indices to eos_idx (after adding a dimension).
-#     """
-#     # Determine which positions in each sequence equal the EOS token.
-#     is_eos = completion_ids == eos_token_id  # Boolean tensor of shape (batch_size, seq_len)
-
-#     # Initialize a tensor to store the index of the first EOS for each sequence.
-#     # If no EOS is found, default to the full sequence length (is_eos.size(1)).
-#     eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=completion_ids.device)
-
-#     # Identify sequences that contain at least one EOS.
-#     mask_exists = is_eos.any(dim=1)
-#     # For sequences with an EOS, update eos_idx to the index of the first occurrence.
-#     eos_idx[mask_exists] = is_eos.int().argmax(dim=1)[mask_exists]
-
-#     # Create a tensor of indices [0, 1, 2, ..., seq_len-1] and replicate it for each sequence in the batch.
-#     sequence_indices = torch.arange(is_eos.size(1), device=completion_ids.device).expand(is_eos.size(0), -1)
-
-#     # Build the mask: positions with an index less than or equal to the first EOS index are marked as 1.
-#     completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
-
-#     return completion_mask
 
 
 def create_completion_mask(completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id):
@@ -157,9 +120,6 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
     prompt_mask = prompt_mask.repeat_interleave(num_generations, dim=0)
 
     # Generate new tokens for each prompt. The output includes the original prompt and the generated tokens.
-    import pdb
-
-    pdb.set_trace()
     outputs = model(  # old 方法是直接generate
         prompt_ids,
         attention_mask=prompt_mask,
@@ -169,9 +129,6 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
         pad_token_id=tokenizer.pad_token_id,
         eos_token_id=tokenizer.eos_token_id,
     )
-    import pdb
-
-    pdb.set_trace()
     # Remove the prompt portion from the generated output to isolate the completion tokens.
     completion_ids = outputs[:, prompt_length:]  # Shape: (batch_size*num_generations, completion_seq_len)
 
@@ -284,9 +241,6 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
     """
     tokenizer.padding_side = "left"
     device = next(model.parameters()).device
-    import pdb
-
-    pdb.set_trace()
     # Extract prompts and answers.
     # prompts = [sample["prompt"] if isinstance(sample, dict) else sample[0] for sample in batch_samples]
     # answers = [sample["answer"] if isinstance(sample, dict) else sample[1] for sample in batch_samples]
@@ -361,9 +315,7 @@ def compute_group_relative_advantages(rewards, num_generations):
     return advantages.unsqueeze(1)  # Add dimension for token-wise operations
 
 
-def maximize_grpo_objective(
-    model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
-):
+def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon, accelerator):
     """
     Update the policy model by maximizing the GRPO objective.
 
@@ -502,15 +454,86 @@ def initialize_model(model, tokenizer, device):
 #     return reference_model
 
 
+# def copy_policy_to_reference(accelerator, policy_model, reference_model):
+#     # 获取 policy_model 的参数，只在 rank 0 上执行
+#     if accelerator.is_local_main_process:
+#         policy_state_dict = policy_model.state_dict()  # 改为直接从模型获取状态字典
+#     else:
+#         policy_state_dict = {}
+
+#     reference_model = accelerator.unwrap_model(reference_model)
+
+#     # # 获取并打印 policy_model 的第一个参数
+#     # policy_state_dict = policy_model.state_dict()
+#     # first_policy_param = list(policy_state_dict.items())[0]  # 获取第一个参数
+#     # print("Policy model first parameter:", first_policy_param)
+
+#     # # 获取并打印 reference_model 的第一个参数
+#     # reference_state_dict = reference_model.state_dict()
+#     # first_reference_param = list(reference_state_dict.items())[0]  # 获取第一个参数
+#     # print("Reference model first parameter:", first_reference_param)
+
+#     # exit()
+
+
+#     # # 创建一个新的 state_dict，调整键名
+#     # adjusted_state_dict = {}
+#     # for key, value in policy_state_dict.items():
+#     #     if key.startswith("module."):
+#     #         new_key = key[len("module."):]
+#     #         # model.base_model.model.model.layers
+#     #         # new_key = key
+#     #     else:
+#     #         new_key = key
+#     #     adjusted_state_dict[new_key] = value
+
+#     # # 确保 reference_model 的参数是从正确的状态字典加载
+#     # reference_model = accelerator.unwrap_model(reference_model)
+#     # reference_model.load_state_dict(adjusted_state_dict)
+#     reference_model.eval()
+
+#     # 在所有卡上同步 reference_model
+#     reference_model = accelerator.prepare(reference_model)
+
+#     return reference_model
+
+
+# def copy_policy_to_reference(accelerator, policy_model, reference_model):
+#     # 1. 从分布式环境中获取合并后的 policy_model 的参数
+#     accelerator.wait_for_everyone()
+
+#     # 确保在分布式训练时解包模型
+#     if accelerator.is_local_main_process:
+#         # FIXME 拿不到lora矩阵
+#         policy_model = accelerator.unwrap_model(policy_model, keep_fp32_wrapper=True, keep_torch_compile=True)  # 解包分布式模型
+
+#     # 获取状态字典
+#     policy_state_dict = policy_model.model.state_dict()  # 获取 policy_model 的状态字典
+#     reference_state_dict = reference_model.model.state_dict()  # 获取 reference_model 的状态字典
+
+#     # FIXME 暂时跳过了那些没有对齐的情况(LoRA)
+#     reference_model.model.load_state_dict(policy_state_dict, strict=False)
+
+#     # 3. 将 reference_model 转换到分布式环境
+#     # 不考虑reference_model的初始化，直接load到卡上 => 不会报错
+#     reference_model = accelerator.prepare(reference_model)  # 转换为适应多GPU环境
+
+#     # 设置 reference_model 为评估模式（如果需要的话）
+#     reference_model.eval()
+
+#     print("Policy 参数已同步到 Reference Model，并转为分布式模式")
+
+#     return reference_model
+
+
 def train_with_grpo(
-    model,
+    policy_model,
+    reference_model,
     tokenizer,
-    device_ids=None,
     accelerator=None,
     dataloader=None,
     num_iterations=1,
     steps_per_iteration=500,
-    batch_size=4,
     num_generations=4,
     max_completion_length=128,
     beta=0.1,
@@ -518,6 +541,9 @@ def train_with_grpo(
     mu=1,
     epsilon=0.2,
     reward_function=combined_reward,
+    model_saver=None,
+    checkpoint_dir=None,
+    current_step=0,
 ):
     """
     Iterative Group Relative Policy Optimization algorithm.
@@ -540,161 +566,72 @@ def train_with_grpo(
     Returns:
         The fine-tuned policy model.
     """
-    # Initialize policy model
-    policy_model = model
-    device = next(policy_model.parameters()).device
 
     # Outer loop for iterations with reward model updates
+    sum_steps = current_step
     for iteration in tqdm(range(1, num_iterations + 1), desc="GRPO Iterations", position=0, leave=True):
         torch.cuda.empty_cache()
-        logging.info("empty cache!!!")
-        tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
-
-        # Create reference model for KL constraint
-        reference_model = copy.deepcopy(policy_model)
-        for param in reference_model.parameters():
-            param.requires_grad = False
-        reference_model = reference_model.to(accelerator.device)
-        reference_model.eval()
+        # tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
 
         # Initialize optimizer
         optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
 
+        # policy_model.to(accelerator.device)
         policy_model.train()
         policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
 
+        # Create reference model for KL constraint
+        # Zero3
+        # reference_model = copy_policy_to_reference(accelerator, policy_model, reference_model)
+        # reference_model = copy.deepcopy(policy_model)
+        aggregated_model = accelerator.unwrap_model(policy_model)
+        # 再进行深拷贝得到参考模型
+        reference_model = copy.deepcopy(aggregated_model)
+        for param in reference_model.parameters():
+            param.requires_grad = False
+        reference_model.to(accelerator.device)
+
         # Inner loop for policy updates
-        # pbar = tqdm(range(1, steps_per_iteration + 1), desc=f"step {iteration}", position=1, leave=False)
         step = 0
         for batch in dataloader:
-            print(f"==step:{step}/{len(dataloader)}==")
-            # Sample batch of prompts
-            # batch_samples = random.sample(train_data, batch_size)
-
-            # FIXME torch.cuda.empty_cache()  # 清理缓存
+            torch.cuda.empty_cache()
+            start_time = time.time()
             # Set old policy for this step
-            # logging.info(f"==> in generate rollout data")
             with torch.no_grad():
                 # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
-                    policy_model,
-                    reference_model,
-                    tokenizer,
-                    batch,
-                    num_generations,
-                    max_completion_length,
+                    policy_model, reference_model, tokenizer, batch, num_generations, max_completion_length
                 )
 
             # Multiple GRPO updates per batch of generations
-            # logging.info(f"==> in grpo update")
             for grpo_iter in range(1, mu + 1):
                 loss_value, avg_reward = maximize_grpo_objective(
-                    policy_model,
-                    reference_model,
-                    rollout_data,
-                    tokenizer,
-                    reward_function,
-                    optimizer,
-                    beta,
-                    epsilon,
-                    accelerator,
+                    policy_model, reference_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
                 )
-            step += 1
-            logging.info(
-                f"Iteration {iteration}/{num_iterations} , Step {step}, Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}"
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(
+                f"Iteration {iteration}/{num_iterations}, Step {step+1}/{min(steps_per_iteration, len(dataloader))}, "
+                f"Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}, Time: {elapsed_time:.2f}s"
             )
-            # pbar.set_postfix({"Loss": f"{loss_value:.4f}", "Avg Reward": f"{avg_reward:.4f}"})
+
+            step += 1
+            sum_steps += 1
+
+            print(f"sum_steps: {sum_steps}")
+            if sum_steps % 2 == 0 and sum_steps > current_step:
+                accelerator.wait_for_everyone()
+
+                if accelerator.is_local_main_process:
+                    checkpoint_path = f"{checkpoint_dir}/step-{sum_steps:04d}"
+                    os.makedirs(checkpoint_path, exist_ok=True)
+                    # 保存 LoRA 部分的参数
+                    policy_model.model.save_pretrained(checkpoint_path)
+                    tokenizer.save_pretrained(checkpoint_path)
+            if step >= steps_per_iteration:
+                break
 
         tqdm.write(f"Completed iteration {iteration}. Reward model update would happen here.")
 
     return policy_model
-
-
-def evaluate_model(model, tokenizer, eval_dataloader, device):
-    """
-    Evaluates the model on a set of examples and prints detailed results.
-
-    Args:
-        model: The language model to evaluate.
-        tokenizer: The tokenizer for encoding inputs and decoding outputs.
-        eval_examples (list): List of evaluation examples, each containing "prompt" and "answer".
-        device: The device (CPU or GPU) to run evaluation on.
-
-    Returns:
-        list: evaluation_results containing detailed results for each example for further evaluation
-
-    Explanation:
-        1. Sets the model to evaluation mode.
-        2. For each example in the evaluation set:
-           - Encodes the prompt and generates a response using the model.
-           - Extracts the predicted answer from the generated response.
-           - Prints detailed information about each example.
-        3. Returns the detailed results.
-        4. Returns the model to training mode.
-    """
-    model.eval()
-    total = len(eval_dataloader)
-    print("\n" + "=" * 50)
-    print("EVALUATION ON", total, "EXAMPLES")
-    print("=" * 50)
-
-    # Create a list to store evaluation results
-    evaluation_results = []
-
-    for batch in tqdm(eval_dataloader, desc="Evaluating"):
-        # Build the full prompt using the same method as training.
-        full_prompt = batch["prompt"]
-        expected = batch["answer"]
-        question = batch["question"]
-        # Tokenize the full prompt and generate a response from the model.
-        inputs = tokenizer(full_prompt, return_tensors="pt", padding=True, padding_side="left").to(device)
-        prompt_ids = inputs["input_ids"].to(device)
-        attention_mask = inputs["attention_mask"].to(device)
-
-        # prompt_ids = prompt_ids.repeat_interleave(1, dim=0)
-        # attention_mask = attention_mask.repeat_interleave(1, dim=0)
-
-        with torch.no_grad():
-            output = model.generate(
-                input_ids=prompt_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=1000,
-                do_sample=True,
-                temperature=0.7,
-                pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-            )
-        response = tokenizer.decode(output[0], skip_special_tokens=True)
-
-        # Create result entry for this example
-        result_entry = {
-            "prompt": full_prompt,
-            "question": question,
-            "expected": expected,
-            "response": response,
-        }
-
-        try:
-            predicted = extract_answer_from_model_output(response)
-            result_entry["predicted"] = predicted
-
-            # Print details of the evaluation.
-            if False:
-                print("\n==> Prompt:")
-                print(full_prompt)
-                print("\n==> Expected Answer:")
-                print(expected)
-                print("\n==> Extracted Answer:")
-                print(predicted)
-                print("\n==> Full Generated Response:")
-                print(response)
-                print("-" * 50)
-
-        except Exception as e:
-            logging.error(f"Error: Failed to parse model output for prompt")
-            result_entry["predicted"] = "Error: Failed to parse model output"
-
-        evaluation_results.append(result_entry)
-
-    model.train()
-    return evaluation_results

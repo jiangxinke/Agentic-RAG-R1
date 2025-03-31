@@ -30,18 +30,11 @@ def correctness_reward(prompts, completions, answer, **kwargs):
     extracted = [extract_answer_from_model_output(r) for r in responses]
 
     rewards = []
-    # TODO math
     for r, a in zip(extracted, answer):
         if r == a:  # Exact match case
             rewards.append(2.0)
         else:
-            # Try numeric equivalence
-            r_num = extract_single_number(str(r))
-            a_num = extract_single_number(str(a))
-            if r_num is not None and a_num is not None and r_num == a_num:
-                rewards.append(1.5)
-            else:
-                rewards.append(0.0)
+            rewards.append(0.0)
 
     # Log completion lengths
     completion_lengths = [len(response.split()) for response in responses]
@@ -50,45 +43,54 @@ def correctness_reward(prompts, completions, answer, **kwargs):
 
 def format_reward(completions, **kwargs):
     """
-    Assigns a reward for adhering to the desired XML format.
-
-    Args:
-        completions (list[list[dict]]): List of completion dictionaries.
-        **kwargs: Additional keyword arguments.
-
-    Returns:
-        list[float]: Reward scores based on format compliance.
-
-    Explanation:
-        1. Extracts the text content from each completion.
-        2. Assigns points based on the presence of required XML tags:
-           - 0.2 points for opening <reasoning> tag
-           - 0.2 points for closing </reasoning> tag
-           - 0.2 points for opening <answer> tag
-           - 0.2 points for closing </answer> tag
-        3. Returns a list of format compliance scores.
+    计算格式奖励：
+      1) <reasoning> 和 </reasoning>：
+         - 只要检测到就分别给 0.2 分 (共 0.4)。
+      2) <search> 和 </search>：
+         - 最多允许出现 3 对；1～3 对时，每对 0.2 分 (最高 0.6)；
+         - 若大于 3 对，直接得 0 分（表示扣分）。
+      3) <answer> 和 </answer>：
+         - 必须恰好出现 1 对才给 0.4 分，否则为 0 分。
+      注：如果需要严格检查顺序，可以额外比较标签在字符串中的索引。
     """
-    # Extract the content from each completion's first element
+
+    # 提取 completion 内容
     responses = [completion[0]["content"] for completion in completions]
     rewards = []
-    format_scores = []
 
     for response in responses:
         score = 0.0
+
+        # <reasoning> 检测，出现就加分
         if "<reasoning>" in response:
             score += 0.2
         if "</reasoning>" in response:
             score += 0.2
-        if "<search>" in response:
-            score += 0.2
-        if "</search>" in response:
-            score += 0.2
-        if "<answer>" in response:
-            score += 0.2
-        if "</answer>" in response:
-            score += 0.2
+
+        # <search> 可多对，超过 3 对扣分
+        search_start_count = response.count("<search>")
+        search_end_count = response.count("</search>")
+        search_pairs = min(search_start_count, search_end_count)
+
+        if search_pairs == 0:
+            pass
+        elif search_pairs <= 3:
+            # 1 到 3 对之间：每对 0.2 分
+            # 上限可达 3 * 0.2 = 0.6
+            score += 0.2 * search_pairs
+        else:
+            # 超过 3 对 => “最高 0.6，额外对数进行扣分”
+            score -= 0.2 * (search_pairs - 3)
+
+        # <answer> 只允许 1 对
+        answer_start_count = response.count("<answer>")
+        answer_end_count = response.count("</answer>")
+        # 当 exactly one pair => +0.4
+        if (answer_start_count == 1) and (answer_end_count == 1):
+            score += 0.4
+
+        # 记录该条的格式分
         rewards.append(score)
-        format_scores.append(score)
 
     return rewards
 
@@ -150,5 +152,14 @@ def combined_reward(prompts, completions, answer):
         # Format score range: 0.0 to 0.8
         # Total range: 0.0 to 2.8
         combined_rewards.append(c_score + f_score + rag_score)
+    # print("prompts:" + "*" * 100)
+    # print(prompts)
+    # print("prompts:" + "*" * 100)
+    # print("completions:" + "*" * 100)
+    # print(completions)
+    # print("completions:" + "*" * 100)
+    # print("combined_rewards:" + "*" * 100)
+    # print(combined_rewards)
+    # print("combined_rewards:" + "*" * 100)
 
     return combined_rewards

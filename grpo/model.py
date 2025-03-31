@@ -8,7 +8,6 @@ import re
 from utils.web_search import web_search
 
 
-# TODO any
 class ThinkTagStoppingCriteria(StoppingCriteria):
     def __init__(self, tokenizer, think_token="</search>"):
         super().__init__()
@@ -17,15 +16,11 @@ class ThinkTagStoppingCriteria(StoppingCriteria):
         self.target_ids_2 = [522, 1836, 397]
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        # 只检查 input_ids[0]
-        sample = input_ids[0]
-        # 确保序列长度至少有 3
-        if sample.size(0) >= 3:
-            # 取末尾 3 个 token
-            tail_slice = sample[-3:]
-            # 转成 Python list 后比对
-            if tail_slice.tolist() == self.target_ids_1 or tail_slice.tolist() == self.target_ids_2:
-                return True
+        for sample in input_ids:
+            if sample.size(0) >= 3:
+                tail_slice = sample[-3:]
+                if tail_slice.tolist() == self.target_ids_1 or tail_slice.tolist() == self.target_ids_2:
+                    return True
         return False
 
 
@@ -37,26 +32,16 @@ class CustomModel(PreTrainedModel):
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
-        self.max_length_for_gather = 4000  # 不能太短了，太短了全是eos token
+        self.max_length_for_gather = 1500  # 不能太短了，太短了全是eos token
         # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
     # def forward(self, input_ids, attention_mask=None):
     #     return self.model(input_ids=input_ids, attention_mask=attention_mask)
 
-    def forward(
-        self,
-        input_ids,
-        attention_mask=None,
-        logits_to_keep=None,
-        obtain_logits=False,
-        **kwargs,
-    ):
+    def forward(self, input_ids, attention_mask=None, logits_to_keep=None, obtain_logits=False, **kwargs):
         """
         这里是 DataParallel 并行时会自动调用的入口。
         """
-        import pdb
-
-        pdb.set_trace()
         # 可在此直接写生成逻辑，或调用自定义的 generate_with_think_interruption()
         if not obtain_logits:
             generated_output = self.generate_with_think_interruption(
@@ -76,16 +61,7 @@ class CustomModel(PreTrainedModel):
                 logits_to_keep=logits_to_keep + 1,
             ).logits
 
-    def generate(
-        self,
-        input_ids,
-        attention_mask=None,
-        max_new_tokens=1000,
-        do_sample=True,
-        temperature=0.7,
-        pad_token_id=None,
-        eos_token_id=None,
-    ):
+    def generate(self, input_ids, attention_mask, max_new_tokens, do_sample, temperature, pad_token_id, eos_token_id):
         generated_output = self.generate_with_think_interruption(
             input_ids,
             attention_mask=attention_mask,
@@ -132,7 +108,7 @@ class CustomModel(PreTrainedModel):
         temperature=1.0,
         pad_token_id=None,
         eos_token_id=None,
-        max_iterations=3,
+        max_iterations=8,
     ):
         """
         多轮生成逻辑：用文本字符串来检测 <search> / </search>、<answer> / </answer> 等标签。
@@ -162,29 +138,17 @@ class CustomModel(PreTrainedModel):
         for iteration in range(max_iterations):
             if should_generate.any():
                 active_indices = torch.nonzero(should_generate).squeeze(dim=1)
-                import pdb
 
-                pdb.set_trace()
-                # # 只对还在生成的样本进行 generate
-                # if iteration == 0:
-                #     for i in current_input_ids:
-                #         print("*" * 100)
-                #         print(self.tokenizer.decode(i, skip_special_tokens=False))
-                #         print("*" * 100)
                 outputs = self.model.generate(
                     current_input_ids,
                     attention_mask=current_attention_mask,
-                    # max_new_tokens=max_new_tokens,
-                    max_new_tokens=200,
+                    max_new_tokens=200,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
                     do_sample=do_sample,
                     temperature=temperature,
                     pad_token_id=pad_token_id,
                     eos_token_id=eos_token_id,
                     stopping_criteria=stopping_criteria,
                 )
-                import pdb
-
-                pdb.set_trace()
 
                 new_prompt_list = []
 
@@ -285,10 +249,10 @@ class CustomModel(PreTrainedModel):
                     break
             else:
                 break
-        for i in all_outputs:
-            print("*" * 100)
-            print(self.tokenizer.decode(i, skip_special_tokens=False))
-            print("*" * 100)
+        # for i in all_outputs:
+        #     print("*" * 100)
+        #     print(self.tokenizer.decode(i, skip_special_tokens=False))
+        #     print("*" * 100)
 
         # 对所有输出做对齐
         padded_outputs = self.padding_and_truncate(all_outputs, device)
