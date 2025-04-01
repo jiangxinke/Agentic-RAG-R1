@@ -2,6 +2,7 @@ import json
 import logging
 
 import torch
+from torch import nn
 from tqdm import tqdm
 
 from data.prompt import LLM_EVAL_PROMPT
@@ -46,6 +47,7 @@ def evaluate_model(
         full_prompt = batch["prompt"]
         expected = batch["answer"]
         question = batch["question"]
+        id = batch["id"]
         # Tokenize the full prompt and generate a response from the model.
         inputs = tokenizer(full_prompt, return_tensors="pt", padding=True, padding_side="left").to(device)
         prompt_ids = inputs["input_ids"].to(device)
@@ -88,6 +90,7 @@ def evaluate_model(
 
         # Create result entry for this example
         result_entry = {
+            "id": id.item() if isinstance(id, torch.Tensor) else id,  # Convert tensor to Python value
             "prompt": full_prompt,
             "question": question,
             "expected": expected,
@@ -122,6 +125,7 @@ def evaluate_model(
 def evaluate(
     model,
     tokenizer,
+    accelerator,
     eval_dataloader,
     device,
     output_dir,
@@ -143,49 +147,60 @@ def evaluate(
             evaluation_after_grpo=evaluation_after_grpo,
         )
 
-        evaluation_before_grpo_path = output_dir / "evaluation_before_grpo.json"
-        with open(evaluation_before_grpo_path, "w") as f:
-            json.dump(evaluation_results, f, indent=2)
+        # 确保所有进程在继续之前等待训练完成
+        accelerator.wait_for_everyone()
 
-        # 同时保存为txt格式
-        evaluation_before_grpo_txt_path = output_dir / "evaluation_before_grpo.txt"
-        with open(evaluation_before_grpo_txt_path, "w") as f:
-            for item in evaluation_results:
-                print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(evaluation_results)} 条数据")
+        # 收集所有进程的结果
+        all_evaluation_results = accelerator.gather_for_metrics([item for item in evaluation_results])
 
-        # 过滤条目 predicted 是 None 的
-        evaluation_results_filtered = [
-            item for item in evaluation_results if item["predicted"] is not None and item["predicted"] != ""
-        ]
+        if accelerator.is_main_process:
+            # 按照id排序结果
+            all_evaluation_results = sorted(all_evaluation_results, key=lambda x: x["id"])
 
-        evaluation_before_grpo_filtered_path = output_dir / "evaluation_before_grpo_filtered.json"
-        with open(evaluation_before_grpo_filtered_path, "w") as f:
-            json.dump(evaluation_results_filtered, f, indent=2)
+            evaluation_before_grpo_path = output_dir / "evaluation_before_grpo.json"
+            with open(evaluation_before_grpo_path, "w") as f:
+                json.dump(all_evaluation_results, f, indent=2)
 
-        # 同时保存为txt格式
-        evaluation_before_grpo_filtered_txt_path = output_dir / "evaluation_before_grpo_filtered.txt"
-        with open(evaluation_before_grpo_filtered_txt_path, "w") as f:
-            for item in evaluation_results_filtered:
-                print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(evaluation_results_filtered)} 条数据")
+            # 同时保存为txt格式
+            evaluation_before_grpo_txt_path = output_dir / "evaluation_before_grpo.txt"
+            with open(evaluation_before_grpo_txt_path, "w") as f:
+                for item in all_evaluation_results:
+                    print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(all_evaluation_results)} 条数据")
 
-        from utils.evaluate import evaluate_with_llm
+            # 过滤条目 predicted 是 None 的
+            evaluation_results_filtered = [
+                item for item in all_evaluation_results if item["predicted"] is not None and item["predicted"] != ""
+            ]
 
-        correct, total, pre_grpo_accuracy = evaluate_with_llm(LLM_EVAL_PROMPT, evaluation_results_filtered)
+            from utils.evaluate import evaluate_with_llm
 
-        logging.info(f"Initial accuracy: {correct}/{total} = {pre_grpo_accuracy:.2f}%")
-        results["pre_grpo_correct"] = correct
-        results["pre_grpo_total"] = total
-        results["pre_grpo_accuracy"] = pre_grpo_accuracy
+            correct, total, pre_grpo_accuracy, evaluation_results_filtered = evaluate_with_llm(
+                LLM_EVAL_PROMPT, evaluation_results_filtered
+            )
+            evaluation_before_grpo_filtered_path = output_dir / "evaluation_before_grpo_filtered.json"
+            with open(evaluation_before_grpo_filtered_path, "w") as f:
+                json.dump(evaluation_results_filtered, f, indent=2)
 
-        with open(output_dir / "results.json", "w") as f:
-            json.dump(results, f, indent=2)
+            # 同时保存为txt格式
+            evaluation_before_grpo_filtered_txt_path = output_dir / "evaluation_before_grpo_filtered.txt"
+            with open(evaluation_before_grpo_filtered_txt_path, "w") as f:
+                for item in evaluation_results_filtered:
+                    print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(evaluation_results_filtered)} 条数据")
 
-        # 同时保存为txt格式
-        with open(output_dir / "results.txt", "w") as f:
-            print(json.dumps(results, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(results)} 条数据")
+            logging.info(f"Initial accuracy: {correct}/{total} = {pre_grpo_accuracy:.2f}%")
+            results["pre_grpo_correct"] = correct
+            results["pre_grpo_total"] = total
+            results["pre_grpo_accuracy"] = pre_grpo_accuracy
+
+            with open(output_dir / "results.json", "w") as f:
+                json.dump(results, f, indent=2)
+
+            # 同时保存为txt格式
+            with open(output_dir / "results.txt", "w") as f:
+                print(json.dumps(results, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(results)} 条数据")
 
     if evaluation_after_grpo:
         logging.info("Evaluating model after training...")
@@ -199,46 +214,57 @@ def evaluate(
             evaluation_after_grpo=evaluation_after_grpo,
         )
 
-        evaluation_after_grpo_path = output_dir / "evaluation_after_grpo.json"
-        with open(evaluation_after_grpo_path, "w") as f:
-            json.dump(evaluation_results, f, indent=2)
+        # 确保所有进程在继续之前等待
+        accelerator.wait_for_everyone()
 
-        # 同时保存为txt格式
-        evaluation_after_grpo_txt_path = output_dir / "evaluation_after_grpo.txt"
-        with open(evaluation_after_grpo_txt_path, "w") as f:
-            for item in evaluation_results:
-                print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(evaluation_results)} 条数据")
+        # 收集所有进程的结果
+        all_evaluation_results = accelerator.gather_for_metrics([item for item in evaluation_results])
 
-        # 过滤条目 predicted 是 None 的
-        evaluation_results_filtered = [
-            item for item in evaluation_results if item["predicted"] is not None and item["predicted"] != ""
-        ]
+        if accelerator.is_main_process:
+            # 按照id排序结果，确保id是Python原生类型
+            all_evaluation_results = sorted(all_evaluation_results, key=lambda x: x["id"])
 
-        evaluation_after_grpo_filtered_path = output_dir / "evaluation_after_grpo_filtered.json"
-        with open(evaluation_after_grpo_filtered_path, "w") as f:
-            json.dump(evaluation_results_filtered, f, indent=2)
+            evaluation_after_grpo_path = output_dir / "evaluation_after_grpo.json"
+            with open(evaluation_after_grpo_path, "w") as f:
+                json.dump(all_evaluation_results, f, indent=2)
 
-        # 同时保存为txt格式
-        evaluation_after_grpo_filtered_txt_path = output_dir / "evaluation_after_grpo_filtered.txt"
-        with open(evaluation_after_grpo_filtered_txt_path, "w") as f:
-            for item in evaluation_results_filtered:
-                print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(evaluation_results_filtered)} 条数据")
+            # 同时保存为txt格式
+            evaluation_after_grpo_txt_path = output_dir / "evaluation_after_grpo.txt"
+            with open(evaluation_after_grpo_txt_path, "w") as f:
+                for item in all_evaluation_results:
+                    print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(all_evaluation_results)} 条数据")
 
-        from utils.evaluate import evaluate_with_llm
+            # 过滤条目 predicted 是 None 的
+            evaluation_results_filtered = [
+                item for item in all_evaluation_results if item["predicted"] is not None and item["predicted"] != ""
+            ]
 
-        correct, total, post_grpo_accuracy = evaluate_with_llm(LLM_EVAL_PROMPT, evaluation_results_filtered)
+            from utils.evaluate import evaluate_with_llm
 
-        logging.info(f"Final accuracy: {correct}/{total} = {post_grpo_accuracy:.2f}%")
-        results["post_grpo_correct"] = correct
-        results["post_grpo_total"] = total
-        results["post_grpo_accuracy"] = post_grpo_accuracy
+            correct, total, post_grpo_accuracy, evaluation_results_filtered = evaluate_with_llm(
+                LLM_EVAL_PROMPT, evaluation_results_filtered
+            )
+            evaluation_after_grpo_filtered_path = output_dir / "evaluation_after_grpo_filtered.json"
+            with open(evaluation_after_grpo_filtered_path, "w") as f:
+                json.dump(evaluation_results_filtered, f, indent=2)
 
-        with open(output_dir / "results.json", "w") as f:
-            json.dump(results, f, indent=2)
+            # 同时保存为txt格式
+            evaluation_after_grpo_filtered_txt_path = output_dir / "evaluation_after_grpo_filtered.txt"
+            with open(evaluation_after_grpo_filtered_txt_path, "w") as f:
+                for item in evaluation_results_filtered:
+                    print(json.dumps(item, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(evaluation_results_filtered)} 条数据")
 
-        # 同时保存为txt格式
-        with open(output_dir / "results.txt", "w") as f:
-            print(json.dumps(results, indent=4, ensure_ascii=False), file=f)
-            f.write(f"\n共有 {len(results)} 条数据")
+            logging.info(f"Final accuracy: {correct}/{total} = {post_grpo_accuracy:.2f}%")
+            results["post_grpo_correct"] = correct
+            results["post_grpo_total"] = total
+            results["post_grpo_accuracy"] = post_grpo_accuracy
+
+            with open(output_dir / "results.json", "w") as f:
+                json.dump(results, f, indent=2)
+
+            # 同时保存为txt格式
+            with open(output_dir / "results.txt", "w") as f:
+                print(json.dumps(results, indent=4, ensure_ascii=False), file=f)
+                f.write(f"\n共有 {len(results)} 条数据")

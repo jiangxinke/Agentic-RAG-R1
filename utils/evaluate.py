@@ -28,21 +28,22 @@ def evaluate_with_llm(prompt, data):
         question = item["question"]
         expected = item["expected"]
         predicted = item["predicted"]
-        formatted_prompt = prompt.format(
-            question=question, expected=expected, predicted=predicted
-        )
+        formatted_prompt = prompt.format(question=question, expected=expected, predicted=predicted)
         response = get_model_response(formatted_prompt)
-        # tqdm.write(response)
         if response == "Yes":
             correct += 1
+            item["eval"] = "true"
         else:
             incorrect += 1
-        # print("-" * 100)
+            item["eval"] = "false"
 
     total = correct + incorrect
-    percent = correct / total
+    if total == 0:
+        percent = 0
+    else:
+        percent = correct / total
     print(f"Correct: {correct}, Incorrect: {incorrect}, Percent: {percent}")
-    return correct, total, percent
+    return correct, total, percent, data
 
 
 if __name__ == "__main__":
@@ -81,9 +82,7 @@ if __name__ == "__main__":
         predicted = item["predicted"]
         if predicted is None or predicted == "":
             continue
-        formatted_prompt = prompt.format(
-            question=question, expected=expected, predicted=predicted
-        )
+        formatted_prompt = prompt.format(question=question, expected=expected, predicted=predicted)
         response = get_model_response(formatted_prompt)
         tqdm.write(formatted_prompt)
         tqdm.write(response)

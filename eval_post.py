@@ -1,69 +1,68 @@
 import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import json
 import logging
 from pathlib import Path
+from time import sleep
 import torch
 from torch.utils.data import DataLoader
-import argparse
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel, LoraConfig
+from torch import nn
 
 from data.prepare_dataset import prepare_dataset
 from utils.utils import load_config, set_random_seed, optimize_model_memory, setup_logging
 from grpo.model import CustomModel
 from grpo.evaluater import evaluate
 from data.prompt import LLM_EVAL_PROMPT
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate a model on a dataset")
-    parser.add_argument("--config", type=str, default="config/config.yaml", help="Path to config file")
-    parser.add_argument("--output_dir", type=str, default=None, help="Directory to save evaluation results")
-    # parser.add_argument("--checkpoint_path", type=str, required=True, help="Path to the saved LoRA checkpoint")
-    return parser.parse_args()
+from accelerate import Accelerator
 
 
 def main():
-    args = parse_args()
-    config = load_config(args.config)
-    args.checkpoint_path = "/home/haoyu.zhang/jxk/gjr/250329/checkpoint/xiaobeir1-Qwen2.5-7B-Instruct/step-0060"
-    # Setup environment
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
-    else:
-        output_dir = Path(f"eval_output/post/{config.exp}")
+    accelerator = Accelerator()
+    config = load_config("config/config.yaml")
+    config.dataset.num_eval = 3
+
+    # 这里示例假设你固定使用 step-440 这个checkpoint做评估
+    checkpoint_step = 440
+    checkpoint_path = f"/home/haoyu.zhang/jxk/gjr/250329/checkpoint/xiaobeir1-Qwen2.5-7B-Instruct/step-{checkpoint_step:04d}"
+
+    # 使用默认的输出目录
+    output_dir = Path(f"eval_output/post/{config.exp}/step-{checkpoint_step:04d}")
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 日志初始化
     setup_logging(output_dir, level=logging.INFO)
 
-    # Save config
+    # 保存一下config
     with open(output_dir / "config.json", "w") as f:
         json.dump(config.__dict__, f, indent=2)
 
+    # 设置随机种子
     set_random_seed(config.random_seed)
     logging.info(f"Set random seed to {config.random_seed}")
 
+    # 根据环境变量和PyTorch自动选择设备
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"Using device: {device}")
 
-    # Prepare dataset
+    # 准备数据集
     _, eval_dataset = prepare_dataset("train", config.dataset.name, eval_size=config.dataset.num_eval)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=1, shuffle=False)
-    logging.info(f"Eval dataloader: {len(eval_dataloader)}")
 
-    # Initialize model and tokenizer
+    eval_dataloader = DataLoader(eval_dataset, batch_size=1, shuffle=False)
+    logging.info(f"Eval dataloader size: {len(eval_dataloader)}")
+
+    # 初始化模型 & tokenizer
     logging.info("Loading model...")
     torch_dtype = getattr(torch, config.model.torch_dtype)
-
     base_model = AutoModelForCausalLM.from_pretrained(config.model.name, torch_dtype=torch_dtype, trust_remote_code=True)
+
     tokenizer = AutoTokenizer.from_pretrained(config.model.name, padding_side="left")
     tokenizer.pad_token = tokenizer.eos_token
     base_model.config.pad_token_id = base_model.config.eos_token_id = tokenizer.eos_token_id
 
-    # Apply LoRA configuration
+    # 如果要使用LoRA
     if config.training.use_lora:
-        logging.info(f"Applying LoRA configuration...")
+        logging.info("Applying LoRA configuration...")
         lora_cfg = LoraConfig(
             r=config.lora_config.r,
             lora_alpha=config.lora_config.lora_alpha,
@@ -72,27 +71,46 @@ def main():
             bias=config.lora_config.bias,
             task_type=config.lora_config.task_type,
         )
-
-        # Load the saved LoRA weights
-        logging.info(f"Loading LoRA weights from {args.checkpoint_path}")
-        base_model = PeftModel.from_pretrained(base_model, args.checkpoint_path)
+        logging.info(f"Loading LoRA weights from {checkpoint_path}")
+        base_model = PeftModel.from_pretrained(base_model, checkpoint_path)
         logging.info("LoRA weights loaded successfully")
     else:
         logging.warning("Not using LoRA but checkpoint path was provided")
 
+    # 把模型放到设备上
     base_model = base_model.to(device)
 
-    # Optimize model memory usage
+    # 优化内存
     base_model = optimize_model_memory(base_model)
 
-    # Wrap the model with CustomModel
+    # 构建你的CustomModel
     model = CustomModel(base_model, tokenizer)
 
-    # Run evaluation
+    model, eval_dataloader = accelerator.prepare(model, eval_dataloader)
+    # # 获取并输出具体的显卡号和accelerator信息
+    # if torch.cuda.is_available():
+    #     gpu_id = torch.cuda.current_device()
+    #     gpu_name = torch.cuda.get_device_name(gpu_id)
+    #     logging.info(
+    #         f"Model and eval_dataloader prepared with accelerator, device: {device} (GPU {gpu_id}: {gpu_name}), accelerator device: {accelerator.device}, len(eval_dataloader): {len(eval_dataloader)}"
+    #     )
+    #     # 打印所有样本的ID
+    #     for batch in eval_dataloader:
+    #         logging.info(f"{accelerator.device} Batch ID: {batch['id']}")
+    #         for i in range(len(batch["id"])):
+    #             logging.info(f"{accelerator.device} Sample ID: {batch['id'][i]}")
+
+    # else:
+    #     logging.info(
+    #         f"Model and eval_dataloader prepared with accelerator, device: {device}, accelerator device: {accelerator.device}, len(eval_dataloader): {len(eval_dataloader)}"
+    #     )
+
+    # 开始评估
     logging.info("Starting evaluation...")
     evaluate(
         model,
         tokenizer,
+        accelerator,
         eval_dataloader,
         device,
         output_dir,
