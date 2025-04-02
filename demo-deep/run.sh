@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 deepspeed --num_gpus=1 --master_port=12347 main.py
