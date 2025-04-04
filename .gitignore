@@ -18,3 +18,5 @@ output_eval/
 output_train/
 output/
 eval_output/
+
+env.dot

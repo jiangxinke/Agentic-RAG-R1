@@ -13,8 +13,8 @@ evaluation_after_grpo: False
 eval_checkpoint_step: 540
 
 model:
-  # name: "Qwen/Qwen2.5-0.5B-Instruct"
-  name: "Qwen/Qwen2.5-7B-Instruct"
+  name: "Qwen/Qwen2.5-0.5B-Instruct"
+  # name: "Qwen/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
   # name: "internlm/internlm2_5-1_8b"
@@ -27,8 +27,8 @@ training:
   use_lora: True
   continue_training: False
   current_step: 0
-  num_iterations: 1
-  steps_per_iteration: 1
+  num_iterations: 4
+  steps_per_iteration: 2
   batch_size: 1
   num_generations: 8
   max_completion_length: 100
