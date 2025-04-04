@@ -56,7 +56,7 @@ class WikiSearcher:
 
     def close(self):
         """
-        Closes the Elasticsearch connection.
+        Closes the Elasticsearch connection. 
         """
         self.es.close()
 
