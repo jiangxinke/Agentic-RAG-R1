@@ -27,6 +27,24 @@ done 1. 微调前的多卡推断 以及带 id 带正确错误的 100
 2. 统计微调前和微调后的长度
 4. 统计 reward swandb 重新训练 100step
 
+======================================================
+
+20250405
+1. 写一个能现成跑 demo 的脚本
+2. 更新规模 训练 2000 条  测试 1000 条
+3. 微调前；微调前+search；微调后+search
+7. 观察 backtrace 有没有什么效果
+done 4. 统计长度、答案格式准确率、search 调用次数、reasoning、backtrack。loss reward
+done 5. swandb
+done 6. 配置 dot 文件
+done 8.TypeError: Tools.Wiki_RAG() got an unexpected keyword argument 'query' try
+done 9.2222 Web_RAG None
+done 10.if sum_steps % 2 == 0 and sum_steps > current_step: 参数
+~~~
+problem: Swandb 只记录了第一张卡的
+======================================================
+
+
 
 # 环境配置
 

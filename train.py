@@ -1,9 +1,10 @@
 from rich.traceback import install
+from dotenv import load_dotenv
 
+load_dotenv()
 install()
 
 from utils.saver import ModelSaver
-
 import os
 import json
 import logging
@@ -14,6 +15,9 @@ import datetime
 import torch
 import pdb
 import logging
+import swanlab
+from swanlab.integration.accelerate import SwanLabTracker
+from accelerate.logging import get_logger
 
 # pdb.set_trace = lambda *args, **kwargs: None  # 将这个函数变为空
 
@@ -35,8 +39,6 @@ from accelerate import Accelerator
 
 
 def main(config):
-    # Select training function based on GPU configuration
-    accelerator = Accelerator()
     """
     Main function to run the training and evaluation pipeline.
 
@@ -48,6 +50,15 @@ def main(config):
     5. Evaluate final model
     6. Save results
     """
+    # Initialize accelerator first
+    accelerator = Accelerator()
+    if accelerator.is_local_main_process:
+        swanlab.init(
+            project=config.project_name,
+            experiment_name=config.exp,
+            config=config.__dict__,
+        )
+
     # 1. Setup environment
 
     now = datetime.datetime.now()
@@ -141,6 +152,8 @@ def main(config):
         current_step = config.training.current_step
     else:
         current_step = 0
+
+    logger = get_logger(__name__)
     model = train_with_grpo(
         policy_model=custom_model,
         reference_model=ref_custom_model,
@@ -150,6 +163,7 @@ def main(config):
         model_saver=model_saver,
         checkpoint_dir=checkpoint_dir,
         current_step=current_step,
+        save_interval=config.save.save_interval,
         **training_config,
     )
     end_time = time.time()

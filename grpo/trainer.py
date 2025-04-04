@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 
 import numpy as np
@@ -16,6 +17,7 @@ from utils.answer_extractor import extract_answer_from_model_output
 from utils.protoco import DataProto
 from utils.utils import print_memory_usage
 from accelerate import Accelerator
+import swanlab
 
 
 def create_completion_mask(completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id):
@@ -352,12 +354,13 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     repeated_answers = rollout_data["repeated_answers"]
 
     # Compute rewards
+    reward_dict = reward_function(
+        prompts=repeated_prompts,
+        completions=formatted_completions,
+        answer=repeated_answers,
+    )
     rewards = torch.tensor(
-        reward_function(
-            prompts=repeated_prompts,
-            completions=formatted_completions,
-            answer=repeated_answers,
-        ),
+        reward_dict["total_scores"],
         dtype=torch.float32,
         device=next(model.parameters()).device,
     )
@@ -383,147 +386,10 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     print(loss.item())
     # Optimization step
     optimizer.zero_grad()
-    # loss.backward()
-    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
     accelerator.backward(loss)
     optimizer.step()
 
-    return loss.item(), avg_reward
-
-
-# def copy_policy_to_reference(accelerator, policy_model, reference_model):
-#     # reference_model = copy.deepcopy(policy_model)
-#     # 获取 policy_model 的完整参数（ZeRO-3 需通过 Accelerator 处理）
-#     policy_state_dict = accelerator.get_state_dict(policy_model)
-#     # 加载到 reference_model
-#     accelerator.unwrap_model(reference_model).load_state_dict(policy_state_dict)
-#     return reference_model
-
-
-def initialize_model(model, tokenizer, device):
-    # 构造一个 dummy 输入（根据模型输入要求调整形状和内容）
-    dummy_input = tokenizer("Hello, world!", return_tensors="pt").input_ids.to(device)
-    # 执行一次前向传播触发参数初始化
-    with torch.no_grad():
-        _ = model(dummy_input)
-    return model
-
-
-# def copy_policy_to_reference(accelerator, policy_model, reference_model):
-#     # 获取 policy_model 的完整参数（例如 ZeRO-3 模式下需要 Accelerator 处理）
-#     policy_state_dict = accelerator.get_state_dict(policy_model)
-
-#     # 创建一个新的 state_dict，调整键名（这里示例为去除前缀 "model."）
-#     adjusted_state_dict = {}
-#     for key, value in policy_state_dict.items():
-#         # 如果键以 "model." 开头，则去掉这个前缀
-#         if key.startswith("model."):
-#             new_key = key[len("model."):]
-#         else:
-#             new_key = key
-#         adjusted_state_dict[new_key] = value
-
-#     # 加载调整后的参数到 reference_model
-#     accelerator.unwrap_model(reference_model).load_state_dict(adjusted_state_dict)
-#     return reference_model
-
-
-# def copy_policy_to_reference(accelerator, policy_model, reference_model):
-#     # 假设0号GPU是主设备
-#     # accelerator.broadcast(policy_model.state_dict(), src=0)
-#     # 然后将这些参数加载到reference model
-#     # reference_model.load_state_dict(policy_model.state_dict(), strict=False)
-
-#     # 尝试使用 accelerator.get_state_dict；如果返回 None，则直接调用 state_dict()
-#     policy_state_dict = accelerator.get_state_dict(policy_model)
-
-#     # 创建一个新的 state_dict，调整键名（这里示例为去除前缀 "model."）
-#     adjusted_state_dict = {}
-#     for key, value in policy_state_dict.items():
-#         # 如果键以 "model." 开头，则去掉这个前缀
-#         if key.startswith("module."):
-#             new_key = key[len("module.") :]
-#         else:
-#             new_key = key
-#         adjusted_state_dict[new_key] = value
-
-#     # 加载状态字典
-#     reference_model.load_state_dict(adjusted_state_dict)
-
-#     accelerator.wait_for_everyone()
-#     return reference_model
-
-
-# def copy_policy_to_reference(accelerator, policy_model, reference_model):
-#     # 获取 policy_model 的参数，只在 rank 0 上执行
-#     if accelerator.is_local_main_process:
-#         policy_state_dict = policy_model.state_dict()  # 改为直接从模型获取状态字典
-#     else:
-#         policy_state_dict = {}
-
-#     reference_model = accelerator.unwrap_model(reference_model)
-
-#     # # 获取并打印 policy_model 的第一个参数
-#     # policy_state_dict = policy_model.state_dict()
-#     # first_policy_param = list(policy_state_dict.items())[0]  # 获取第一个参数
-#     # print("Policy model first parameter:", first_policy_param)
-
-#     # # 获取并打印 reference_model 的第一个参数
-#     # reference_state_dict = reference_model.state_dict()
-#     # first_reference_param = list(reference_state_dict.items())[0]  # 获取第一个参数
-#     # print("Reference model first parameter:", first_reference_param)
-
-#     # exit()
-
-
-#     # # 创建一个新的 state_dict，调整键名
-#     # adjusted_state_dict = {}
-#     # for key, value in policy_state_dict.items():
-#     #     if key.startswith("module."):
-#     #         new_key = key[len("module."):]
-#     #         # model.base_model.model.model.layers
-#     #         # new_key = key
-#     #     else:
-#     #         new_key = key
-#     #     adjusted_state_dict[new_key] = value
-
-#     # # 确保 reference_model 的参数是从正确的状态字典加载
-#     # reference_model = accelerator.unwrap_model(reference_model)
-#     # reference_model.load_state_dict(adjusted_state_dict)
-#     reference_model.eval()
-
-#     # 在所有卡上同步 reference_model
-#     reference_model = accelerator.prepare(reference_model)
-
-#     return reference_model
-
-
-# def copy_policy_to_reference(accelerator, policy_model, reference_model):
-#     # 1. 从分布式环境中获取合并后的 policy_model 的参数
-#     accelerator.wait_for_everyone()
-
-#     # 确保在分布式训练时解包模型
-#     if accelerator.is_local_main_process:
-#         # FIXME 拿不到lora矩阵
-#         policy_model = accelerator.unwrap_model(policy_model, keep_fp32_wrapper=True, keep_torch_compile=True)  # 解包分布式模型
-
-#     # 获取状态字典
-#     policy_state_dict = policy_model.model.state_dict()  # 获取 policy_model 的状态字典
-#     reference_state_dict = reference_model.model.state_dict()  # 获取 reference_model 的状态字典
-
-#     # FIXME 暂时跳过了那些没有对齐的情况(LoRA)
-#     reference_model.model.load_state_dict(policy_state_dict, strict=False)
-
-#     # 3. 将 reference_model 转换到分布式环境
-#     # 不考虑reference_model的初始化，直接load到卡上 => 不会报错
-#     reference_model = accelerator.prepare(reference_model)  # 转换为适应多GPU环境
-
-#     # 设置 reference_model 为评估模式（如果需要的话）
-#     reference_model.eval()
-
-#     print("Policy 参数已同步到 Reference Model，并转为分布式模式")
-
-#     return reference_model
+    return loss.item(), avg_reward, reward_dict
 
 
 def train_with_grpo(
@@ -544,6 +410,7 @@ def train_with_grpo(
     model_saver=None,
     checkpoint_dir=None,
     current_step=0,
+    save_interval=10,
 ):
     """
     Iterative Group Relative Policy Optimization algorithm.
@@ -605,12 +472,163 @@ def train_with_grpo(
 
             # Multiple GRPO updates per batch of generations
             for grpo_iter in range(1, mu + 1):
-                loss_value, avg_reward = maximize_grpo_objective(
+                loss_value, avg_reward, reward_dict = maximize_grpo_objective(
                     policy_model, reference_model, rollout_data, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
                 )
 
             end_time = time.time()
             elapsed_time = end_time - start_time
+            if accelerator.is_local_main_process:
+                # 统计指标
+                # 1. 完成长度
+                completion_lengths = []
+                for comp_list in rollout_data["formatted_completions"]:
+                    for comp_dict in comp_list:
+                        completion_lengths.append(len(comp_dict["content"].split()))
+                avg_completion_length = sum(completion_lengths) / len(completion_lengths) if completion_lengths else 0
+
+                # 2. 答案格式准确率 - 检查是否包含<answer>和</answer>标签
+                answer_format_count = 0
+                for comp_list in rollout_data["formatted_completions"]:
+                    for comp_dict in comp_list:
+                        comp = comp_dict["content"]
+                        if "<answer>" in comp and "</answer>" in comp:
+                            answer_format_count += 1
+                answer_format_accuracy = answer_format_count / len(rollout_data["formatted_completions"])
+
+                # 3. 搜索相关指标
+                search_start_count = 0
+                search_end_count = 0
+                search_pairs_count = 0
+                search_content_lengths = []
+
+                for comp_list in rollout_data["formatted_completions"]:
+                    for comp_dict in comp_list:
+                        comp = comp_dict["content"]
+                        # 统计标签数量
+                        search_start_count += comp.count("<search>")
+                        search_end_count += comp.count("</search>")
+
+                        # 统计成对出现的情况和内容长度
+                        search_starts = [m.start() for m in re.finditer("<search>", comp)]
+                        search_ends = [m.start() for m in re.finditer("</search>", comp)]
+
+                        # 找到有效的搜索对
+                        valid_pairs = 0
+                        for start_pos in search_starts:
+                            # 找到下一个结束标签
+                            valid_end = next((end for end in search_ends if end > start_pos), None)
+                            if valid_end is not None:
+                                valid_pairs += 1
+                                # 计算内容长度
+                                content_length = len(comp[start_pos + len("<search>") : valid_end].strip().split())
+                                search_content_lengths.append(content_length)
+                                # 从列表中移除已使用的结束标签
+                                search_ends.remove(valid_end)
+
+                        search_pairs_count += valid_pairs
+
+                # 计算平均值
+                total_completions = sum(1 for comp_list in rollout_data["formatted_completions"] for _ in comp_list)
+                avg_search_start_count = search_start_count / total_completions if total_completions else 0
+                avg_search_end_count = search_end_count / total_completions if total_completions else 0
+                avg_search_pairs = search_pairs_count / total_completions if total_completions else 0
+                avg_search_content_length = (
+                    sum(search_content_lengths) / len(search_content_lengths) if search_content_lengths else 0
+                )
+
+                # 4. 推理标志使用情况
+                reasoning_start_count = 0
+                reasoning_end_count = 0
+                reasoning_pairs_count = 0
+                reasoning_content_lengths = []
+
+                for comp_list in rollout_data["formatted_completions"]:
+                    for comp_dict in comp_list:
+                        comp = comp_dict["content"]
+                        # 统计标签数量
+                        reasoning_start_count += comp.count("<reasoning>")
+                        reasoning_end_count += comp.count("</reasoning>")
+
+                        # 统计成对出现的情况和内容长度
+                        if "<reasoning>" in comp and "</reasoning>" in comp:
+                            reasoning_pairs_count += 1
+
+                            # 计算推理内容的长度
+                            reasoning_start = comp.find("<reasoning>") + len("<reasoning>")
+                            reasoning_end = comp.find("</reasoning>")
+                            if reasoning_start < reasoning_end:
+                                content_length = len(comp[reasoning_start:reasoning_end].strip().split())
+                                reasoning_content_lengths.append(content_length)
+
+                # 计算平均值
+                avg_reasoning_start_count = reasoning_start_count / total_completions if total_completions else 0
+                avg_reasoning_end_count = reasoning_end_count / total_completions if total_completions else 0
+                avg_reasoning_pairs = reasoning_pairs_count / total_completions if total_completions else 0
+                avg_reasoning_content_length = (
+                    sum(reasoning_content_lengths) / len(reasoning_content_lengths) if reasoning_content_lengths else 0
+                )
+
+                # 5. 反思标签使用情况
+                backtrack_start_count = 0
+                backtrack_end_count = 0
+                backtrack_pairs_count = 0
+                backtrack_content_lengths = []
+
+                for comp_list in rollout_data["formatted_completions"]:
+                    for comp_dict in comp_list:
+                        comp = comp_dict["content"]
+                        # 统计标签数量
+                        backtrack_start_count += comp.count("<backtrack>")
+                        backtrack_end_count += comp.count("</backtrack>")
+
+                        # 统计成对出现的情况和内容长度
+                        if "<backtrack>" in comp and "</backtrack>" in comp:
+                            backtrack_pairs_count += 1
+
+                            # 计算反思内容的长度
+                            backtrack_start = comp.find("<backtrack>") + len("<backtrack>")
+                            backtrack_end = comp.find("</backtrack>")
+                            if backtrack_start < backtrack_end:
+                                content_length = len(comp[backtrack_start:backtrack_end].strip().split())
+                                backtrack_content_lengths.append(content_length)
+
+                # 计算平均值
+                avg_backtrack_start_count = backtrack_start_count / total_completions if total_completions else 0
+                avg_backtrack_end_count = backtrack_end_count / total_completions if total_completions else 0
+                avg_backtrack_pairs = backtrack_pairs_count / total_completions if total_completions else 0
+                avg_backtrack_content_length = (
+                    sum(backtrack_content_lengths) / len(backtrack_content_lengths) if backtrack_content_lengths else 0
+                )
+
+                # 记录所有指标
+                swanlab.log(
+                    {
+                        # 训练进度指标
+                        "sum_steps": sum_steps,
+                        "loss": loss_value,
+                        # 奖励指标
+                        "total_reward": avg_reward,
+                        "correctness_reward": torch.tensor(reward_dict["correctness_scores"]).mean().item(),
+                        "format_reward": torch.tensor(reward_dict["format_scores"]).mean().item(),
+                        "rag_reward": torch.tensor(reward_dict["rag_scores"]).mean().item(),
+                        # 性能指标
+                        "time_per_step": elapsed_time,
+                        # 生成内容指标
+                        "avg_completion_length": avg_completion_length,
+                        "answer_format_accuracy": answer_format_accuracy,
+                        # 搜索标签统计
+                        "avg_search_pairs": avg_search_pairs,
+                        "avg_search_content_length": avg_search_content_length,
+                        # 推理标签统计
+                        "avg_reasoning_pairs": avg_reasoning_pairs,
+                        "avg_reasoning_content_length": avg_reasoning_content_length,
+                        # 反思标签统计
+                        "avg_backtrack_pairs": avg_backtrack_pairs,
+                        "avg_backtrack_content_length": avg_backtrack_content_length,
+                    }
+                )
+
             print(
                 f"Iteration {iteration}/{num_iterations}, Step {step+1}/{min(steps_per_iteration, len(dataloader))}, "
                 f"Loss: {loss_value:.4f}, Avg Reward: {avg_reward:.4f}, Time: {elapsed_time:.2f}s"
@@ -620,7 +638,7 @@ def train_with_grpo(
             sum_steps += 1
 
             print(f"sum_steps: {sum_steps}")
-            if sum_steps % 10 == 0 and sum_steps > current_step:
+            if sum_steps % save_interval == 0 and sum_steps > current_step:
                 accelerator.wait_for_everyone()
 
                 if accelerator.is_local_main_process:
@@ -629,6 +647,8 @@ def train_with_grpo(
                     # 保存 LoRA 部分的参数
                     policy_model.model.save_pretrained(checkpoint_path)
                     tokenizer.save_pretrained(checkpoint_path)
+
+                accelerator.wait_for_everyone()
             if step >= steps_per_iteration:
                 break
 

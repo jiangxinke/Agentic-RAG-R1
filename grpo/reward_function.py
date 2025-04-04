@@ -86,7 +86,7 @@ def format_reward(completions, **kwargs):
             # 上限可达 3 * 0.2 = 0.6
             score += 0.2 * search_pairs
         else:
-            # 超过 3 对 => “最高 0.6，额外对数进行扣分”
+            # 超过 3 对 => "最高 0.6，额外对数进行扣分"
             score -= 0.2 * (search_pairs - 3)
 
         # <answer> 只允许 1 对
@@ -138,14 +138,11 @@ def combined_reward(prompts, completions, answer):
         answer (list[str]): List of expected answers.
 
     Returns:
-        list[float]: Combined rewards for each prompt-completion pair.
-
-    Explanation:
-        1. Calculates individual reward components:
-           - Correctness rewards (range: 0.0 to 2.0)
-           - Format rewards (range: 0.0 to 0.8)
-        2. Combines the rewards by adding them together.
-        3. Returns the combined scores with total range of 0.0 to 2.8.
+        dict: A dictionary containing:
+            - 'total_scores': List of combined rewards (0.0 to 2.8)
+            - 'correctness_scores': List of correctness rewards (0.0 to 2.0)
+            - 'format_scores': List of format rewards (0.0 to 0.8)
+            - 'rag_scores': List of RAG rewards
     """
     # Get individual rewards
     correctness_scores = correctness_reward(prompts=prompts, completions=completions, answer=answer)
@@ -153,20 +150,16 @@ def combined_reward(prompts, completions, answer):
     rag_scores = rag_reward(prompts=prompts, completions=completions)
 
     # Combine rewards - correctness is weighted more heavily
-    combined_rewards = []
+    total_scores = []
     for c_score, f_score, rag_score in zip(correctness_scores, format_scores, rag_scores):
         # Correctness score range: 0.0 to 2.0
         # Format score range: 0.0 to 0.8
         # Total range: 0.0 to 2.8
-        combined_rewards.append(c_score + f_score + rag_score)
-    # print("prompts:" + "*" * 100)
-    # print(prompts)
-    # print("prompts:" + "*" * 100)
-    # print("completions:" + "*" * 100)
-    # print(completions)
-    # print("completions:" + "*" * 100)
-    # print("combined_rewards:" + "*" * 100)
-    # print(combined_rewards)
-    # print("combined_rewards:" + "*" * 100)
+        total_scores.append(c_score + f_score + rag_score)
 
-    return combined_rewards
+    return {
+        "total_scores": total_scores,
+        "correctness_scores": correctness_scores,
+        "format_scores": format_scores,
+        "rag_scores": rag_scores,
+    }

@@ -1,3 +1,4 @@
+import logging
 from multiprocessing.connection import Client
 from utils.web_search import web_search
 import os, re
@@ -14,8 +15,9 @@ from utils.wiki_search import create_wiki_searcher
 - https://serper.dev/dashboard
 """
 
-rag_host = 'localhost'
+rag_host = "localhost"
 rag_port = 63863
+
 
 class Tools:
     def __init__(self) -> None:
@@ -76,28 +78,28 @@ class Tools:
             #     ],
             # },
             {
-                'name_for_human': '医学维基百科知识检索模块',
-                'name_for_model': 'Wiki_RAG',
-                'description_for_model': '使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。',
-                'parameters': [
+                "name_for_human": "医学维基百科知识检索模块",
+                "name_for_model": "Wiki_RAG",
+                "description_for_model": "使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。",
+                "parameters": [
                     {
-                        'name': 'input',
-                        'description': '规范名称的医学实体',
-                        'required': True,
-                        'schema': {'type': 'string'},
+                        "name": "input",
+                        "description": "规范名称的医学实体",
+                        "required": True,
+                        "schema": {"type": "string"},
                     }
                 ],
             },
             {
-                'name_for_human': '医学知识检索模块',
-                'name_for_model': 'Web_RAG',
-                'description_for_model': '这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。',
-                'parameters': [
+                "name_for_human": "医学知识检索模块",
+                "name_for_model": "Web_RAG",
+                "description_for_model": "这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。",
+                "parameters": [
                     {
-                        'name': 'input',
-                        'description': '用户询问的字符串形式的问句',
-                        'required': True,
-                        'schema': {'type': 'string'},
+                        "name": "input",
+                        "description": "用户询问的字符串形式的问句",
+                        "required": True,
+                        "schema": {"type": "string"},
                     }
                 ],
             },
@@ -136,21 +138,21 @@ class Tools:
 
     def HypothesisOutput(self, input: str) -> str:
         input = str(input)
-        HO_result = send_data(input=input, function_call_type='HO')
+        HO_result = send_data(input=input, function_call_type="HO")
         HO_result = str(HO_result)
-        HO_result += '但是你后续必须需要检索医学知识辅助你回答，而不是一直使用假设性输出'
+        HO_result += "但是你后续必须需要检索医学知识辅助你回答，而不是一直使用假设性输出"
         return HO_result if HO_result else "无法探索性回答知识，需要再次调用或规范用户询问"
 
     def MedicalNER(self, input: str) -> str:
-        NER_result = str(send_data(input=input, function_call_type='NER'))
+        NER_result = str(send_data(input=input, function_call_type="NER"))
         return NER_result if NER_result else "无法抽取知识，请规范用户输入"
 
     def DOC_RAG(self, input: str) -> str:
-        RAG_result = str(send_data(input=input, function_call_type='DOC'))
+        RAG_result = str(send_data(input=input, function_call_type="DOC"))
         return RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
 
     def KG_RAG(self, input: str) -> str:
-        RAG_result = str(send_data(input=input, function_call_type='KG'))
+        RAG_result = str(send_data(input=input, function_call_type="KG"))
         return RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
 
     def Wiki_RAG(self, input: str) -> str:
@@ -161,14 +163,15 @@ class Tools:
 
     def Web_RAG(self, input: str) -> str:
         RAG_result = web_search(input, count=1)
+        logging.info(f"Web_RAG result: {RAG_result}")
         return RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
 
     def KnowledgeOrganize(self, input: str) -> str:
-        RAG_result = str(send_data(input=input, function_call_type='KO'))
+        RAG_result = str(send_data(input=input, function_call_type="KO"))
         return RAG_result if RAG_result else "无法总结医学知识，请规范用户输入"
 
     def Filter(self, input: str) -> str:
-        RAG_result = str(send_data(input=input, function_call_type='Filter'))
+        RAG_result = str(send_data(input=input, function_call_type="Filter"))
         return RAG_result if RAG_result else "无法过滤医学知识，请规范用户输入"
 
 
@@ -177,14 +180,15 @@ def send_data(input, function_call_type):
     """Sends data to the server and receives the response."""
     try:
         client = Client((rag_host, rag_port))
-        data_dict = {'clear': 0, 'query': input, 'function_call_type': function_call_type}
+        data_dict = {"clear": 0, "query": input, "function_call_type": function_call_type}
         client.send(data_dict)
         result = client.recv()  # Wait to receive data
         client.close()
         return result
     except Exception as e:
         return f"An error occurred: {e}"
-    
-if __name__ == '__main__':
-    result = send_data('蛋糕', 'DOC')
+
+
+if __name__ == "__main__":
+    result = send_data("蛋糕", "DOC")
     print(result[0][:50])

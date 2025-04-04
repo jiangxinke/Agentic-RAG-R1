@@ -67,45 +67,50 @@ class CustomModel(PreTrainedModel):
     def call_plugin(self, plugin_name: str, plugin_args: str):
         try:
             plugin_args = json5.loads(plugin_args)
-        except Exception as e:
             plugin_args = {"input": plugin_args}
+        except Exception as e:
+            plugin_args = {"input": str(plugin_args)}
 
         def format_result(result):
             if isinstance(result, list):
                 return "\n".join(str(item) for item in result)
             return str(result)
 
-        if plugin_name == "google_search":
-            result = self.tool.Web_RAG(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "HypothesisOutput":
-            result = self.tool.HypothesisOutput(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "MedicalNER":
-            result = self.tool.MedicalNER(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "DOC_RAG":
-            result = self.tool.DOC_RAG(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "KG_RAG":
-            result = self.tool.KG_RAG(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "Baike_RAG":
-            result = self.tool.Baike_RAG(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "Web_RAG":
-            result = self.tool.Web_RAG(**plugin_args)
-        elif plugin_name == "Wiki_RAG":
-            result = self.tool.Wiki_RAG(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "KnowledgeOrganize":
-            result = self.tool.KnowledgeOrganize(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        elif plugin_name == "Filter":
-            result = self.tool.Filter(**plugin_args)
-            return "\nObservation:" + format_result(result)
-        else:
-            return "\nObservation:" + f"Plugin {plugin_name} not found"
+        try:
+            if plugin_name == "google_search":
+                result = self.tool.Web_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "HypothesisOutput":
+                result = self.tool.HypothesisOutput(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "MedicalNER":
+                result = self.tool.MedicalNER(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "DOC_RAG":
+                result = self.tool.DOC_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "KG_RAG":
+                result = self.tool.KG_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "Baike_RAG":
+                result = self.tool.Baike_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "Web_RAG":
+                result = self.tool.Web_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "Wiki_RAG":
+                result = self.tool.Wiki_RAG(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "KnowledgeOrganize":
+                result = self.tool.KnowledgeOrganize(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            elif plugin_name == "Filter":
+                result = self.tool.Filter(**plugin_args)
+                return "\nObservation:" + format_result(result)
+            else:
+                return "\nObservation:" + f"Plugin {plugin_name} not found"
+        except Exception as e:
+            return "\nObservation:" + str(e)
 
     def parse_latest_plugin_call(self, text):
         match = re.match(r'\[(.*?)\]:\s*(?:"(.*?)"|(.*))', text)
@@ -254,18 +259,13 @@ class CustomModel(PreTrainedModel):
                         query = new_text[start_idx:end_idx].strip()
 
                         # NOTE tools calling
-                        plugin_name, plugin_args = self.parse_latest_plugin_call(query)
-                        search_result = self.call_plugin(plugin_name, plugin_args)  # TODO FIXME here
-                        print("2222", plugin_name, search_result)
-                        # # 调用搜索
-                        # try:
-                        #     # NOTE tools calling
-                        #     plugin_name, plugin_args = self.parse_latest_plugin_call(query)
-                        #     search_result = self.call_plugin(plugin_name, plugin_args)      # TODO FIXME here
-                        #     print("2222", )
-                        #     # search_result = web_search(query, count=1)
-                        # except Exception as e:
-                        #     search_result = f"检索出错: {str(e)}"
+                        try:
+                            plugin_name, plugin_args = self.parse_latest_plugin_call(query)
+                            search_result = self.call_plugin(plugin_name, plugin_args)  # TODO FIXME here
+                            print(f"tools calling: {plugin_name}, {search_result[:100]}")
+                        except Exception as e:
+                            print(f"tools calling error: {e}")
+                            search_result = f"tools calling error: {str(e)}"
 
                         # 在文本层面截断到 </search> 后，插入 <observation> ... </observation>
                         # 先保留到 </search>（含）
