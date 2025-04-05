@@ -1,12 +1,10 @@
 project_name: "xiaobeir1"
-# exp: "Qwen2.5-7B-Instruct-10iter-100steps"
-exp: "debug"
+exp: "Qwen2.5-7B-Instruct-150iter-1step-4gpu"
+# exp: "debug"
 # exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
 # exp: "xiaobeir1-Qwen2.5-7B-Instruct"
 # exp: "xiaobeir1-Qwen2.5-32B-Instruct"
 # exp: "xiaobeir1-Qwen2.5-14B-Instruct"
-# exp: "internlm/internlm2_5-1_8b"
-# exp: "meta-llama/Llama-3.1-8B-Instruct"
 
 
 random_seed: 42
@@ -30,8 +28,8 @@ training:
   use_lora: True
   continue_training: False
   current_step: 0
-  num_iterations: 10
-  steps_per_iteration: 100
+  num_iterations: 150
+  steps_per_iteration: 1
   batch_size: 1
   num_generations: 8
   max_completion_length: 100
@@ -58,5 +56,5 @@ dataset:
   num_eval: 1000
 
 save:
-  save_interval: 1
+  save_interval: 10
 

@@ -49,7 +49,7 @@ def correctness_reward(prompts, completions, answer, **kwargs):
         formatted_prompt = eval_prompt.format(question=prompt, expected=ans, predicted=response)
         llm_response = get_model_response(formatted_prompt)
 
-        if llm_response == "Yes":
+        if "yes" in llm_response.lower():
             rewards.append(3.0)  # Full points for correct answer
         else:
             rewards.append(0.0)  # No points for incorrect answer
