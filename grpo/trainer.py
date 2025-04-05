@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import copy
 import random
 from tqdm import tqdm
+from deepspeed import DeepSpeedEngine
 
 from trl import SFTTrainer
 
@@ -440,6 +441,14 @@ def train_with_grpo(
         torch.cuda.empty_cache()
         # tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
 
+        # 检查policy_model是否是DeepSpeedEngine
+        is_deepspeed = hasattr(policy_model, "module") and isinstance(policy_model, DeepSpeedEngine)
+
+        # 如果是DeepSpeedEngine，先解开模型
+        if is_deepspeed:
+            policy_model = accelerator.unwrap_model(policy_model)
+
+        accelerator.wait_for_everyone()
         # Initialize optimizer
         optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
 
@@ -645,7 +654,7 @@ def train_with_grpo(
                     checkpoint_path = f"{checkpoint_dir}/step-{sum_steps:04d}"
                     os.makedirs(checkpoint_path, exist_ok=True)
                     # 保存 LoRA 部分的参数
-                    policy_model.model.save_pretrained(checkpoint_path)
+                    policy_model.module.save_pretrained(checkpoint_path)
                     tokenizer.save_pretrained(checkpoint_path)
 
                 accelerator.wait_for_everyone()

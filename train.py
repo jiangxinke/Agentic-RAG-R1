@@ -33,9 +33,11 @@ from utils.utils import (
 )
 from grpo.reward_function import combined_reward
 from grpo.model import CustomModel
-from grpo.trainer import train_with_grpo
 from grpo.evaluater import evaluate
 from accelerate import Accelerator
+
+# Import train_with_grpo after other imports to avoid circular imports
+from grpo.trainer import train_with_grpo
 
 
 def main(config):

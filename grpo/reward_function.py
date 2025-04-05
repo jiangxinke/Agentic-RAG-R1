@@ -102,7 +102,7 @@ def format_reward(completions, **kwargs):
     return rewards
 
 
-def rag_reward(prompts, completions):
+def rag_reward(prompts, completions, rag_weight=2):
     # list; list
     extract_observation = [extract_observation_from_text(str(item_completion)) for item_completion in completions]
 
@@ -123,7 +123,9 @@ def rag_reward(prompts, completions):
 
         rag_evaluator = RetrievalQualityEvaluator(llm)
         evaluation_result = rag_evaluator.evaluate_retrieval(user_input, retrieved_contexts)
-        rag_reward.append(evaluation_result)
+        # Apply weight to the RAG reward
+        weighted_result = evaluation_result * rag_weight
+        rag_reward.append(weighted_result)
 
     return rag_reward
 
