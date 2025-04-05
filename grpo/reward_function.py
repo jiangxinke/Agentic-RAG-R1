@@ -1,4 +1,6 @@
+from tqdm import tqdm
 from utils.answer_extractor import *
+from utils.evaluate import get_model_response
 from utils.retrieval_quality_evaluator import *
 
 
@@ -14,31 +16,84 @@ def correctness_reward(prompts, completions, answer, **kwargs):
 
     Returns:
         list[float]: Reward scores based on answer correctness.
-
-    Explanation:
-        1. Extracts the text content from each completion.
-        2. Processes each response to extract the answer portion.
-        3. Compares extracted answers with expected answers using two methods:
-           - Exact string matching (2.0 points)
-           - Numeric equivalence check (1.5 points)
-        4. Returns a list of reward scores.
     """
     # Extract the content from each completion's first element
     responses = [completion[0]["content"] for completion in completions]
 
-    # Extract answers from model outputs
-    extracted = [extract_answer_from_model_output(r) for r in responses]
+    # Prepare the evaluation prompt
+    eval_prompt = """
+你是一名严格、但能识别同义表达的阅卷老师。请阅读以下信息并判断学生的选择题作答是否正确：
+
+1. 【题目】：
+{question}
+
+2. 【正确答案】：
+{expected}
+
+3. 【学生的作答】：
+{predicted}
+
+你的任务是：
+- 首先判断学生的作答是否与正确答案一致（如果含义相同也视为一致）；
+- 如果学生作答正确，请只输出：Yes
+- 如果学生作答错误，请只输出：No
+
+**重要要求**：
+- 不要输出引号、标点、换行、额外文字、空格或其他任何字符。
+- 只输出一个单词：Yes 或 No。
+    """
 
     rewards = []
-    for r, a in zip(extracted, answer):
-        if r == a:  # Exact match case
-            rewards.append(2.0)
-        else:
-            rewards.append(0.0)
 
-    # Log completion lengths
-    completion_lengths = [len(response.split()) for response in responses]
+    for prompt, response, ans in tqdm(zip(prompts, responses, answer), total=len(prompts), desc="Evaluating correctness"):
+        formatted_prompt = eval_prompt.format(question=prompt, expected=ans, predicted=response)
+        llm_response = get_model_response(formatted_prompt)
+
+        if llm_response == "Yes":
+            rewards.append(3.0)  # Full points for correct answer
+        else:
+            rewards.append(0.0)  # No points for incorrect answer
+
     return rewards
+
+
+# def correctness_reward(prompts, completions, answer, **kwargs):
+#     """
+#     Assigns a reward based on the correctness of the model's answer.
+
+#     Args:
+#         prompts (list[str]): List of prompt texts.
+#         completions (list[list[dict]]): List of completion dictionaries.
+#         answer (list[str]): List of expected answers.
+#         **kwargs: Additional keyword arguments.
+
+#     Returns:
+#         list[float]: Reward scores based on answer correctness.
+
+#     Explanation:
+#         1. Extracts the text content from each completion.
+#         2. Processes each response to extract the answer portion.
+#         3. Compares extracted answers with expected answers using two methods:
+#            - Exact string matching (2.0 points)
+#            - Numeric equivalence check (1.5 points)
+#         4. Returns a list of reward scores.
+#     """
+#     # Extract the content from each completion's first element
+#     responses = [completion[0]["content"] for completion in completions]
+
+#     # Extract answers from model outputs
+#     extracted = [extract_answer_from_model_output(r) for r in responses]
+
+#     rewards = []
+#     for r, a in zip(extracted, answer):
+#         if r == a:  # Exact match case
+#             rewards.append(2.0)
+#         else:
+#             rewards.append(0.0)
+
+#     # Log completion lengths
+#     completion_lengths = [len(response.split()) for response in responses]
+#     return rewards
 
 
 def format_reward(completions, **kwargs):

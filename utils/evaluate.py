@@ -46,6 +46,8 @@ def evaluate_with_llm(prompt, data):
     return correct, total, percent, data
 
 
+
+
 if __name__ == "__main__":
     prompt = """
 你是一名严格、但能识别同义表达的阅卷老师。请阅读以下信息并判断学生的选择题作答是否正确：

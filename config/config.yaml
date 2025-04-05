@@ -1,5 +1,5 @@
 project_name: "xiaobeir1"
-# exp: "Qwen2.5-7B-Instruct"
+# exp: "Qwen2.5-7B-Instruct-10iter-100steps"
 exp: "debug"
 # exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
 # exp: "xiaobeir1-Qwen2.5-7B-Instruct"
@@ -31,7 +31,7 @@ training:
   continue_training: False
   current_step: 0
   num_iterations: 10
-  steps_per_iteration: 1
+  steps_per_iteration: 100
   batch_size: 1
   num_generations: 8
   max_completion_length: 100
