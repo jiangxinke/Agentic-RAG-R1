@@ -118,7 +118,7 @@ def main(config):
             model = get_peft_model(model, lora_cfg)
             ref_model = get_peft_model(ref_model, lora_cfg)
         else:
-            weights_path = f"checkpoint/{config.exp}/step-{config.training.current_step:04d}"
+            weights_path = f"checkpoint/{config.exp}/2025-04-06/step-{config.training.current_step:04d}"
             model = PeftModel.from_pretrained(model, weights_path, config=lora_cfg, is_trainable=True)
             ref_model = PeftModel.from_pretrained(ref_model, weights_path, config=lora_cfg, is_trainable=True)
             logging.info(f"Continue training from {weights_path}")

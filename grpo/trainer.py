@@ -19,6 +19,7 @@ from utils.protoco import DataProto
 from utils.utils import print_memory_usage
 from accelerate import Accelerator
 import swanlab
+import pdb
 
 
 def create_completion_mask(completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id):
@@ -122,6 +123,7 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
     # New shape: (batch_size*num_generations, prompt_seq_len)
     prompt_mask = prompt_mask.repeat_interleave(num_generations, dim=0)
 
+    # pdb.set_trace()
     # Generate new tokens for each prompt. The output includes the original prompt and the generated tokens.
     outputs = model(  # old 方法是直接generate
         prompt_ids,
@@ -134,7 +136,8 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
     )
     # Remove the prompt portion from the generated output to isolate the completion tokens.
     completion_ids = outputs[:, prompt_length:]  # Shape: (batch_size*num_generations, completion_seq_len)
-
+    # pdb.set_trace()
+    # pdb.set_trace()
     # Create a binary mask that ignores tokens beyond the first EOS token.
     observation_start_token_id = tokenizer("<observation>").input_ids[0]
     observation_end_token_id = tokenizer("</observation>").input_ids[0]
@@ -290,7 +293,7 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
     }
 
 
-def compute_group_relative_advantages(rewards, num_generations):
+def res_compute_group_relative_advantages(rewards, num_generations):
     """
     Compute group-relative advantages for each prompt group.
 
@@ -313,7 +316,48 @@ def compute_group_relative_advantages(rewards, num_generations):
     expanded_stds = group_stds.repeat_interleave(num_generations)
 
     # Normalize rewards to get advantages
+    # FIXME  TODO
+    # rewards_
     advantages = (rewards - expanded_means) / (expanded_stds + 1e-4)
+
+    return advantages.unsqueeze(1)  # Add dimension for token-wise operations
+
+
+def compute_group_relative_advantages(rewards, num_generations):
+    """
+    Compute group-relative advantages for each prompt group.
+
+    Args:
+        rewards (torch.Tensor): Tensor of shape (batch_size * num_generations) containing rewards.
+        num_generations (int): Number of completions generated per prompt.
+
+    Returns:
+        torch.Tensor: Tensor of advantages computed relative to the group mean.
+    """
+    # Reshape rewards to group by prompt
+    rewards_by_group = rewards.view(-1, num_generations)
+
+    # Compute mean, std, min, max for each prompt group
+    group_means = rewards_by_group.mean(dim=1)
+    group_stds = rewards_by_group.std(dim=1)
+    group_mins = rewards_by_group.min(dim=1).values
+    group_maxs = rewards_by_group.max(dim=1).values
+
+    # Identify groups where mean == min or mean == max
+    # (If all samples in a group are the same, its mean == min == max.)
+    mean_equals_min_or_max = (group_means == group_mins) | (group_means == group_maxs)
+
+    # Expand mean, std, and the boolean mask to match the original flat shape
+    expanded_means = group_means.repeat_interleave(num_generations)
+    expanded_stds = group_stds.repeat_interleave(num_generations)
+    expanded_mask = mean_equals_min_or_max.repeat_interleave(num_generations)
+
+    # Normal advantage computation
+    advantages = (rewards - expanded_means) / (expanded_stds + 1e-4)
+
+    # For groups where mean == min or max, replace advantage with ±1 (random)
+    random_signs = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
+    advantages[expanded_mask] = random_signs[expanded_mask]
 
     return advantages.unsqueeze(1)  # Add dimension for token-wise operations
 
@@ -375,7 +419,8 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
 
     # Compute surrogate loss with clipping
     surrogate1 = ratio * advantages
-    surrogate2 = torch.clamp(ratio, 1 - epsilon, 1 + epsilon) * advantages
+    # surrogate2 = torch.clamp(ratio, 1 - epsilon, 1 + epsilon) * advantages
+    surrogate2 = torch.clamp(ratio, 1 - 0.2, 1 + 0.35) * advantages
     surrogate_loss = torch.min(surrogate1, surrogate2)
 
     # Compute KL divergence penalty
@@ -391,6 +436,113 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     optimizer.step()
 
     return loss.item(), avg_reward, reward_dict
+
+
+def analyze_completions(completions):
+    import re
+
+    processed_completions = []
+    for comp in completions:
+        if isinstance(comp, list) and len(comp) > 0 and isinstance(comp[0], dict) and "content" in comp[0]:
+            processed_completions.append(comp[0]["content"])
+        elif isinstance(comp, dict) and "content" in comp:
+            processed_completions.append(comp["content"])
+        elif isinstance(comp, str):
+            processed_completions.append(comp)
+        else:
+            continue
+
+    if not processed_completions:
+        return {
+            "avg_completion_length": 0,
+            "answer_format_accuracy": 0,
+            "avg_search_pairs": 0,
+            "avg_search_content_length": 0,
+            "avg_reasoning_pairs": 0,
+            "avg_reasoning_content_length": 0,
+            "avg_backtrack_pairs": 0,
+            "avg_backtrack_content_length": 0,
+        }
+
+    # 1. 完成长度
+    completion_lengths = [len(comp) for comp in processed_completions]
+    print(f"completion_lengths: {completion_lengths}")
+    avg_completion_length = sum(completion_lengths) / len(completion_lengths) if completion_lengths else 0
+
+    # 2. 答案格式准确率
+    answer_format_count = sum(1 for comp in processed_completions if "<answer>" in comp and "</answer>" in comp)
+    avg_answer_format_accuracy = answer_format_count / len(processed_completions) if processed_completions else 0
+
+    # 3. 搜索相关指标
+    search_pairs_count = 0
+    search_content_lengths = []
+
+    for comp in processed_completions:
+        search_starts = [m.start() for m in re.finditer("<search>", comp)]
+        search_ends = [m.start() for m in re.finditer("</search>", comp)]
+
+        valid_pairs = 0
+        for start_pos in search_starts:
+            valid_end = next((end for end in search_ends if end > start_pos), None)
+            if valid_end is not None:
+                valid_pairs += 1
+                content_length = len(comp[start_pos + len("<search>") : valid_end].strip().split())
+                search_content_lengths.append(content_length)
+                search_ends.remove(valid_end)
+
+        search_pairs_count += valid_pairs
+
+    # 4. 推理标志使用情况
+    reasoning_pairs_count = 0
+    reasoning_content_lengths = []
+
+    for comp in processed_completions:
+        if "<reasoning>" in comp and "</reasoning>" in comp:
+            reasoning_pairs_count += 1
+            reasoning_start = comp.find("<reasoning>") + len("<reasoning>")
+            reasoning_end = comp.find("</reasoning>")
+            if reasoning_start < reasoning_end:
+                content_length = len(comp[reasoning_start:reasoning_end].strip().split())
+                reasoning_content_lengths.append(content_length)
+
+    # 5. 反思标签使用情况
+    backtrack_pairs_count = 0
+    backtrack_content_lengths = []
+
+    for comp in processed_completions:
+        if "<backtrack>" in comp and "</backtrack>" in comp:
+            backtrack_pairs_count += 1
+            backtrack_start = comp.find("<backtrack>") + len("<backtrack>")
+            backtrack_end = comp.find("</backtrack>")
+            if backtrack_start < backtrack_end:
+                content_length = len(comp[backtrack_start:backtrack_end].strip().split())
+                backtrack_content_lengths.append(content_length)
+
+    total_completions = len(processed_completions)
+
+    avg_search_pairs = search_pairs_count / total_completions if total_completions else 0
+    avg_search_content_length = sum(search_content_lengths) / len(search_content_lengths) if search_content_lengths else 0
+
+    avg_reasoning_pairs = reasoning_pairs_count / total_completions if total_completions else 0
+    avg_reasoning_content_length = (
+        sum(reasoning_content_lengths) / len(reasoning_content_lengths) if reasoning_content_lengths else 0
+    )
+
+    avg_backtrack_pairs = backtrack_pairs_count / total_completions if total_completions else 0
+    avg_backtrack_content_length = (
+        sum(backtrack_content_lengths) / len(backtrack_content_lengths) if backtrack_content_lengths else 0
+    )
+
+    return {
+        "avg_completion_length": avg_completion_length,
+        "avg_answer_format_accuracy": avg_answer_format_accuracy,
+        "avg_search_pairs": avg_search_pairs,
+        "avg_search_content_length": avg_search_content_length,
+        "avg_reasoning_pairs": avg_reasoning_pairs,
+        "avg_reasoning_content_length": avg_reasoning_content_length,
+        "avg_backtrack_pairs": avg_backtrack_pairs,
+        "avg_backtrack_content_length": avg_backtrack_content_length,
+    }
 
 
 def train_with_grpo(
@@ -478,6 +630,7 @@ def train_with_grpo(
                 rollout_data = generate_rollout_data(
                     policy_model, reference_model, tokenizer, batch, num_generations, max_completion_length
                 )
+            # pdb.set_trace()
 
             # Multiple GRPO updates per batch of generations
             for grpo_iter in range(1, mu + 1):
@@ -487,130 +640,25 @@ def train_with_grpo(
 
             end_time = time.time()
             elapsed_time = end_time - start_time
+
             if accelerator.is_local_main_process:
-                # 统计指标
-                # 1. 完成长度
-                completion_lengths = []
+                all_completions = []
                 for comp_list in rollout_data["formatted_completions"]:
                     for comp_dict in comp_list:
-                        completion_lengths.append(len(comp_dict["content"].split()))
-                avg_completion_length = sum(completion_lengths) / len(completion_lengths) if completion_lengths else 0
+                        all_completions.append(comp_dict["content"])
+                # pdb.set_trace()
 
-                # 2. 答案格式准确率 - 检查是否包含<answer>和</answer>标签
-                answer_format_count = 0
-                for comp_list in rollout_data["formatted_completions"]:
-                    for comp_dict in comp_list:
-                        comp = comp_dict["content"]
-                        if "<answer>" in comp and "</answer>" in comp:
-                            answer_format_count += 1
-                answer_format_accuracy = answer_format_count / len(rollout_data["formatted_completions"])
+                completion_stats = analyze_completions(all_completions)
 
-                # 3. 搜索相关指标
-                search_start_count = 0
-                search_end_count = 0
-                search_pairs_count = 0
-                search_content_lengths = []
+                avg_completion_length = completion_stats["avg_completion_length"]
+                avg_answer_format_accuracy = completion_stats["avg_answer_format_accuracy"]
+                avg_search_pairs = completion_stats["avg_search_pairs"]
+                avg_search_content_length = completion_stats["avg_search_content_length"]
+                avg_reasoning_pairs = completion_stats["avg_reasoning_pairs"]
+                avg_reasoning_content_length = completion_stats["avg_reasoning_content_length"]
+                avg_backtrack_pairs = completion_stats["avg_backtrack_pairs"]
+                avg_backtrack_content_length = completion_stats["avg_backtrack_content_length"]
 
-                for comp_list in rollout_data["formatted_completions"]:
-                    for comp_dict in comp_list:
-                        comp = comp_dict["content"]
-                        # 统计标签数量
-                        search_start_count += comp.count("<search>")
-                        search_end_count += comp.count("</search>")
-
-                        # 统计成对出现的情况和内容长度
-                        search_starts = [m.start() for m in re.finditer("<search>", comp)]
-                        search_ends = [m.start() for m in re.finditer("</search>", comp)]
-
-                        # 找到有效的搜索对
-                        valid_pairs = 0
-                        for start_pos in search_starts:
-                            # 找到下一个结束标签
-                            valid_end = next((end for end in search_ends if end > start_pos), None)
-                            if valid_end is not None:
-                                valid_pairs += 1
-                                # 计算内容长度
-                                content_length = len(comp[start_pos + len("<search>") : valid_end].strip().split())
-                                search_content_lengths.append(content_length)
-                                # 从列表中移除已使用的结束标签
-                                search_ends.remove(valid_end)
-
-                        search_pairs_count += valid_pairs
-
-                # 计算平均值
-                total_completions = sum(1 for comp_list in rollout_data["formatted_completions"] for _ in comp_list)
-                avg_search_start_count = search_start_count / total_completions if total_completions else 0
-                avg_search_end_count = search_end_count / total_completions if total_completions else 0
-                avg_search_pairs = search_pairs_count / total_completions if total_completions else 0
-                avg_search_content_length = (
-                    sum(search_content_lengths) / len(search_content_lengths) if search_content_lengths else 0
-                )
-
-                # 4. 推理标志使用情况
-                reasoning_start_count = 0
-                reasoning_end_count = 0
-                reasoning_pairs_count = 0
-                reasoning_content_lengths = []
-
-                for comp_list in rollout_data["formatted_completions"]:
-                    for comp_dict in comp_list:
-                        comp = comp_dict["content"]
-                        # 统计标签数量
-                        reasoning_start_count += comp.count("<reasoning>")
-                        reasoning_end_count += comp.count("</reasoning>")
-
-                        # 统计成对出现的情况和内容长度
-                        if "<reasoning>" in comp and "</reasoning>" in comp:
-                            reasoning_pairs_count += 1
-
-                            # 计算推理内容的长度
-                            reasoning_start = comp.find("<reasoning>") + len("<reasoning>")
-                            reasoning_end = comp.find("</reasoning>")
-                            if reasoning_start < reasoning_end:
-                                content_length = len(comp[reasoning_start:reasoning_end].strip().split())
-                                reasoning_content_lengths.append(content_length)
-
-                # 计算平均值
-                avg_reasoning_start_count = reasoning_start_count / total_completions if total_completions else 0
-                avg_reasoning_end_count = reasoning_end_count / total_completions if total_completions else 0
-                avg_reasoning_pairs = reasoning_pairs_count / total_completions if total_completions else 0
-                avg_reasoning_content_length = (
-                    sum(reasoning_content_lengths) / len(reasoning_content_lengths) if reasoning_content_lengths else 0
-                )
-
-                # 5. 反思标签使用情况
-                backtrack_start_count = 0
-                backtrack_end_count = 0
-                backtrack_pairs_count = 0
-                backtrack_content_lengths = []
-
-                for comp_list in rollout_data["formatted_completions"]:
-                    for comp_dict in comp_list:
-                        comp = comp_dict["content"]
-                        # 统计标签数量
-                        backtrack_start_count += comp.count("<backtrack>")
-                        backtrack_end_count += comp.count("</backtrack>")
-
-                        # 统计成对出现的情况和内容长度
-                        if "<backtrack>" in comp and "</backtrack>" in comp:
-                            backtrack_pairs_count += 1
-
-                            # 计算反思内容的长度
-                            backtrack_start = comp.find("<backtrack>") + len("<backtrack>")
-                            backtrack_end = comp.find("</backtrack>")
-                            if backtrack_start < backtrack_end:
-                                content_length = len(comp[backtrack_start:backtrack_end].strip().split())
-                                backtrack_content_lengths.append(content_length)
-
-                # 计算平均值
-                avg_backtrack_start_count = backtrack_start_count / total_completions if total_completions else 0
-                avg_backtrack_end_count = backtrack_end_count / total_completions if total_completions else 0
-                avg_backtrack_pairs = backtrack_pairs_count / total_completions if total_completions else 0
-                avg_backtrack_content_length = (
-                    sum(backtrack_content_lengths) / len(backtrack_content_lengths) if backtrack_content_lengths else 0
-                )
-
-                # 记录所有指标
                 swanlab.log(
                     {
                         # 训练进度指标
@@ -624,17 +672,17 @@ def train_with_grpo(
                         # 性能指标
                         "time_per_step": elapsed_time,
                         # 生成内容指标
-                        "avg_completion_length": avg_completion_length,
-                        "answer_format_accuracy": answer_format_accuracy,
+                        "completion_length": avg_completion_length,
+                        "answer_format_accuracy": avg_answer_format_accuracy,
                         # 搜索标签统计
-                        "avg_search_pairs": avg_search_pairs,
-                        "avg_search_content_length": avg_search_content_length,
+                        # "search_pairs": avg_search_pairs,
+                        # "search_content_length": avg_search_content_length,
                         # 推理标签统计
-                        "avg_reasoning_pairs": avg_reasoning_pairs,
-                        "avg_reasoning_content_length": avg_reasoning_content_length,
+                        # "reasoning_pairs": avg_reasoning_pairs,
+                        # "reasoning_content_length": avg_reasoning_content_length,
                         # 反思标签统计
-                        "avg_backtrack_pairs": avg_backtrack_pairs,
-                        "avg_backtrack_content_length": avg_backtrack_content_length,
+                        # "backtrack_pairs": avg_backtrack_pairs,
+                        # "backtrack_content_length": avg_backtrack_content_length,
                     }
                 )
 
@@ -654,7 +702,7 @@ def train_with_grpo(
                     checkpoint_path = f"{checkpoint_dir}/step-{sum_steps:04d}"
                     os.makedirs(checkpoint_path, exist_ok=True)
                     # 保存 LoRA 部分的参数
-                    policy_model.module.save_pretrained(checkpoint_path)
+                    policy_model.model.save_pretrained(checkpoint_path)
                     tokenizer.save_pretrained(checkpoint_path)
 
                 accelerator.wait_for_everyone()

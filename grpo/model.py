@@ -8,6 +8,7 @@ import json5
 # 统一采用新代码中的搜索器（例如 EnglishWebSearcher）
 from utils.web_search import web_search
 from utils.Tools import Tools
+import pdb
 
 
 class ThinkTagStoppingCriteria(StoppingCriteria):
@@ -17,6 +18,7 @@ class ThinkTagStoppingCriteria(StoppingCriteria):
         self.target_ids_1 = [522, 1836, 29]
         self.target_ids_2 = [522, 1836, 397]
 
+    # Any
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         for sample in input_ids:
             if sample.size(0) >= 3:
@@ -34,7 +36,7 @@ class CustomModel(PreTrainedModel):
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
-        self.max_length_for_gather = 1500  # 不能太短了，太短了全是eos token
+        self.max_length_for_gather = 3000  # 不能太短了，太短了全是eos token
         self.tool = Tools()
         # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
@@ -138,30 +140,53 @@ class CustomModel(PreTrainedModel):
         return generated_output
 
     def padding_and_truncate(self, all_outputs, device):
-        # 2) 初始化一个列表来收集处理后的张量
         final_outputs = []
+
+        decoded_outputs = []
         for out_tensor in all_outputs:
-            # 如果太长，先截断
-            if out_tensor.size(0) > self.max_length_for_gather:
-                out_tensor = out_tensor[: self.max_length_for_gather]
+            if out_tensor is None:
+                decoded_outputs.append("")
+            else:
+                decoded_text = self.tokenizer.decode(out_tensor, skip_special_tokens=True)
+                decoded_outputs.append(decoded_text)
 
-            # 构造一个 shape=[max_length_for_gather] 的张量，用于容纳最终序列
-            padded_tensor = torch.full(
-                (self.max_length_for_gather,),
-                fill_value=self.tokenizer.eos_token_id,
-                dtype=torch.long,
-                device=device,
-            )
+        encoded_outputs = self.tokenizer(
+            decoded_outputs, return_tensors="pt", padding="max_length", max_length=self.max_length_for_gather, truncation=True
+        )
 
-            # 将实际内容拷贝到 padded_tensor 的前 out_tensor.size(0) 部分
-            padded_tensor[: out_tensor.size(0)] = out_tensor
+        padded_outputs = encoded_outputs.input_ids.to(device)
 
-            # 把这个处理好的固定长度序列放进 final_outputs
-            final_outputs.append(padded_tensor)
+        for i, text in enumerate(decoded_outputs):
+            if not text:
+                padded_outputs[i] = torch.full(
+                    (self.max_length_for_gather,), fill_value=self.tokenizer.eos_token_id, dtype=torch.long, device=device
+                )
 
-        # 3) 堆叠成为 [batch_size, max_length_for_gather] 的 2D 张量
-        padded_outputs = torch.stack(final_outputs, dim=0)
         return padded_outputs
+        # # 2) 初始化一个列表来收集处理后的张量
+        # final_outputs = []
+        # for out_tensor in all_outputs:
+        #     # 如果太长，先截断
+        #     if out_tensor.size(0) > self.max_length_for_gather:
+        #         out_tensor = out_tensor[: self.max_length_for_gather]
+
+        #     # 构造一个 shape=[max_length_for_gather] 的张量，用于容纳最终序列
+        #     padded_tensor = torch.full(
+        #         (self.max_length_for_gather,),
+        #         fill_value=self.tokenizer.eos_token_id,
+        #         dtype=torch.long,
+        #         device=device,
+        #     )
+
+        #     # 将实际内容拷贝到 padded_tensor 的前 out_tensor.size(0) 部分
+        #     padded_tensor[: out_tensor.size(0)] = out_tensor
+
+        #     # 把这个处理好的固定长度序列放进 final_outputs
+        #     final_outputs.append(padded_tensor)
+
+        # # 3) 堆叠成为 [batch_size, max_length_for_gather] 的 2D 张量
+        # padded_outputs = torch.stack(final_outputs, dim=0)
+        # return padded_outputs
 
     def generate_with_think_interruption(
         self,
@@ -200,13 +225,29 @@ class CustomModel(PreTrainedModel):
         stopping_criteria = StoppingCriteriaList([ThinkTagStoppingCriteria(self.tokenizer)])
 
         for iteration in range(max_iterations):
+            # pdb.set_trace()
+            # 检查当前输入中是否有前导的 eos token（所有样本在同一位置都是 eos token）
+            # 如果有，则跳过这些位置，减少不必要的计算
+            leading_eos = []
+            for pos in range(current_input_ids.size(1)):
+                if (current_input_ids[:, pos] == eos_token_id).all():
+                    leading_eos.append(pos)
+                else:
+                    break
+
+            # 如果找到了前导的 eos token，则调整输入和注意力掩码来跳过这些位置
+            if leading_eos and len(leading_eos) > 0:
+                skip_len = leading_eos[-1] + 1
+                current_input_ids = current_input_ids[:, skip_len:]
+                current_attention_mask = current_attention_mask[:, skip_len:]
+
             if should_generate.any():
                 active_indices = torch.nonzero(should_generate).squeeze(dim=1)
 
                 outputs = self.model.generate(
                     current_input_ids,
                     attention_mask=current_attention_mask,
-                    max_new_tokens=200,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
+                    max_new_tokens=1000,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
                     do_sample=do_sample,
                     temperature=temperature,
                     pad_token_id=pad_token_id,
@@ -276,7 +317,7 @@ class CustomModel(PreTrainedModel):
                         appended_text = f"{sub_text}\n<observation>\n{search_result}\n</observation>\n"
 
                         # 拼回历史文本
-                        history_text = self.tokenizer.decode(sample_output[:old_len], skip_special_tokens=False)
+                        history_text = self.tokenizer.decode(sample_output[:old_len], skip_special_tokens=True)
                         updated_text = history_text + appended_text
 
                         # 重新编码
@@ -293,6 +334,7 @@ class CustomModel(PreTrainedModel):
                         if iteration < max_iterations - 1 and not eos_found:
                             # 拼回历史，继续下一轮
                             history_ids = sample_output[:old_len]
+
                             updated_input_ids = torch.cat([history_ids, new_tokens], dim=-1)
                             new_prompt_list.append(updated_input_ids)
                         else:
@@ -322,5 +364,7 @@ class CustomModel(PreTrainedModel):
         #     print("*" * 100)
 
         # 对所有输出做对齐
+        # pdb.set_trace()
         padded_outputs = self.padding_and_truncate(all_outputs, device)
+        # pdb.set_trace()
         return padded_outputs

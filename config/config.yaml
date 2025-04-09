@@ -1,5 +1,5 @@
 project_name: "xiaobeir1"
-exp: "Qwen2.5-7B-Instruct-150iter-1step-4gpu"
+exp: "Qwen2.5-7B-Instruct-2iter-50step-2gpu-promptv1"
 # exp: "debug"
 # exp: "xiaobeir1-Qwen2.5-0.5B-Instruct"
 # exp: "xiaobeir1-Qwen2.5-7B-Instruct"
@@ -11,7 +11,7 @@ random_seed: 42
 evaluation_before_grpo: False
 evaluation_after_grpo: False
 
-eval_checkpoint_step: 540
+eval_checkpoint_step: 200
 
 model:
   # name: "Qwen/Qwen2.5-0.5B-Instruct"
@@ -28,10 +28,10 @@ training:
   use_lora: True
   continue_training: False
   current_step: 0
-  num_iterations: 150
-  steps_per_iteration: 1
+  num_iterations: 2 # epoch
+  steps_per_iteration: 50 # in one epoch
   batch_size: 1
-  num_generations: 8
+  num_generations: 6
   max_completion_length: 100
   beta: 0.04
   learning_rate: 0.000005
@@ -56,5 +56,5 @@ dataset:
   num_eval: 1000
 
 save:
-  save_interval: 10
+  save_interval: 5
 
