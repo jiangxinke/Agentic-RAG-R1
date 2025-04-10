@@ -1,11 +1,16 @@
 # 基于 llm 的评估
 import json
+import os
+
+from dotenv import load_dotenv
 from openai import OpenAI
 from tqdm import tqdm
 
+load_dotenv()
+
 client = OpenAI(
-    api_key="8cefb70606f3472d8731bd65661ce409",
-    base_url="http://8289.model.mingxingtech.com:10032/v1",
+    api_key=os.getenv("EVAL_LLM_API_KEY"),
+    base_url=os.getenv("EVAL_LLM_BASE_URL"),
 )
 
 
@@ -44,8 +49,6 @@ def evaluate_with_llm(prompt, data):
         percent = correct / total
     print(f"Correct: {correct}, Incorrect: {incorrect}, Percent: {percent}")
     return correct, total, percent, data
-
-
 
 
 if __name__ == "__main__":

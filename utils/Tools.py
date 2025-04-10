@@ -1,9 +1,10 @@
 import logging
+import os
+import re
 from multiprocessing.connection import Client
-from utils.web_search import web_search
-import os, re
 from typing import Dict, List
 
+from utils.web_search import web_search
 from utils.wiki_search import create_wiki_searcher
 
 """

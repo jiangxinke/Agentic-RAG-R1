@@ -1,6 +1,7 @@
 import random
-import numpy as np
 import re
+
+import numpy as np
 
 # def extract_answer_from_model_output(text):
 #     """

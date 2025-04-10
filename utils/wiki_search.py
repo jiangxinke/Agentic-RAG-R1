@@ -1,14 +1,16 @@
-import pytest
-import elasticsearch
 import os
+
+import elasticsearch
+import pytest
 from elasticsearch import Elasticsearch
+
 
 class WikiSearcher:
     """
     A class to interact with an Elasticsearch index for performing search queries.
     """
 
-    def __init__(self, index_name='wiki_en', url: str = "https://localhost:9200"):
+    def __init__(self, index_name="wiki_en", url: str = "https://localhost:9200"):
         """
         Initializes the ElasticsearchSearcher with the given configuration.
 
@@ -37,34 +39,26 @@ class WikiSearcher:
             list: A list of dictionaries containing search results.
         """
         # Define the search query using multi_match to search in 'title' and 'text' fields
-        search_body = {
-            "query": {
-                "multi_match": {
-                    "query": query,
-                    "fields": ["title", "text"] 
-                }
-            },
-            "size": size
-        }
+        search_body = {"query": {"multi_match": {"query": query, "fields": ["title", "text"]}}, "size": size}
 
         # Execute the search
         response = self.es.search(index=self.index_name, body=search_body)
 
-        hits = response['hits']['hits']
-        relevant_docs = [hit['_source'] for hit in hits]
+        hits = response["hits"]["hits"]
+        relevant_docs = [hit["_source"] for hit in hits]
         return relevant_docs
 
     def close(self):
         """
-        Closes the Elasticsearch connection. 
+        Closes the Elasticsearch connection.
         """
         self.es.close()
 
     @staticmethod
     def create_es_client(url: str) -> Elasticsearch:
         """Initialize Elasticsearch client with environment configuration."""
-        if not os.environ.get('ELASTIC_SEARCH_PASSWORD'):
-            raise ValueError('ELASTIC_SEARCH_PASSWORD environment variable not set')
+        if not os.environ.get("ELASTIC_SEARCH_PASSWORD"):
+            raise ValueError("ELASTIC_SEARCH_PASSWORD environment variable not set")
 
         return Elasticsearch(
             url,
@@ -80,11 +74,13 @@ def test_english_wiki_searcher():
     result = wiki_searcher.search("why is the sky blue?")
     assert isinstance(result, list)
 
+
 def test_chinese_wiki_searcher():
     wiki_searcher = create_wiki_searcher("zh")
     assert wiki_searcher is not None
     result = wiki_searcher.search("为什么天空是蓝色的？")
     assert isinstance(result, list)
+
 
 def test_unsupported_language():
     wiki_searcher = create_wiki_searcher("unsupported")
@@ -92,13 +88,15 @@ def test_unsupported_language():
     with pytest.raises(elasticsearch.NotFoundError):
         wiki_searcher.search("why is the sky blue?")
 
+
 def create_wiki_searcher(language: str, url: str = None) -> WikiSearcher:
     index_name = "wiki_" + language.lower()
-    url = url or os.environ.get('ELASTIC_SEARCH_URL')
+    url = url or os.environ.get("ELASTIC_SEARCH_URL")
     if url:
         return WikiSearcher(index_name, url)
     else:
         return WikiSearcher(index_name)
+
 
 def main():
     """
@@ -128,8 +126,9 @@ def main():
         print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure the Elasticsearch connection is closed
-        if 'searcher' in locals():
+        if "searcher" in locals():
             searcher.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

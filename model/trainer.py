@@ -1,25 +1,24 @@
+import copy
 import logging
 import os
+import pdb
+import random
 import re
 import time
 
 import numpy as np
+import swanlab
 import torch
 import torch.nn.functional as F
-import copy
-import random
-from tqdm import tqdm
+from accelerate import Accelerator
 from deepspeed import DeepSpeedEngine
-
+from tqdm import tqdm
 from trl import SFTTrainer
 
-from grpo.reward_function import combined_reward
+from model.reward_function import combined_reward
 from utils.answer_extractor import extract_answer_from_model_output
 from utils.protoco import DataProto
 from utils.utils import print_memory_usage
-from accelerate import Accelerator
-import swanlab
-import pdb
 
 
 def create_completion_mask(completion_ids, eos_token_id, observation_start_token_id, observation_end_token_id):
@@ -431,14 +430,17 @@ def maximize_grpo_objective(model, ref_model, rollout_data, tokenizer, reward_fu
     loss = -((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
     print(loss.item())
     # Optimization step
+    print(accelerator.device, "in optimizer.zero_grad()")
     optimizer.zero_grad()
+    print(accelerator.device, "in accelerator.backward(loss)")
     accelerator.backward(loss)
+    print(accelerator.device, "in optimizer.step()")
     optimizer.step()
-
+    print(accelerator.device, "in return loss.item(), avg_reward, reward_dict")
     return loss.item(), avg_reward, reward_dict
 
 
-def analyze_completions(completions):
+def analyze_completions(completions, reward_dict):
     import re
 
     processed_completions = []
@@ -532,8 +534,8 @@ def analyze_completions(completions):
     avg_backtrack_content_length = (
         sum(backtrack_content_lengths) / len(backtrack_content_lengths) if backtrack_content_lengths else 0
     )
-
-    return {
+    # 汇总奖励和性能指标
+    metrics = {
         "avg_completion_length": avg_completion_length,
         "avg_answer_format_accuracy": avg_answer_format_accuracy,
         "avg_search_pairs": avg_search_pairs,
@@ -543,6 +545,16 @@ def analyze_completions(completions):
         "avg_backtrack_pairs": avg_backtrack_pairs,
         "avg_backtrack_content_length": avg_backtrack_content_length,
     }
+
+    # 添加奖励指标
+    if "correctness_scores" in reward_dict:
+        metrics["correctness_reward"] = torch.tensor(reward_dict["correctness_scores"]).mean().item()
+    if "format_scores" in reward_dict:
+        metrics["format_reward"] = torch.tensor(reward_dict["format_scores"]).mean().item()
+    if "rag_scores" in reward_dict:
+        metrics["rag_reward"] = torch.tensor(reward_dict["rag_scores"]).mean().item()
+
+    return metrics
 
 
 def train_with_grpo(
@@ -641,48 +653,48 @@ def train_with_grpo(
             end_time = time.time()
             elapsed_time = end_time - start_time
 
+            all_completions = []
+            for comp_list in rollout_data["formatted_completions"]:
+                for comp_dict in comp_list:
+                    all_completions.append(comp_dict["content"])
+            # pdb.set_trace()
+
+            completion_stats = analyze_completions(all_completions, reward_dict)
+
+            completion_length = completion_stats["avg_completion_length"]
+            answer_format_accuracy = completion_stats["avg_answer_format_accuracy"]
+            correctness_reward = completion_stats["correctness_reward"]
+            format_reward = completion_stats["format_reward"]
+            rag_reward = completion_stats["rag_reward"]
+            # pdb.set_trace()
+
+            accelerator.wait_for_everyone()
+            all_sum_steps = accelerator.gather_for_metrics([sum_steps])
+            all_loss_value = accelerator.gather_for_metrics([loss_value])
+            all_avg_reward = accelerator.gather_for_metrics([avg_reward])
+            all_correctness_reward = accelerator.gather_for_metrics([correctness_reward])
+            all_format_reward = accelerator.gather_for_metrics([format_reward])
+            all_rag_reward = accelerator.gather_for_metrics([rag_reward])
+            all_time_per_step = accelerator.gather_for_metrics([elapsed_time])
+            all_completion_length = accelerator.gather_for_metrics([completion_length])
+            all_answer_format_accuracy = accelerator.gather_for_metrics([answer_format_accuracy])
+
             if accelerator.is_local_main_process:
-                all_completions = []
-                for comp_list in rollout_data["formatted_completions"]:
-                    for comp_dict in comp_list:
-                        all_completions.append(comp_dict["content"])
-                # pdb.set_trace()
-
-                completion_stats = analyze_completions(all_completions)
-
-                avg_completion_length = completion_stats["avg_completion_length"]
-                avg_answer_format_accuracy = completion_stats["avg_answer_format_accuracy"]
-                avg_search_pairs = completion_stats["avg_search_pairs"]
-                avg_search_content_length = completion_stats["avg_search_content_length"]
-                avg_reasoning_pairs = completion_stats["avg_reasoning_pairs"]
-                avg_reasoning_content_length = completion_stats["avg_reasoning_content_length"]
-                avg_backtrack_pairs = completion_stats["avg_backtrack_pairs"]
-                avg_backtrack_content_length = completion_stats["avg_backtrack_content_length"]
-
                 swanlab.log(
                     {
                         # 训练进度指标
-                        "sum_steps": sum_steps,
-                        "loss": loss_value,
+                        "sum_steps": sum(all_sum_steps) / len(all_sum_steps),
+                        "loss": sum(all_loss_value) / len(all_loss_value),
                         # 奖励指标
-                        "total_reward": avg_reward,
-                        "correctness_reward": torch.tensor(reward_dict["correctness_scores"]).mean().item(),
-                        "format_reward": torch.tensor(reward_dict["format_scores"]).mean().item(),
-                        "rag_reward": torch.tensor(reward_dict["rag_scores"]).mean().item(),
+                        "total_reward": sum(all_avg_reward) / len(all_avg_reward),
+                        "correctness_reward": sum(all_correctness_reward) / len(all_correctness_reward),
+                        "format_reward": sum(all_format_reward) / len(all_format_reward),
+                        "rag_reward": sum(all_rag_reward) / len(all_rag_reward),
                         # 性能指标
-                        "time_per_step": elapsed_time,
+                        "time_per_step": sum(all_time_per_step) / len(all_time_per_step),
                         # 生成内容指标
-                        "completion_length": avg_completion_length,
-                        "answer_format_accuracy": avg_answer_format_accuracy,
-                        # 搜索标签统计
-                        # "search_pairs": avg_search_pairs,
-                        # "search_content_length": avg_search_content_length,
-                        # 推理标签统计
-                        # "reasoning_pairs": avg_reasoning_pairs,
-                        # "reasoning_content_length": avg_reasoning_content_length,
-                        # 反思标签统计
-                        # "backtrack_pairs": avg_backtrack_pairs,
-                        # "backtrack_content_length": avg_backtrack_content_length,
+                        "completion_length": sum(all_completion_length) / len(all_completion_length),
+                        "answer_format_accuracy": sum(all_answer_format_accuracy) / len(all_answer_format_accuracy),
                     }
                 )
 

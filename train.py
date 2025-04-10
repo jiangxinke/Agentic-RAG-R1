@@ -1,43 +1,38 @@
-from rich.traceback import install
 from dotenv import load_dotenv
+from rich.traceback import install
 
 load_dotenv()
 install()
 
-from utils.saver import ModelSaver
-import os
+import datetime
 import json
 import logging
-from pathlib import Path
-from torch.utils.data import DataLoader
-import time
-import datetime
-import torch
+import os
 import pdb
-import logging
+import time
+from pathlib import Path
+
 import swanlab
-from swanlab.integration.accelerate import SwanLabTracker
+import torch
+from accelerate import Accelerator
 from accelerate.logging import get_logger
-
-# pdb.set_trace = lambda *args, **kwargs: None  # 将这个函数变为空
-
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, PeftModel, get_peft_model
+from swanlab.integration.accelerate import SwanLabTracker
+from torch.utils.data import DataLoader
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.prepare_dataset import prepare_dataset
+from model.evaluater import evaluate
+from model.model import CustomModel
+from model.reward_function import combined_reward
+from model.trainer import train_with_grpo
+from utils.saver import ModelSaver
 from utils.utils import (
     load_config,
-    set_random_seed,
     optimize_model_memory,
+    set_random_seed,
     setup_logging,
 )
-from grpo.reward_function import combined_reward
-from grpo.model import CustomModel
-from grpo.evaluater import evaluate
-from accelerate import Accelerator
-
-# Import train_with_grpo after other imports to avoid circular imports
-from grpo.trainer import train_with_grpo
 
 
 def main(config):

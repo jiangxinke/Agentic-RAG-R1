@@ -1,14 +1,16 @@
 import logging
-from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
+import pdb
+import re
+
+import json5
 import torch
 from torch.nn.utils.rnn import pad_sequence
-import re
-import json5
+from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
+
+from utils.Tools import Tools
 
 # 统一采用新代码中的搜索器（例如 EnglishWebSearcher）
 from utils.web_search import web_search
-from utils.Tools import Tools
-import pdb
 
 
 class ThinkTagStoppingCriteria(StoppingCriteria):
@@ -36,7 +38,7 @@ class CustomModel(PreTrainedModel):
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
-        self.max_length_for_gather = 3000  # 不能太短了，太短了全是eos token
+        self.max_length_for_gather = 2000  # 不能太短了，太短了全是eos token
         self.tool = Tools()
         # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
@@ -247,7 +249,7 @@ class CustomModel(PreTrainedModel):
                 outputs = self.model.generate(
                     current_input_ids,
                     attention_mask=current_attention_mask,
-                    max_new_tokens=1000,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
+                    max_new_tokens=50,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
                     do_sample=do_sample,
                     temperature=temperature,
                     pad_token_id=pad_token_id,

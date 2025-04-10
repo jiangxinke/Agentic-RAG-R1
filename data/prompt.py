@@ -182,6 +182,7 @@ def build_prompt(messages):
 
 from utils.Tools import Tools
 
+
 def build_system_tools(sys_prompt):
 
     tool = Tools()
@@ -189,10 +190,10 @@ def build_system_tools(sys_prompt):
 
     for tool in tool.toolConfig:
         tool_descs.append(TOOL_DESC.format(**tool))
-        tool_names.append(tool['name_for_model'])
+        tool_names.append(tool["name_for_model"])
 
-    tool_descs = '\n\n'.join(tool_descs)
-    tool_names = ','.join(tool_names)
+    tool_descs = "\n\n".join(tool_descs)
+    tool_names = ",".join(tool_names)
     sys_prompt_tools = sys_prompt.format(tool_descs=tool_descs, tool_names=tool_names)
 
     return sys_prompt_tools

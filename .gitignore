@@ -25,3 +25,9 @@ TODO
 eval*.py
 eval*.sh
 paint.py
+
+models/
+
+merge.py
+demo*
+test*
