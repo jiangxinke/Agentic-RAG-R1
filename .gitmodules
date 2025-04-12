@@ -1,0 +1,3 @@
+[submodule "ArtSearch"]
+	path = ArtSearch
+	url = https://github.com/Artessay/ArtSearch.git
