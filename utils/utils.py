@@ -92,15 +92,15 @@ def print_memory_usage():
 
     print("=" * 50)
 
-
-def setup_logging(log_dir, level=logging.INFO):
-    log_dir.mkdir(parents=True, exist_ok=True)
+def setup_logging(log_dir=None, level=logging.INFO):
+    handlers = [logging.StreamHandler()]
+    
+    if log_dir is not None:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_dir / "training.log"))
 
     logging.basicConfig(
         level=level,
         format=("[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s"),
-        handlers=[
-            logging.FileHandler(log_dir / "training.log"),
-            logging.StreamHandler(),
-        ],
+        handlers=handlers,
     )

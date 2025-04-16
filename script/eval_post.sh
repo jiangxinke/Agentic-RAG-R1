@@ -1,14 +1,14 @@
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate r1
 
-NUM_EVAL=200
-DATE="2025-04-10"
-STEPS="10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100"
+NUM_EVAL=100
+DATE="2025-04-12"
+STEPS="150"
 
 for STEP in $STEPS; do
-    CUDA_VISIBLE_DEVICES=1,7 accelerate launch \
+    CUDA_VISIBLE_DEVICES=0,1,3,6 accelerate launch \
         --config_file ./config/accelerate_config/eval_multigpu.yaml \
         --main_process_port 12349 \
-        --num_processes 2 \
+        --num_processes 4 \
         --mixed_precision "bf16" \
         eval_post.py \
         --date "$DATE" \

@@ -12,6 +12,7 @@ import pdb
 import time
 from pathlib import Path
 
+import deepspeed
 import swanlab
 import torch
 from accelerate import Accelerator
@@ -19,7 +20,7 @@ from accelerate.logging import get_logger
 from peft import LoraConfig, PeftModel, get_peft_model
 from swanlab.integration.accelerate import SwanLabTracker
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from data.prepare_dataset import prepare_dataset
 from model.evaluater import evaluate
@@ -35,19 +36,10 @@ from utils.utils import (
 )
 
 
-def main(config):
-    """
-    Main function to run the training and evaluation pipeline.
+def main():
+    # 1. Setup environment
+    config = load_config("config/config.yaml")
 
-    Steps:
-    1. Load config and setup environment
-    2. Initialize model and tokenizer
-    3. Evaluate initial model (optional)
-    4. Fine-tune with GRPO
-    5. Evaluate final model
-    6. Save results
-    """
-    # Initialize accelerator first
     accelerator = Accelerator()
     if accelerator.is_local_main_process:
         swanlab.init(
@@ -55,8 +47,6 @@ def main(config):
             experiment_name=config.exp,
             config=config.__dict__,
         )
-
-    # 1. Setup environment
 
     now = datetime.datetime.now()
     time_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -87,8 +77,34 @@ def main(config):
     logging.info("Loading model...")
     torch_dtype = getattr(torch, config.model.torch_dtype)
 
-    model = AutoModelForCausalLM.from_pretrained(config.model.name, torch_dtype=torch_dtype, trust_remote_code=True)
-    ref_model = AutoModelForCausalLM.from_pretrained(config.model.name, torch_dtype=torch_dtype, trust_remote_code=True)
+    # qlora
+    # bnb_config = BitsAndBytesConfig(
+    #     load_in_4bit=True,
+    #     bnb_4bit_quant_type="nf4",
+    #     bnb_4bit_compute_dtype=torch.bfloat16,
+    #     bnb_4bit_use_double_quant=True,
+    #     bnb_4bit_quant_storage=torch.bfloat16,
+    # )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        config.model.name,
+        torch_dtype=torch_dtype,
+        trust_remote_code=True,
+    )
+    ref_model = AutoModelForCausalLM.from_pretrained(
+        config.model.name,
+        torch_dtype=torch_dtype,
+        trust_remote_code=True,
+    )
+    # pdb.set_trace()
+    # params = [p for name, p in model.named_parameters()]
+    # with deepspeed.zero.GatheredParameters(params, enabled=True):
+    #     model_state_dict = model.state_dict()
+    #     state_dict = {k: v for k, v in model_state_dict.items()}
+
+    # # model1 = accelerator.unwrap_model(model)
+    # # model1 = model.unwrap_model()
+    # model_dict = accelerator.get_state_dict(model)
     model = model.to(device)
     ref_model = ref_model.to(device)
     logging.info("Model loaded successfully")
@@ -97,6 +113,18 @@ def main(config):
     tokenizer.pad_token = tokenizer.eos_token
     model.config.pad_token_id = model.config.eos_token_id = tokenizer.eos_token_id
     ref_model.config.pad_token_id = ref_model.config.eos_token_id = tokenizer.eos_token_id
+
+    # print(f"tokenizer.decode([522, 1836, 29]): ->{tokenizer.decode([522, 1836, 29])}<-")
+    # print(f"tokenizer.decode([522, 1836, 397]): ->{tokenizer.decode([522, 1836, 397])}<-")
+
+    # observation_start_token_id = tokenizer("<observation>").input_ids[0]
+    # observation_end_token_id = tokenizer("</observation>").input_ids[0]
+
+    # print(f"observation_start_token_id: {observation_start_token_id},")
+    # print(f"observation_end_token_id: {observation_end_token_id}")
+
+    # print(f"tokenizer.decode({observation_end_token_id}): ->{tokenizer.decode([observation_end_token_id])}<-")
+    # print(f"tokenizer.decode({observation_start_token_id}): ->{tokenizer.decode([observation_start_token_id])}<-")
 
     # Apply LoRA
     ## TODO standard lora
@@ -128,7 +156,10 @@ def main(config):
         "num_iterations": config.training.num_iterations,
         "steps_per_iteration": config.training.steps_per_iteration,
         "num_generations": config.training.num_generations,
-        "max_completion_length": config.training.max_completion_length,
+        "max_new_tokens": config.training.max_new_tokens,
+        "max_length_for_gather": config.training.max_length_for_gather,
+        "temperature": config.training.temperature,
+        "do_sample": config.training.do_sample,
         "beta": config.training.beta,
         "learning_rate": config.training.learning_rate,
         "mu": config.training.mu,
@@ -143,6 +174,7 @@ def main(config):
     custom_model = CustomModel(model, tokenizer)
     ref_custom_model = CustomModel(ref_model, tokenizer)
     model_saver = ModelSaver()
+
     # Run training
     start_time = time.time()
     if config.training.continue_training:
@@ -150,10 +182,9 @@ def main(config):
     else:
         current_step = 0
 
-    logger = get_logger(__name__)
-    model = train_with_grpo(
+    train_with_grpo(
         policy_model=custom_model,
-        reference_model=ref_custom_model,
+        base_reference_model=ref_custom_model,
         tokenizer=tokenizer,
         accelerator=accelerator,
         dataloader=train_dataloader,
@@ -169,17 +200,8 @@ def main(config):
 
     # 确保所有进程在继续之前等待训练完成
     accelerator.wait_for_everyone()
-
-    # 确保所有进程在退出前等待主进程完成评估
-    # accelerator.wait_for_everyone()
-
-    # # 6. Save model
-    # if accelerator.is_local_main_process:
-    #     # FIXME 拿不到lora矩阵
-    #     model.save_pretrained(checkpoint_dir)
-    #     tokenizer.save_pretrained(checkpoint_dir)
+    accelerator.end_training()
 
 
 if __name__ == "__main__":
-    config = load_config("config/config.yaml")
-    main(config)
+    main()

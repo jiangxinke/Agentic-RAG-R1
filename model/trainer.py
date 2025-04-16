@@ -6,6 +6,7 @@ import random
 import re
 import time
 
+import deepspeed
 import numpy as np
 import swanlab
 import torch
@@ -81,7 +82,84 @@ def create_completion_mask(completion_ids, eos_token_id, observation_start_token
     return final_mask
 
 
-def generate_completions(model, tokenizer, prompts, num_generations=4, max_completion_length=32):
+def create_completion_mask(
+    completion_ids: torch.Tensor, eos_token_id: int, observation_start_ids: list, observation_end_ids: list
+):
+    """
+    根据给定的 completion_ids，生成一个 mask：
+      - 在第一个 EOS 之后（不含 EOS 本身）全部置 0
+      - <observation> ... </observation> 标签内内容全部置 0
+      - 其余部分置 1
+
+    Args:
+        completion_ids (torch.Tensor): [batch_size, seq_len] 的模型生成结果 token id 序列
+        eos_token_id (int): 结束符（EOS）的 token id
+        observation_start_ids (list[int]): "<observation>" 对应的多个 token id
+        observation_end_ids   (list[int]): "</observation>" 对应的多个 token id
+
+    Returns:
+        torch.Tensor: [batch_size, seq_len] 的 0/1 掩码张量
+    """
+    batch_size, seq_len = completion_ids.shape
+
+    # 1) 找到第一个EOS的索引 => 构造 completion_mask
+    is_eos = completion_ids == eos_token_id
+    eos_idx = torch.full(
+        (batch_size,),
+        seq_len,  # 若没出现EOS就默认到结尾
+        dtype=torch.long,
+        device=completion_ids.device,
+    )
+    has_eos = is_eos.any(dim=1)
+    eos_idx[has_eos] = is_eos.int().argmax(dim=1)[has_eos]
+
+    # 构造 shape=[batch_size,seq_len] 的序号矩阵 (0,1,2,...,seq_len-1)
+    seq_indices = torch.arange(seq_len, device=completion_ids.device).unsqueeze(0).expand(batch_size, -1)
+    # <= eos_idx 的地方为1 (含EOS自身), 否则0
+    completion_mask = (seq_indices <= eos_idx.unsqueeze(1)).int()
+
+    # 2) 通过滑窗匹配找到 observation_start / observation_end
+    is_observation_start = torch.zeros_like(completion_ids, dtype=torch.bool)
+    is_observation_end = torch.zeros_like(completion_ids, dtype=torch.bool)
+
+    obs_start_len = len(observation_start_ids)
+    obs_end_len = len(observation_end_ids)
+
+    for b_idx in range(batch_size):
+        for i in range(seq_len - obs_start_len + 1):
+            if torch.all(
+                completion_ids[b_idx, i : i + obs_start_len] == torch.tensor(observation_start_ids, device=completion_ids.device)
+            ):
+                is_observation_start[b_idx, i] = True
+
+        for i in range(seq_len - obs_end_len + 1):
+            if torch.all(
+                completion_ids[b_idx, i : i + obs_end_len] == torch.tensor(observation_end_ids, device=completion_ids.device)
+            ):
+                is_observation_end[b_idx, i] = True
+
+    # 3) 构造 observation_flag: 在 <observation> ... </observation> 之内的内容置 1，否则 0
+    observation_flag = torch.zeros_like(completion_mask, dtype=torch.int)
+    for b_idx in range(batch_size):
+        in_obs = False
+        for i in range(seq_len):
+            if is_observation_start[b_idx, i]:
+                in_obs = True
+            if in_obs:
+                observation_flag[b_idx, i] = 1
+            if is_observation_end[b_idx, i]:
+                in_obs = False
+
+    # 4) 最终 mask：保留 completion_mask（1）里、且不在 observation 区间内
+    #    => final = completion_mask & (1 - observation_flag)
+    final_mask = completion_mask & (1 - observation_flag)
+
+    return final_mask
+
+
+def generate_completions(
+    model, tokenizer, prompts, num_generations=4, max_new_tokens=128, max_length_for_gather=2000, temperature=0.7, do_sample=True
+):
     """
     Generate multiple completions for each prompt and create corresponding attention masks.
 
@@ -90,7 +168,8 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
         tokenizer: The tokenizer to process the prompts and decode the outputs.
         prompts (list of str): List of input prompt strings.
         num_generations (int): Number of completions to generate per prompt.
-        max_completion_length (int): Maximum number of new tokens to generate for the completion.
+        max_new_tokens (int): Maximum number of new tokens to generate for the completion.
+        max_length_for_gather (int): Maximum length of the input sequence.
 
     Returns:
         tuple: Contains the following tensors:
@@ -127,19 +206,21 @@ def generate_completions(model, tokenizer, prompts, num_generations=4, max_compl
     outputs = model(  # old 方法是直接generate
         prompt_ids,
         attention_mask=prompt_mask,
-        max_new_tokens=max_completion_length,
-        do_sample=True,
-        temperature=1.0,
-        pad_token_id=tokenizer.pad_token_id,
-        eos_token_id=tokenizer.eos_token_id,
+        max_new_tokens=max_new_tokens,
+        max_length_for_gather=max_length_for_gather,
+        do_sample=do_sample,
+        temperature=temperature,
+        # pad_token_id=tokenizer.pad_token_id,
+        # eos_token_id=tokenizer.eos_token_id,
     )
     # Remove the prompt portion from the generated output to isolate the completion tokens.
     completion_ids = outputs[:, prompt_length:]  # Shape: (batch_size*num_generations, completion_seq_len)
     # pdb.set_trace()
     # pdb.set_trace()
     # Create a binary mask that ignores tokens beyond the first EOS token.
-    observation_start_token_id = tokenizer("<observation>").input_ids[0]
-    observation_end_token_id = tokenizer("</observation>").input_ids[0]
+    # FIXME ?
+    observation_start_token_id = tokenizer("<observation>").input_ids
+    observation_end_token_id = tokenizer("</observation>").input_ids
     # completion_mask = create_completion_mask(completion_ids, tokenizer.eos_token_id)
     completion_mask = create_completion_mask(
         completion_ids,
@@ -228,7 +309,9 @@ def compute_log_probabilities(model, input_ids, attention_mask, logits_to_keep):
     return selective_log_softmax(logits, input_ids)
 
 
-def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_generations, max_completion_length):
+def generate_rollout_data(
+    model, ref_model, tokenizer, batch_samples, num_generations, max_new_tokens, max_length_for_gather, temperature, do_sample
+):
     """
     Generate rollouts and compute static log probabilities for both the old policy (current model)
     and the reference model. Gradients are disabled so that these remain fixed.
@@ -239,7 +322,7 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
         tokenizer: The tokenizer.
         batch_samples: List of training samples.
         num_generations: Number of completions to generate per prompt.
-        max_completion_length: Maximum completion length.
+        max_new_tokens: Maximum completion length.
 
     Returns:
         A dictionary with rollout data including both old and reference log probabilities.
@@ -257,7 +340,7 @@ def generate_rollout_data(model, ref_model, tokenizer, batch_samples, num_genera
     # We generate once, and then use the same completions to compute both sets of log probabilities.
     with torch.no_grad():
         prompt_ids, prompt_mask, completion_ids, completion_mask = generate_completions(
-            model, tokenizer, prompts, num_generations, max_completion_length
+            model, tokenizer, prompts, num_generations, max_new_tokens, max_length_for_gather, temperature, do_sample
         )
         # FIXME gjr question 这里是想 不观察到 observation 只观察到 最终输出结果来计算概率这些吗？
         input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
@@ -457,6 +540,7 @@ def analyze_completions(completions, reward_dict):
     if not processed_completions:
         return {
             "avg_completion_length": 0,
+            "avg_completion_length_noobservation": 0,
             "answer_format_accuracy": 0,
             "avg_search_pairs": 0,
             "avg_search_content_length": 0,
@@ -470,6 +554,17 @@ def analyze_completions(completions, reward_dict):
     completion_lengths = [len(comp) for comp in processed_completions]
     print(f"completion_lengths: {completion_lengths}")
     avg_completion_length = sum(completion_lengths) / len(completion_lengths) if completion_lengths else 0
+
+    # 1.1 计算去除observation标签内容后的长度
+    completion_lengths_noobservation = []
+    for comp in processed_completions:
+        # 移除所有<observation>...</observation>内容
+        cleaned_comp = re.sub(r"<observation>.*?</observation>", "", comp, flags=re.DOTALL)
+        completion_lengths_noobservation.append(len(cleaned_comp))
+
+    avg_completion_length_noobservation = (
+        sum(completion_lengths_noobservation) / len(completion_lengths_noobservation) if completion_lengths_noobservation else 0
+    )
 
     # 2. 答案格式准确率
     answer_format_count = sum(1 for comp in processed_completions if "<answer>" in comp and "</answer>" in comp)
@@ -537,6 +632,7 @@ def analyze_completions(completions, reward_dict):
     # 汇总奖励和性能指标
     metrics = {
         "avg_completion_length": avg_completion_length,
+        "avg_completion_length_noobservation": avg_completion_length_noobservation,
         "avg_answer_format_accuracy": avg_answer_format_accuracy,
         "avg_search_pairs": avg_search_pairs,
         "avg_search_content_length": avg_search_content_length,
@@ -559,14 +655,17 @@ def analyze_completions(completions, reward_dict):
 
 def train_with_grpo(
     policy_model,
-    reference_model,
+    base_reference_model,
     tokenizer,
     accelerator=None,
     dataloader=None,
     num_iterations=1,
     steps_per_iteration=500,
     num_generations=4,
-    max_completion_length=128,
+    max_new_tokens=128,
+    max_length_for_gather=2000,
+    temperature=0.7,
+    do_sample=True,
     beta=0.1,
     learning_rate=5e-6,
     mu=1,
@@ -599,9 +698,11 @@ def train_with_grpo(
         The fine-tuned policy model.
     """
 
+    # pdb.set_trace()
     # Outer loop for iterations with reward model updates
     sum_steps = current_step
     for iteration in tqdm(range(1, num_iterations + 1), desc="GRPO Iterations", position=0, leave=True):
+        reference_model = copy.deepcopy(base_reference_model)
         torch.cuda.empty_cache()
         # tqdm.write(f"Starting iteration {iteration}/{num_iterations}")
 
@@ -619,18 +720,41 @@ def train_with_grpo(
         # policy_model.to(accelerator.device)
         policy_model.train()
         policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
+        
 
         # Create reference model for KL constraint
         # Zero3
         # reference_model = copy_policy_to_reference(accelerator, policy_model, reference_model)
         # reference_model = copy.deepcopy(policy_model)
-        aggregated_model = accelerator.unwrap_model(policy_model)
-        # 再进行深拷贝得到参考模型
-        reference_model = copy.deepcopy(aggregated_model)
-        for param in reference_model.parameters():
-            param.requires_grad = False
-        reference_model.to(accelerator.device)
 
+        # aggregated_model = accelerator.unwrap_model(policy_model)
+        # 再进行深拷贝得到参考模型
+        # reference_model = copy.deepcopy(aggregated_model)
+        # for param in reference_model.parameters():
+        #     param.requires_grad = False
+        # reference_model.to(accelerator.device)
+
+        # pdb.set_trace()
+        # 收集所有 LoRA 参数
+        # pdb.set_trace()
+        policy_model_lora_params = [p for name, p in policy_model.named_parameters() if "lora" in name]
+        with deepspeed.zero.GatheredParameters(policy_model_lora_params, enabled=True):
+            # 从所有 GPU 收集 LoRA 参数
+            policy_model_state_dict = policy_model.state_dict()
+
+            # 创建一个新的字典，只包含 LoRA 参数
+            lora_state_dict = {k: v for k, v in policy_model_state_dict.items() if "lora" in k}
+
+            # 将 policy 模型的 LoRA 参数复制到 reference 模型
+            missing_keys, unexpected_keys = reference_model.load_state_dict(lora_state_dict, strict=False)
+            reference_model.to(accelerator.device)
+
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(f"Copied LoRA parameters from policy to reference model")
+            print(f"Missing keys: {missing_keys if len(missing_keys) < 10 else f'{len(missing_keys)} keys'}")
+            print(f"Unexpected keys: {unexpected_keys if len(unexpected_keys) < 10 else f'{len(unexpected_keys)} keys'}")
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        reference_model = accelerator.prepare(reference_model)
         # Inner loop for policy updates
         step = 0
         for batch in dataloader:
@@ -640,7 +764,15 @@ def train_with_grpo(
             with torch.no_grad():
                 # Generate completions and compute log probs
                 rollout_data = generate_rollout_data(
-                    policy_model, reference_model, tokenizer, batch, num_generations, max_completion_length
+                    policy_model,
+                    reference_model,
+                    tokenizer,
+                    batch,
+                    num_generations,
+                    max_new_tokens,
+                    max_length_for_gather,
+                    temperature,
+                    do_sample,
                 )
             # pdb.set_trace()
 
@@ -666,6 +798,7 @@ def train_with_grpo(
             correctness_reward = completion_stats["correctness_reward"]
             format_reward = completion_stats["format_reward"]
             rag_reward = completion_stats["rag_reward"]
+            completion_length_noobservation = completion_stats["avg_completion_length_noobservation"]
             # pdb.set_trace()
 
             accelerator.wait_for_everyone()
@@ -678,7 +811,7 @@ def train_with_grpo(
             all_time_per_step = accelerator.gather_for_metrics([elapsed_time])
             all_completion_length = accelerator.gather_for_metrics([completion_length])
             all_answer_format_accuracy = accelerator.gather_for_metrics([answer_format_accuracy])
-
+            all_completion_length_noobservation = accelerator.gather_for_metrics([completion_length_noobservation])
             if accelerator.is_local_main_process:
                 swanlab.log(
                     {
@@ -694,6 +827,8 @@ def train_with_grpo(
                         "time_per_step": sum(all_time_per_step) / len(all_time_per_step),
                         # 生成内容指标
                         "completion_length": sum(all_completion_length) / len(all_completion_length),
+                        "completion_length_noobservation": sum(all_completion_length_noobservation)
+                        / len(all_completion_length_noobservation),
                         "answer_format_accuracy": sum(all_answer_format_accuracy) / len(all_answer_format_accuracy),
                     }
                 )
@@ -722,5 +857,3 @@ def train_with_grpo(
                 break
 
         tqdm.write(f"Completed iteration {iteration}. Reward model update would happen here.")
-
-    return policy_model

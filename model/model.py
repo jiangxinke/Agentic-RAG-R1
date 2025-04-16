@@ -4,69 +4,106 @@ import re
 
 import json5
 import torch
-from torch.nn.utils.rnn import pad_sequence
 from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
 
 from utils.Tools import Tools
-
-# 统一采用新代码中的搜索器（例如 EnglishWebSearcher）
-from utils.web_search import web_search
 
 
 class ThinkTagStoppingCriteria(StoppingCriteria):
     def __init__(self, tokenizer, think_token="</search>"):
         super().__init__()
-        # 目标序列
-        self.target_ids_1 = [522, 1836, 29]
-        self.target_ids_2 = [522, 1836, 397]
+        # Target sequences
+        self.target_ids_1 = [522, 1836, 29]  # "</search>"
+        self.target_ids_2 = [522, 1836, 397]  # "</search>\n"
 
-    # Any
+    # Any one stop
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        for sample in input_ids:
-            if sample.size(0) >= 3:
-                tail_slice = sample[-3:]
-                if tail_slice.tolist() == self.target_ids_1 or tail_slice.tolist() == self.target_ids_2:
-                    return True
-        return False
+        if input_ids.shape[1] < 3:
+            return False
+
+        last_tokens = input_ids[:, -3:]  # shape: [batch_size, 3]
+
+        device = input_ids.device
+        t1 = torch.tensor(self.target_ids_1, device=device)
+        t2 = torch.tensor(self.target_ids_2, device=device)
+
+        # Compare separately to see if any sequence's last three tokens match target_ids_1 or target_ids_2
+        match_t1 = (last_tokens == t1).all(dim=1).any()
+        match_t2 = (last_tokens == t2).all(dim=1).any()
+
+        return match_t1 or match_t2
 
 
 class CustomModel(PreTrainedModel):
-    def __init__(self, model, tokenizer, searcher=None):
-        """
-        构造函数增加 searcher 参数，默认为 EnglishWebSearcher。
-        """
+    def __init__(self, model, tokenizer):
         super().__init__(model.config)
+
         self.model = model
         self.tokenizer = tokenizer
-        self.max_length_for_gather = 2000  # 不能太短了，太短了全是eos token
         self.tool = Tools()
-        # self.searcher = searcher if searcher is not None else EnglishWebSearcher()
 
-    # def forward(self, input_ids, attention_mask=None):
-    #     return self.model(input_ids=input_ids, attention_mask=attention_mask)
-
-    def forward(self, input_ids, attention_mask=None, logits_to_keep=None, obtain_logits=False, **kwargs):
+    def forward(
+        self,
+        input_ids,
+        attention_mask,
+        max_new_tokens=1000,
+        max_length_for_gather=2000,
+        do_sample=True,
+        temperature=0.8,
+        logits_to_keep=None,
+        obtain_logits=False,
+        max_generate_iterations=8,
+        **kwargs,
+    ):
         """
-        这里是 DataParallel 并行时会自动调用的入口。
+        Entry function that is automatically called during DataParallel processing.
         """
-        # 可在此直接写生成逻辑，或调用自定义的 generate_with_think_interruption()
         if not obtain_logits:
-            generated_output = self.generate_with_think_interruption(
+            # Text generation mode
+            return self.generate_with_think_interruption(
                 input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=1000,
-                do_sample=True,
-                temperature=0.7,
+                max_new_tokens=max_new_tokens,
+                max_length_for_gather=max_length_for_gather,
+                do_sample=do_sample,
+                temperature=temperature,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                max_generate_iterations=max_generate_iterations,
+                **kwargs,
             )
-            return generated_output
-        else:  # 第二次采样，只是获得logits
+        else:
+            # Logits retrieval mode
             return self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 logits_to_keep=logits_to_keep + 1,
             ).logits
+
+    def generate(
+        self,
+        input_ids,
+        attention_mask,
+        max_new_tokens=1000,
+        max_length_for_gather=2000,
+        do_sample=True,
+        temperature=0.8,
+        pad_token_id=None,
+        eos_token_id=None,
+        max_generate_iterations=8,
+        **kwargs,
+    ):
+        return self.forward(
+            input_ids,
+            attention_mask=attention_mask,
+            obtain_logits=False,
+            max_new_tokens=max_new_tokens,
+            max_length_for_gather=max_length_for_gather,
+            do_sample=do_sample,
+            temperature=temperature,
+            max_generate_iterations=max_generate_iterations,
+            **kwargs,
+        )
 
     def call_plugin(self, plugin_name: str, plugin_args: str):
         try:
@@ -122,28 +159,14 @@ class CustomModel(PreTrainedModel):
             plugin_name = match.group(1)  # 提取 TAG（如 DOC, WEB, KG）
             plugin_args = match.group(2) if match.group(2) is not None else match.group(3)  # 处理带引号和不带引号的情况
         else:
-            plugin_name = "Wiki_RAG"  # default
+            plugin_name = "Web_RAG"  # default
             plugin_args = text
 
         plugin_name = re.sub(r"[^a-zA-Z_]", "", plugin_name)  # re-format
 
         return plugin_name, plugin_args.strip() if plugin_args else ""
 
-    def generate(self, input_ids, attention_mask, max_new_tokens, do_sample, temperature, pad_token_id, eos_token_id):
-        generated_output = self.generate_with_think_interruption(
-            input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample,
-            temperature=temperature,
-            pad_token_id=pad_token_id,
-            eos_token_id=eos_token_id,
-        )
-        return generated_output
-
-    def padding_and_truncate(self, all_outputs, device):
-        final_outputs = []
-
+    def padding_and_truncate(self, all_outputs, device, max_length_for_gather):
         decoded_outputs = []
         for out_tensor in all_outputs:
             if out_tensor is None:
@@ -153,7 +176,11 @@ class CustomModel(PreTrainedModel):
                 decoded_outputs.append(decoded_text)
 
         encoded_outputs = self.tokenizer(
-            decoded_outputs, return_tensors="pt", padding="max_length", max_length=self.max_length_for_gather, truncation=True
+            decoded_outputs,
+            return_tensors="pt",
+            padding="max_length",
+            max_length=max_length_for_gather,
+            truncation=True,
         )
 
         padded_outputs = encoded_outputs.input_ids.to(device)
@@ -161,45 +188,48 @@ class CustomModel(PreTrainedModel):
         for i, text in enumerate(decoded_outputs):
             if not text:
                 padded_outputs[i] = torch.full(
-                    (self.max_length_for_gather,), fill_value=self.tokenizer.eos_token_id, dtype=torch.long, device=device
+                    (max_length_for_gather,),
+                    fill_value=self.tokenizer.eos_token_id,
+                    dtype=torch.long,
+                    device=device,
                 )
 
+        # 检查当前输入中是否有前导的 eos token（所有样本在同一位置都是 eos token）
+        # 如果有，则跳过这些位置，减少不必要的计算
+        leading_eos = []
+        for pos in range(padded_outputs.size(1)):
+            if (padded_outputs[:, pos] == self.tokenizer.eos_token_id).all():
+                leading_eos.append(pos)
+            else:
+                break
+
+        # 如果找到了前导的 eos token，则调整输入来跳过这些位置
+        if leading_eos and len(leading_eos) > 0:
+            skip_len = leading_eos[-1] + 1
+            padded_outputs = padded_outputs[:, skip_len:]
+        
+        # 如果全是eos，只保留一个位置
+        if padded_outputs.size(1) == 0:
+            padded_outputs = torch.full(
+                (padded_outputs.size(0), 1),
+                fill_value=self.tokenizer.eos_token_id,
+                dtype=torch.long,
+                device=device
+            )
+
         return padded_outputs
-        # # 2) 初始化一个列表来收集处理后的张量
-        # final_outputs = []
-        # for out_tensor in all_outputs:
-        #     # 如果太长，先截断
-        #     if out_tensor.size(0) > self.max_length_for_gather:
-        #         out_tensor = out_tensor[: self.max_length_for_gather]
-
-        #     # 构造一个 shape=[max_length_for_gather] 的张量，用于容纳最终序列
-        #     padded_tensor = torch.full(
-        #         (self.max_length_for_gather,),
-        #         fill_value=self.tokenizer.eos_token_id,
-        #         dtype=torch.long,
-        #         device=device,
-        #     )
-
-        #     # 将实际内容拷贝到 padded_tensor 的前 out_tensor.size(0) 部分
-        #     padded_tensor[: out_tensor.size(0)] = out_tensor
-
-        #     # 把这个处理好的固定长度序列放进 final_outputs
-        #     final_outputs.append(padded_tensor)
-
-        # # 3) 堆叠成为 [batch_size, max_length_for_gather] 的 2D 张量
-        # padded_outputs = torch.stack(final_outputs, dim=0)
-        # return padded_outputs
 
     def generate_with_think_interruption(
         self,
         prompt_ids,
-        attention_mask=None,
-        max_new_tokens=None,
-        do_sample=True,
-        temperature=1.0,
-        pad_token_id=None,
-        eos_token_id=None,
-        max_iterations=8,
+        attention_mask,
+        max_new_tokens,
+        max_length_for_gather,
+        do_sample,
+        temperature,
+        pad_token_id,
+        eos_token_id,
+        max_generate_iterations,
     ):
         """
         多轮生成逻辑：用文本字符串来检测 <search> / </search>、<answer> / </answer> 等标签。
@@ -226,7 +256,7 @@ class CustomModel(PreTrainedModel):
 
         stopping_criteria = StoppingCriteriaList([ThinkTagStoppingCriteria(self.tokenizer)])
 
-        for iteration in range(max_iterations):
+        for iteration in range(max_generate_iterations):
             # pdb.set_trace()
             # 检查当前输入中是否有前导的 eos token（所有样本在同一位置都是 eos token）
             # 如果有，则跳过这些位置，减少不必要的计算
@@ -249,7 +279,7 @@ class CustomModel(PreTrainedModel):
                 outputs = self.model.generate(
                     current_input_ids,
                     attention_mask=current_attention_mask,
-                    max_new_tokens=50,  # FIXME 不是从config传过来的，这块写死了=>测试可以改成10
+                    max_new_tokens=max_new_tokens,
                     do_sample=do_sample,
                     temperature=temperature,
                     pad_token_id=pad_token_id,
@@ -295,7 +325,7 @@ class CustomModel(PreTrainedModel):
                         continue
 
                     # ------- 2) 若没出现 '</answer>'，再检查 <search> ... </search> -------
-                    if "<search>" in new_text and "</search>" in new_text and (iteration < max_iterations - 1):
+                    if "<search>" in new_text and "</search>" in new_text and (iteration < max_generate_iterations - 1):
                         # 找到 <search> ... </search>
                         start_idx = new_text.index("<search>") + len("<search>")
                         end_idx = new_text.index("</search>")
@@ -333,7 +363,7 @@ class CustomModel(PreTrainedModel):
                         if eos_token_id is not None:
                             eos_found = (new_tokens == eos_token_id).any().item()
 
-                        if iteration < max_iterations - 1 and not eos_found:
+                        if iteration < max_generate_iterations - 1 and not eos_found:
                             # 拼回历史，继续下一轮
                             history_ids = sample_output[:old_len]
 
@@ -360,13 +390,7 @@ class CustomModel(PreTrainedModel):
                     break
             else:
                 break
-        # for i in all_outputs:
-        #     print("*" * 100)
-        #     print(self.tokenizer.decode(i, skip_special_tokens=False))
-        #     print("*" * 100)
 
         # 对所有输出做对齐
-        # pdb.set_trace()
-        padded_outputs = self.padding_and_truncate(all_outputs, device)
-        # pdb.set_trace()
+        padded_outputs = self.padding_and_truncate(all_outputs, device, max_length_for_gather)
         return padded_outputs

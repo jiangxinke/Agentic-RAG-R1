@@ -183,7 +183,7 @@ def build_prompt(messages):
 from utils.Tools import Tools
 
 
-def build_system_tools(sys_prompt):
+def build_system_tools(sys_prompt=SYSTEM_PROMPT_TOOLS):
 
     tool = Tools()
     tool_descs, tool_names = [], []
