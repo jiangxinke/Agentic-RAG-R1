@@ -1,31 +1,35 @@
-# Agentic RAG-R1: Enhance Agentic RAG Reasoning Capacity via Reinforcement Learning
+# 🤖 Agentic RAG-R1: Enhance Agentic RAG Reasoning Capacity via Reinforcement Learning 🚀
 
 ## Table of Contents
 - [Introduction](#introduction)
-- [What is Agentic RAG?](#what-is-agentic-rag)
-- [Architecture](#architecture)
-- [Training Strategy](#training-strategy)
-- [Features](#features)
+  - [What is Agentic RAG?](#what-is-agentic-rag)
+  - [Architecture](#architecture)
+  - [Training Strategy](#training-strategy)
+  - [Rollout Generation](#rollout-generation)
 - [Installation](#installation)
-- [Folder Structure](#folder-structure)
-- [Quick Start](#quick-start)
+  - [Tools Environment](#tools-environment-optional)
+  - [Folder Structure](#folder-structure)
+  - [Quick Start](#quick-start)
+- [Features](#features)
 - [Results](#results)
 - [Roadmap](#roadmap)
 - [Acknowledgements](#acknowledgements)
 - [Citation](#citation)
 - [License](#license)
 
-## Introduction
+## Introduction 🌟
 
-Agentic RAG‑R1 is an open‑source initiative to build an Agentic Retrieval‑Augmented Generation (RAG) system by endowing a base language model with autonomous search & reasoning skills through reinforcement learning (currently using the GRPO algorithm).
+Agentic RAG‑R1 is an open‑source initiative to build an Agentic Retrieval‑Augmented Generation (RAG) system by endowing a base language model with autonomous search & reasoning skills through reinforcement learning (currently using the GRPO algorithm). 
 
-**Chinese Language Versions:**
+**Chinese Language Version:**
+
 ![Chinese version results](https://github.com/user-attachments/assets/a6e42d35-4fec-43b9-9a04-3d102e544e20)
 
-**English Language Versions:**
+**English Language Version:**
+
 ![English version results](https://github.com/user-attachments/assets/40f11648-bf46-4cd3-873c-78ca63069499)
 
-## What is Agentic RAG?
+### What is Agentic RAG? 💡
 
 Agentic RAG combines two powerful concepts:
 
@@ -34,7 +38,7 @@ Agentic RAG combines two powerful concepts:
 
 ![Agentic RAG concept](https://github.com/user-attachments/assets/7b4b6559-b395-4de0-8326-ad0fca2e671a)
 
-## Architecture
+### Architecture 🏗️
 
 Our architecture is inspired by TC‑RAG and features an agent memory stack that orchestrates the full deliberation loop, supporting the following actions:
 
@@ -47,34 +51,17 @@ Our architecture is inspired by TC‑RAG and features an agent memory stack that
 
 ![Architecture diagram](https://github.com/user-attachments/assets/53dfae56-6c59-488f-9313-7688d5839077)
 
-## Training Strategy
+### Training Strategy 🧠
 
 Motivated by DeepSeek-R1, we apply GRPO (Generalized Relevance Policy Optimization) to reinforce the agent's choice of reasoning steps and retrieval actions, effectively boosting both search depth and answer quality.
 
 ![Training strategy diagram](https://github.com/user-attachments/assets/9880394a-f16a-4acd-84c8-db9f4f7d8433)
 
-### Rollout Generation
+### Rollout Generation 🔄
 
 ![Rollout generation diagram](https://github.com/user-attachments/assets/21d90097-f7a4-46ef-a442-c8a0a778bab4)
 
-## Features
-
-- **LoRA Tuning Support**: Fine-tune efficiently with Low-Rank Adaptation
-- **Custom Agent Tools**: Integrate your own tools and personal RAG datasets
-- **Distributed Training**: Support for Deepspeed Zero 2 Stage and Zero 3 Stage
-- **Efficient Resource Usage**: Support for models up to 32B parameters using only 2 A100 GPUs
-- **Tool Calling Reward**: Enhanced reward model that includes:
-  - Accuracy reward
-  - Format reward
-  - RAG accuracy reward using the RAGAS framework
-
-The total reward is calculated as:
-
-$$r_{total} = r_{accuracy} + r_{format} + r_{rag}$$
-
-- **TCRAG Integration**: Uses TCRAG as the rollout generator
-
-## Installation
+## Installation 🛠️
 
 We use conda to manage the environment. Follow these steps to set up:
 
@@ -84,11 +71,11 @@ conda activate AgenticRAG
 pip install -r requirements.txt
 ```
 
-### Tools Environment (Optional)
+### Tools Environment (Optional) 🧰
 
 We provide our search tool repository [ArtSearch](https://github.com/Artessay/ArtSearch) as the search engine, which supports retrieval of information from Wikipedia. You can follow the instructions in that repository to deploy a local instance of the search system.
 
-## Folder Structure
+### Folder Structure 📁
 
 ```
 .
@@ -116,17 +103,34 @@ We provide our search tool repository [ArtSearch](https://github.com/Artessay/Ar
 │   └── utils                 # Utility functions
 ```
 
-## Quick Start
+### Quick Start ⚡
 
-### Training
+#### Training
 
-[Training instructions to be added]
+comming soon~
 
-### Inference
+#### Inference
 
-[Inference instructions to be added]
+comming soon~
 
-## Results
+## Features ✨
+
+- **LoRA Tuning Support** 🔧: Fine-tune efficiently with Low-Rank Adaptation
+- **Custom Agent Tools** 🛠️: Integrate your own tools and personal RAG datasets
+- **Distributed Training** 🌐: Support for Deepspeed Zero 2 Stage and Zero 3 Stage
+- **Efficient Resource Usage** 💻: Support for models up to 32B parameters using only 2 A100 GPUs
+- **Tool Calling Reward** 🎯: Enhanced reward model that includes:
+  - Accuracy reward
+  - Format reward
+  - RAG accuracy reward using the RAGAS framework
+
+The total reward is calculated as:
+
+$$r_{total} = r_{accuracy} + r_{format} + r_{rag}$$
+
+- **TCRAG Integration** 🔗: Uses TCRAG as the rollout generator
+
+## Results 📊
 
 ### Experiment Log on Qwen 2.5-7B-Instruct
 
@@ -134,23 +138,28 @@ We provide our search tool repository [ArtSearch](https://github.com/Artessay/Ar
 
 We have made our training logs publicly available at: [SwanLab Training Log](https://swanlab.cn/@devilran/xiaobeir1/runs/ipuoxctxo764rvub20d6h/chart)
 
-### Results on MedQA Test Set
+### Results on MedQA Test Set 🏥
 
 Our Qwen 2.5-7B-Instruct model was evaluated on the MedQA test set using Qwen‑2.5‑72B as the judge:
 
-[Results table to be added]
+| Configuration                        | Format Accuracy | Answer Accuracy |
+|-------------------------------------|------------------|------------------|
+| Before fine-tuning                  | 39%              | 84%              |
+| Before fine-tuning + search         | 56%              | 79%              |
+| After fine-tuning (200 steps) + search | 92%              | 87%              |
 
-## Roadmap
+
+## Roadmap 🗺️
 
 - [ ] Support model quantification
 - [ ] Add more tools
 - [ ] [Additional planned features]
 
-## Acknowledgements
+## Acknowledgements 🙏
 
-The concept of Agentic-RAG-R1 is inspired by Deepseek-R1 and TC-RAG. We sincerely appreciate the efforts of these teams for their contributions to open-source research and development.
+The concept of Agentic-RAG-R1 is inspired by [Deepseek-R1](https://arxiv.org/abs/2501.12948) and [TC-RAG](https://arxiv.org/abs/2408.09199). We sincerely appreciate the efforts of these teams for their contributions to open-source research and development.
 
-## Citation
+## Citation 📝
 
 If you use this work in your research, please cite:
 
@@ -164,6 +173,6 @@ If you use this work in your research, please cite:
 }
 ```
 
-## License
+## License 📄
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
