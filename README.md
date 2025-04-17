@@ -127,9 +127,9 @@ comming soon~
   - Format reward
   - RAG accuracy reward using the RAGAS framework
 
-The total reward is calculated as:
+  The total reward is calculated as:
 
-$$r_{total} = r_{accuracy} + r_{format} + r_{rag}$$
+  $$r_{total} = r_{accuracy} + r_{format} + r_{rag}$$
 
 - **TCRAG Integration** 🔗: Uses TCRAG as the rollout generator
 
