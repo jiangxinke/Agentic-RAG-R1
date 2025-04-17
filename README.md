@@ -25,9 +25,12 @@ Agentic RAG‑R1 is an open‑source initiative to build an Agentic Retrieval‑
 
 ![Chinese version results](https://github.com/user-attachments/assets/a6e42d35-4fec-43b9-9a04-3d102e544e20)
 
+
 **English Language Version:**
 
+
 ![English version results](https://github.com/user-attachments/assets/40f11648-bf46-4cd3-873c-78ca63069499)
+
 
 ### What is Agentic RAG? 💡
 
