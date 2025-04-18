@@ -108,13 +108,32 @@ We provide our search tool repository [ArtSearch](https://github.com/Artessay/Ar
 
 ### Quick Start ⚡
 
+Follow the steps below to get up and running with Agentic RAG‑R1.
+
 #### Training
 
-comming soon~
+- **Zero‑2 Mode**  
+
+`./script/training/train_zero2.sh`
+
+- **Zero‑3 Mode**
+
+`./script/training/train_zero3.sh`
+
 
 #### Inference
 
+- **Example Mode**
+
 comming soon~
+
+- **Server Mode**
+
+Launch the chat server:
+
+`./script/run_server.sh`
+
+
 
 ## Features ✨
 
