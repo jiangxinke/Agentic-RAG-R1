@@ -1,8 +1,7 @@
 from datasets import load_dataset
 
-from data.prompt import SYSTEM_PROMPT_TOOLS as SYSTEM_PROMPT
-from data.prompt import build_prompt, build_system_tools
-# from data.prompt import SYSTEM_PROMPT
+from src.data.prompt import SYSTEM_PROMPT_TOOLS as SYSTEM_PROMPT
+from src.data.prompt import build_prompt, build_system_tools
 
 from datasets import load_dataset, Dataset
 

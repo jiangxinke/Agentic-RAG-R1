@@ -4,8 +4,8 @@ import re
 from multiprocessing.connection import Client
 from typing import Dict, List
 
-from utils.web_search import web_search
-from utils.wiki_search import create_wiki_searcher
+from src.utils.web_search import web_search
+from src.utils.wiki_search import create_wiki_searcher
 
 """
 工具函数
@@ -164,7 +164,6 @@ class Tools:
 
     def Web_RAG(self, input: str) -> str:
         RAG_result = web_search(input, count=1)
-        logging.info(f"Web_RAG result: {RAG_result}")
         return RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
 
     def KnowledgeOrganize(self, input: str) -> str:

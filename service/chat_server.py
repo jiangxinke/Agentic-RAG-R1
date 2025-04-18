@@ -19,7 +19,7 @@ from utils.utils import (
     set_random_seed,
     setup_logging,
 )
-from model.model import CustomModel
+from src.models.model import AgenticRAGModel
 import logging
 from peft import LoraConfig, PeftModel
 from torch import nn
@@ -54,7 +54,7 @@ lora_cfg = LoraConfig(
 logging.info(f"Loading LoRA weights from {checkpoint_path}")
 base_model = PeftModel.from_pretrained(base_model, checkpoint_path)
 base_model = base_model.to(device)
-model = CustomModel(base_model, tokenizer)
+model = AgenticRAGModel(base_model, tokenizer)
 
 
 @app.post("/chat/")

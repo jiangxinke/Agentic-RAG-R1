@@ -4,30 +4,13 @@ tmp.*
 repo.tar.gz
 *.backup
 
-# 忽略目录
-grpo_finetuned_model/
-
 # 忽略所有路径下的 Python 缓存文件
 **/__pycache__/
 *.py[cod]
 *$py.class
 
-logs/
-checkpoint/
-output_eval/
-output_train/
-output/
-eval_output/
-
 .env
 
-TODO
-eval*.py
-eval*.sh
-paint.py
+checkpoints/
+experiments/
 
-models/
-
-merge.py
-demo*
-test*
