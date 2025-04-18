@@ -37,12 +37,12 @@ def main():
     config = load_config("src/config/config.yaml")
 
     accelerator = Accelerator()
-    # if accelerator.is_local_main_process:
-    #     swanlab.init(
-    #         project=config.project.name,
-    #         experiment_name=config.experiment.name,
-    #         config=config.__dict__,
-    #     )
+    if accelerator.is_local_main_process:
+        swanlab.init(
+            project=config.project.name,
+            experiment_name=config.experiment.name,
+            config=config.__dict__,
+        )
 
     now = datetime.datetime.now()
     time_str = now.strftime("%Y-%m-%d %H:%M:%S")

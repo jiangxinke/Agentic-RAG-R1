@@ -32,10 +32,10 @@ training:
   save_interval: 5 # steps
 
   generation:
-    num_generations: 6
+    num_generations: 4
     max_new_tokens: 200
     max_length_for_gather: 100000
-    max_generate_iterations: 4
+    max_generate_iterations: 3
     temperature: 0.7
     do_sample: True
   
