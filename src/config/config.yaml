@@ -28,7 +28,7 @@ training:
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
-  steps_per_iteration: 100 # in one epoch
+  steps_per_iteration: 5 # in one epoch
   save_interval: 5 # steps
 
   generation:

@@ -491,11 +491,13 @@ def train_with_grpo(
 
     Raises:
         RuntimeError: On training failures or save errors.
-    """
+    """    
     optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
     policy_model.train()
     policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
-
+    
+    zero_stage = policy_model.config['zero_optimization']['stage']
+    
     sum_steps = current_step
     for it in range(1, num_iterations + 1):
         logging.info(f"start GRPO iteration {it}/{num_iterations}")
@@ -513,8 +515,11 @@ def train_with_grpo(
             lora_sd = {k: v for k, v in sd.items() if "lora" in k}
             ref_model.load_state_dict(lora_sd, strict=False)
             ref_model.to(accelerator.device)
-        ref_model = accelerator.prepare(ref_model)
-
+            
+        if zero_stage != 2:
+            ref_model = accelerator.prepare(ref_model)  # 如果是 Stage 3，准备模型
+        else:   # 如果是Stage 2，因为ref model不需要优化，所以ref model不需要用zero 2的优化optimizer
+            pass
 
         step = 0
         for batch in dataloader:
