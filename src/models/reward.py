@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+import os
 
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
@@ -50,6 +51,7 @@ def format_reward(completions: List[List[Dict[str, Any]]]) -> List[float]:
     Tag scoring:
       - <reasoning> and </reasoning>: 0.2 each (max 0.4)
       - <backtrack> and </backtrack>: 0.2 each (max 0.4)
+      - <summary> and </summary>: 0.2 each (max 0.4)
       - <search> ... </search>: 0.2 per matching pair, up to 3 pairs (max 0.6); pairs beyond 3 subtract 0.2 each
       - <answer> ... </answer>: 0.4 if exactly one matching pair, otherwise 0.0
 
@@ -78,6 +80,12 @@ def format_reward(completions: List[List[Dict[str, Any]]]) -> List[float]:
         if "<backtrack>" in response:
             score += 0.2
         if "</backtrack>" in response:
+            score += 0.2
+            
+        # summary tags
+        if "<summary>" in response:
+            score += 0.2
+        if "</summary>" in response:
             score += 0.2
 
         # search tag pairs
@@ -126,8 +134,8 @@ def rag_reward(prompts: List[str], completions: List[List[Dict[str, Any]]], rag_
 
     llm = ChatOpenAI(
         model="qwen2.5:72b",
-        base_url="http://8289.model.mingxingtech.com:10032/v1",
-        api_key="8cefb70606f3472d8731bd65661ce409",
+        base_url=os.getenv("EVAL_LLM_BASE_URL"),
+        api_key=os.getenv("EVAL_LLM_API_KEY"),
     )
     evaluator = RetrievalQualityEvaluator(llm)
 

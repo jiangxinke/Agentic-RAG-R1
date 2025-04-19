@@ -7,10 +7,10 @@ experiment:
   random_seed: 42
 
 model:
-  # name: "Qwen/Qwen2.5-0.5B-Instruct"
+  name: "Qwen/Qwen2.5-0.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
-  name: "Qwen/Qwen2.5-32B-Instruct"
+  # name: "Qwen/Qwen2.5-32B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
 

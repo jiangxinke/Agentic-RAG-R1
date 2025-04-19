@@ -8,15 +8,14 @@ import requests
 class BochaWebSearcher:
     def __init__(self, api_key: str = None):
         if api_key is None:
-            # api_key = os.getenv("BOCHA_API_KEY")
-            api_key = "sk-798b1d9cd1fd477fbfa0317bba07e419"
+            api_key = os.getenv("BOCHA_API_KEY")
             assert api_key is not None, "BOCHA_API_KEY is not set"
 
         self.api_key = api_key
 
     def search(self, query: str, count: int = 10) -> list[dict]:
 
-        url = "https://api.bochaai.com/v1/web-search"
+        url = os.getenv("BOCHA_APU_URL")
 
         payload = json.dumps(
             {

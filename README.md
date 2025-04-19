@@ -110,6 +110,8 @@ We provide our search tool repository [ArtSearch](https://github.com/Artessay/Ar
 
 Follow the steps below to get up and running with Agentic RAG‑R1.
 
+Before you start, rename file ".env_format" to ".env" and fill the necessary os enviroment variables.
+
 #### Training
 
 - **Zero‑2 Mode**  
