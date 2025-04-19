@@ -15,7 +15,7 @@ from pathlib import Path
 import deepspeed
 import swanlab
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, init_empty_weights
 from peft import LoraConfig, PeftModel, get_peft_model
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -72,44 +72,21 @@ def main():
     # Initialize model and tokenizer
     logging.info("Loading model...")
 
+    # with init_empty_weights():
     base_model = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
+        # empty_init=True
     )
 
     reference_base_model = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
+        # empty_init=True
     )
-    
-    # quant
-    if config.training.use_quant:
-        bnb_quantization_config = BnbQuantizationConfig(
-            load_in_4bit=config.qlora.load_in_4bit,
-            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
-        )
-        
-        base_model = load_and_quantize_model(
-            base_model,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
-        )
-        
-        reference_base_model = load_and_quantize_model(
-            reference_base_model,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
-        )
-        
-        logging.info(f"Using Quant: {config.qlora}")
-    else:
-        bnb_quantization_config = None
-        logging.info("Not using Quant")
-    
+
     base_model = base_model.to(device)
     reference_base_model = reference_base_model.to(device)
     logging.info("Base model loaded successfully")
@@ -148,6 +125,35 @@ def main():
     else:
         logging.info("Not using LoRA")
 
+    # quant
+    if config.training.use_quant:
+        bnb_quantization_config = BnbQuantizationConfig(
+            load_in_4bit=config.qlora.load_in_4bit,
+            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
+            load_in_8bit= config.qlora.load_in_8bit,  # enable 8bit quantization
+            llm_int8_threshold = config.qlora.llm_int8_threshold, # if load_in_8bit is True
+        )
+        
+        base_model = load_and_quantize_model(
+            base_model,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        reference_base_model = load_and_quantize_model(
+            reference_base_model,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        logging.info(f"Using Quant: {config.qlora}")
+    else:
+        bnb_quantization_config = None
+        logging.info("Not using Quant")
+    
+    
     # GRPO fine-tuning
     logging.info("Starting GRPO fine-tuning...")
     training_config = {
@@ -167,6 +173,7 @@ def main():
         "save_interval": config.training.save_interval,
     }
     logging.info(f"Training config: {training_config}")
+    
     # Optimize model memory usage
     base_model = optimize_model_memory(base_model)
     reference_base_model = optimize_model_memory(reference_base_model)

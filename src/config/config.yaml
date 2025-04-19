@@ -55,7 +55,19 @@ lora:
   task_type: "CAUSAL_LM"
 
 qlora:
-  load_in_4bit: True
+  load_in_4bit: False           # zero 2 可以为True； zero 3必须为False
   bnb_4bit_quant_type: "nf4"
   bnb_4bit_compute_dtype: "bfloat16"
-  bnb_4bit_use_double_quant: True
+  bnb_4bit_use_double_quant: False   # zero 2 可以为True； zero 3必须为False
+  load_in_8bit: True    # enable 8bit quantization  ； zero 3可以为True
+  llm_int8_threshold: 8.0   # if load_in_8bit is True ； zero 3可以为True
+
+
+  ### This is the suggested for zero 2 -- reference：https://huggingface.co/docs/accelerate/v1.6.0/en/package_reference/utilities#accelerate.utils.BnbQuantizationConfig
+  # qlora:
+  # load_in_4bit: True           # zero 2 可以为True； zero 3必须为False
+  # bnb_4bit_quant_type: "nf4"
+  # bnb_4bit_compute_dtype: "bfloat16"
+  # bnb_4bit_use_double_quant: True   # zero 2 可以为True； zero 3必须为False
+  # load_in_8bit: False    # enable 8bit quantization  ； zero 3可以为True
+  # llm_int8_threshold: 6.0   # if load_in_8bit is True ； zero 3可以为True

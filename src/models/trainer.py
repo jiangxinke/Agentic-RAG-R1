@@ -409,26 +409,6 @@ def build_agentic_rag_model(
         trust_remote_code=True,
     ).to(device)
     
-    # Quantization config (if using Quant)
-    if config.training.use_quant:
-        bnb_quantization_config = BnbQuantizationConfig(
-            load_in_4bit=config.qlora.load_in_4bit,
-            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
-        )
-        
-        base = load_and_quantize_model(
-            base,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
-        )
-        
-        logging.info(f"Using Quant: {config.qlora}")
-    else:
-        bnb_quantization_config = None
-        logging.info("Not using Quant")
-    
     # Apply LoRA if needed
     if config.training.use_lora:
         lora_cfg = LoraConfig(
@@ -444,6 +424,29 @@ def build_agentic_rag_model(
             base = PeftModel.from_pretrained(base, weights_path, config=lora_cfg, is_trainable=True)
         else:
             base = get_peft_model(base, lora_cfg)
+            
+    # Quantization config (if using Quant)
+    if config.training.use_quant:
+        bnb_quantization_config = BnbQuantizationConfig(
+            load_in_4bit=config.qlora.load_in_4bit,
+            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
+            load_in_8bit= config.qlora.load_in_8bit,  # enable 8bit quantization
+            llm_int8_threshold = config.qlora.llm_int8_threshold, # if load_in_8bit is True
+        )
+        
+        base = load_and_quantize_model(
+            base,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        logging.info(f"Using Quant: {config.qlora}")
+    else:
+        bnb_quantization_config = None
+        logging.info("Not using Quant")
+    
     # Optimize memory usage
     base = optimize_model_memory(base)
     # Wrap and return AgenticRAGModel
