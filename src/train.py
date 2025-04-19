@@ -19,6 +19,7 @@ from accelerate import Accelerator
 from peft import LoraConfig, PeftModel, get_peft_model
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 
 from src.data.prepare_dataset import prepare_dataset
 from src.models.model import AgenticRAGModel
@@ -71,32 +72,44 @@ def main():
     # Initialize model and tokenizer
     logging.info("Loading model...")
 
-    # qlora
-    if config.training.use_qlora:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=config.qlora.load_in_4bit,
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,
-            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,
-            bnb_4bit_quant_storage=getattr(torch, config.qlora.bnb_4bit_quant_storage),
-        )
-        logging.info(f"Using QLoRA: {config.qlora}")
-    else:
-        bnb_config = None
-        logging.info("Not using QLoRA")
-
     base_model = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
-        quantization_config=bnb_config,
     )
+
     reference_base_model = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
-        quantization_config=bnb_config,
     )
+    
+    # quant
+    if config.training.use_quant:
+        bnb_quantization_config = BnbQuantizationConfig(
+            load_in_4bit=config.qlora.load_in_4bit,
+            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
+        )
+        
+        base_model = load_and_quantize_model(
+            base_model,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        reference_base_model = load_and_quantize_model(
+            reference_base_model,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        logging.info(f"Using Quant: {config.qlora}")
+    else:
+        bnb_quantization_config = None
+        logging.info("Not using Quant")
+    
     base_model = base_model.to(device)
     reference_base_model = reference_base_model.to(device)
     logging.info("Base model loaded successfully")

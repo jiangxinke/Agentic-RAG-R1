@@ -24,7 +24,7 @@ training:
   current_step: 0
 
   use_lora: true
-  use_qlora: false
+  use_quant: true
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
@@ -55,8 +55,7 @@ lora:
   task_type: "CAUSAL_LM"
 
 qlora:
-  load_in_4bit: true
+  load_in_4bit: True
   bnb_4bit_quant_type: "nf4"
   bnb_4bit_compute_dtype: "bfloat16"
-  bnb_4bit_use_double_quant: true
-  bnb_4bit_quant_storage: "bfloat16"
+  bnb_4bit_use_double_quant: True

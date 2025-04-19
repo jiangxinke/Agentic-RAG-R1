@@ -140,6 +140,7 @@ Launch the chat server:
 ## Features ✨
 
 - **LoRA Tuning Support** 🔧: Fine-tune efficiently with Low-Rank Adaptation
+- **Model Quant Support** 💻: Support model quant to nf4 and ..
 - **Custom Agent Tools** 🛠️: Integrate your own tools and personal RAG datasets
 - **Distributed Training** 🌐: Support for Deepspeed Zero 2 Stage and Zero 3 Stage
 - **Efficient Resource Usage** 💻: Support for models up to 32B parameters using only 2 A100 GPUs
@@ -175,7 +176,6 @@ Our Qwen 2.5-7B-Instruct model was evaluated on the MedQA test set using Qwen‑
 
 ## Roadmap 🗺️
 
-- [ ] Support model quantification
 - [ ] Add more tools
 - [ ] [Additional planned features]
 

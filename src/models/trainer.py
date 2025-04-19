@@ -12,6 +12,7 @@ from accelerate import Accelerator
 from deepspeed import DeepSpeedEngine
 from peft import LoraConfig, PeftModel, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 
 from src.models.model import AgenticRAGModel
 from src.models.reward import overall_reward
@@ -400,24 +401,34 @@ def build_agentic_rag_model(
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config.model.name, padding_side="left")
     tokenizer.pad_token = tokenizer.eos_token
-    # Quantization config (if using QLoRA)
-    if config.training.use_qlora:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=config.qlora.load_in_4bit,
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,
-            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,
-            bnb_4bit_quant_storage=getattr(torch, config.qlora.bnb_4bit_quant_storage),
-        )
-    else:
-        bnb_config = None
+    
     # Load base model
     base = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
-        quantization_config=bnb_config,
     ).to(device)
+    
+    # Quantization config (if using Quant)
+    if config.training.use_quant:
+        bnb_quantization_config = BnbQuantizationConfig(
+            load_in_4bit=config.qlora.load_in_4bit,
+            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
+        )
+        
+        base = load_and_quantize_model(
+            base,
+            bnb_quantization_config=bnb_quantization_config,
+            device_map = "auto"
+        )
+        
+        logging.info(f"Using Quant: {config.qlora}")
+    else:
+        bnb_quantization_config = None
+        logging.info("Not using Quant")
+    
     # Apply LoRA if needed
     if config.training.use_lora:
         lora_cfg = LoraConfig(
@@ -572,5 +583,5 @@ def train_with_grpo(
 
             accelerator.wait_for_everyone()
 
-        del ref_model
+        del ref_model       # 清除历史的ref model，节约内存
         torch.cuda.empty_cache()
