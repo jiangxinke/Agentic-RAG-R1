@@ -206,7 +206,7 @@ If you use this work in your research, please cite:
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sunnynexus/Search-o1&type=Date)](https://star-history.com/#sunnynexus/Search-o1&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=sunnynexus/Agentic-RAG-R1&type=Date)](https://star-history.com/#sunnynexus/Agentic-RAG-R1&Date)
 
 ## License 📄
 
