@@ -204,6 +204,10 @@ If you use this work in your research, please cite:
 }
 ```
 
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sunnynexus/Search-o1&type=Date)](https://star-history.com/#sunnynexus/Search-o1&Date)
+
 ## License 📄
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
