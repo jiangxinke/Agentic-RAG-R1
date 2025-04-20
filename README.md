@@ -182,6 +182,7 @@ Our Qwen 2.5-7B-Instruct model was evaluated on the MedQA test set using Qwen‑
 ## Acknowledgements 🙏
 
 The concept of Agentic-RAG-R1 is inspired by [Deepseek-R1](https://arxiv.org/abs/2501.12948) and [TC-RAG](https://arxiv.org/abs/2408.09199). We sincerely appreciate the efforts of these teams for their contributions to open-source research and development.
+This work is the same period work with Search-R1 and ReSearch.
 
 ## Citation 📝
 
