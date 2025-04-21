@@ -1,21 +1,29 @@
 # 🤖 Agentic RAG-R1: Enhance Agentic RAG Reasoning Capacity via Reinforcement Learning 🚀
 
 ## Table of Contents
-- [Introduction](#introduction)
-  - [What is Agentic RAG?](#what-is-agentic-rag)
-  - [Architecture](#architecture)
-  - [Training Strategy](#training-strategy)
-  - [Rollout Generation](#rollout-generation)
-- [Installation](#installation)
-  - [Tools Environment](#tools-environment-optional)
-  - [Folder Structure](#folder-structure)
-  - [Quick Start](#quick-start)
-- [Features](#features)
-- [Results](#results)
-- [Roadmap](#roadmap)
-- [Acknowledgements](#acknowledgements)
-- [Citation](#citation)
-- [License](#license)
+- [🤖 Agentic RAG-R1: Enhance Agentic RAG Reasoning Capacity via Reinforcement Learning 🚀](#-agentic-rag-r1-enhance-agentic-rag-reasoning-capacity-via-reinforcement-learning-)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction 🌟](#introduction-)
+    - [What is Agentic RAG? 💡](#what-is-agentic-rag-)
+    - [Architecture 🏗️](#architecture-️)
+    - [Training Strategy 🧠](#training-strategy-)
+    - [Rollout Generation 🔄](#rollout-generation-)
+  - [Installation 🛠️](#installation-️)
+    - [Tools Environment (Optional) 🧰](#tools-environment-optional-)
+    - [Folder Structure 📁](#folder-structure-)
+    - [Quick Start ⚡](#quick-start-)
+      - [Training](#training)
+      - [Inference](#inference)
+  - [Features ✨](#features-)
+  - [Results 📊](#results-)
+    - [Experiment Log on Qwen 2.5-7B-Instruct](#experiment-log-on-qwen-25-7b-instruct)
+    - [Results on MedQA Test Set 🏥](#results-on-medqa-test-set-)
+  - [Roadmap 🗺️](#roadmap-️)
+  - [Acknowledgements 🙏](#acknowledgements-)
+  - [Contributors📝](#contributors)
+  - [Citation 📝](#citation-)
+  - [🌟 Star History](#-star-history)
+  - [License 📄](#license-)
 
 ## Introduction 🌟
 
@@ -143,7 +151,7 @@ Launch the chat server:
 - **Model Quant Support** 💻: Support model quant to nf4 and ..
 - **Custom Agent Tools** 🛠️: Integrate your own tools and personal RAG datasets
 - **Distributed Training** 🌐: Support for Deepspeed Zero 2 Stage and Zero 3 Stage
-- **Efficient Resource Usage** 💻: Support for models up to 32B parameters using only 2 A100 GPUs
+- **Efficient Resource Usage** 💻: Support for models up to 32B parameters using only **2 A100 GPUs**
 - **Tool Calling Reward** 🎯: Enhanced reward model that includes:
   - Accuracy reward
   - Format reward
@@ -153,7 +161,7 @@ Launch the chat server:
 
   $$r_{total} = r_{accuracy} + r_{format} + r_{rag}$$
 
-- **TCRAG Integration** 🔗: Uses TCRAG as the rollout generator
+- **TCRAG Integration** 🔗: Use [TCRAG](https://github.com/Artessay/TC-RAG) as the rollout generator
 
 ## Results 📊
 
@@ -210,4 +218,4 @@ If you use this work in your research, please cite:
 
 ## License 📄
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License. See the [LICENSE](LICENSE) file for details.
