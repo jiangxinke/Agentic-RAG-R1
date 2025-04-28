@@ -185,7 +185,7 @@ def build_prompt(messages):
     return "\n".join([msg["content"].strip() for msg in messages])
 
 
-from utils.Tools import Tools
+from src.utils.Tools import Tools
 
 
 def build_system_tools(sys_prompt=SYSTEM_PROMPT_TOOLS):

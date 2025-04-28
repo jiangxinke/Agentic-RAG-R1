@@ -7,7 +7,7 @@ import yaml
 from dotmap import DotMap
 
 
-def load_config(config_file: str = "config/config.yaml") -> DotMap:
+def load_config(config_file: str = "src/config/config.yaml") -> DotMap:
     """
     Loads configuration from the specified YAML file
     and returns a DotMap object for dot-notation access.

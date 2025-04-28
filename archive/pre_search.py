@@ -29,32 +29,6 @@ load_dotenv()
 install()
 
 
-def strip_prefix(state_dict: dict[str, torch.Tensor], pattern: str = r"^(?:model\.|base_model\.)+") -> dict[str, torch.Tensor]:
-    """Remove leading ``model.`` / ``base_model.`` (possibly repeated) from keys."""
-    return {re.sub(pattern, "", k): v for k, v in state_dict.items()}
-
-
-def load_lora_weights(base_model: torch.nn.Module, checkpoint_path: Path, lora_cfg: LoraConfig) -> torch.nn.Module:
-    """Try to load LoRA adapter; if direct load fails, strip prefixes and retry."""
-
-    try:
-        logging.info("Attempting direct `PeftModel.from_pretrained()` …")
-        return PeftModel.from_pretrained(base_model, str(checkpoint_path), config=lora_cfg)
-    except Exception as err:  # noqa: BLE001  (broad but intentional)
-        logging.warning(f"Direct load failed ({err}). Falling back to manual load with prefix‑stripping…")
-
-    adapter_file = checkpoint_path / "adapter_model.bin"
-    if not adapter_file.exists():
-        raise FileNotFoundError(f"Expected adapter file not found: {adapter_file}")
-
-    peft_model = PeftModel(base_model, lora_cfg)
-    raw_sd = torch.load(adapter_file, map_location="cpu")
-    clean_sd = strip_prefix(raw_sd)
-    missing, unexpected = peft_model.load_state_dict(clean_sd, strict=False)
-    logging.info("LoRA weights loaded with missing=%d, unexpected=%d", len(missing), len(unexpected))
-    return peft_model
-
-
 def parse_args() -> argparse.Namespace:
     """Parse command‑line arguments."""
 
@@ -73,11 +47,7 @@ def main() -> None:  # noqa: C901  (function is long but clear)
     config.dataset.num_eval = args.num_eval
 
     # 2. Paths ---------------------------------------------------------------
-    checkpoint_dir = Path(f"./checkpoints/{config.experiment.name}/{args.date}")
-    checkpoint_path = checkpoint_dir / f"step-{args.checkpoint_step:04d}"
-    checkpoint_path.exists() or (_ := (_ for _ in ()).throw(FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")))
-
-    output_dir = Path(f"experiments/post/{config.experiment.name}/{args.date}/step-{args.checkpoint_step:04d}")
+    output_dir = Path(f"experiments/pre_search/{config.model.name}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 3. Logging / random seed ----------------------------------------------
@@ -114,46 +84,16 @@ def main() -> None:  # noqa: C901  (function is long but clear)
     tokenizer.pad_token = tokenizer.eos_token
     base_model.config.pad_token_id = tokenizer.eos_token_id
 
-    # 7. LoRA ---------------------------------------------------------------
-    if config.training.use_lora:
-        logging.info("Applying LoRA configuration…")
-        lora_cfg = LoraConfig(
-            r=config.lora.r,
-            lora_alpha=config.lora.lora_alpha,
-            target_modules=config.lora.target_modules,
-            lora_dropout=config.lora.lora_dropout,
-            bias=config.lora.bias,
-            task_type=config.lora.task_type,
-        )
-        logging.info("Loading LoRA weights from %s", checkpoint_path)
-        base_model = load_lora_weights(base_model, checkpoint_path, lora_cfg)
-    else:
-        logging.warning("LoRA not enabled; using base model only.")
-
-    # 8. Quantization --------------------------------------------------------
-    if config.training.use_quant:
-        bnb_quant_cfg = BnbQuantizationConfig(
-            load_in_4bit=config.qlora.load_in_4bit,
-            bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,
-            load_in_8bit=config.qlora.load_in_8bit,
-            llm_int8_threshold=config.qlora.llm_int8_threshold,
-        )
-        base_model = load_and_quantize_model(base_model, bnb_quantization_config=bnb_quant_cfg, device_map="auto")
-        logging.info("Quantization applied: %s", config.qlora)
-    else:
-        logging.info("Not using quantization.")
-
-    # 9. Device + memory tweaks ---------------------------------------------
+    # 7. Device + memory tweaks ---------------------------------------------
     base_model.to(device)
     base_model = optimize_model_memory(base_model)
 
-    # 10. Wrap + prepare -----------------------------------------------------
-    model = AgenticRAGModel(base_model, tokenizer)
+    # 8. Wrap + prepare -----------------------------------------------------
+    model = base_model
+    # model = AgenticRAGModel(model, tokenizer)
     model, eval_dataloader = accelerator.prepare(model, eval_dataloader)
 
-    # 11. Evaluate -----------------------------------------------------------
+    # 9. Evaluate -----------------------------------------------------------
     logging.info("Starting evaluation…")
     evaluate(
         model=model,

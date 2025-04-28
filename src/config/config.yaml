@@ -3,13 +3,13 @@ project:
   description: "under-construction"
 
 experiment:
-  name: "qwen2.5-32b-medqa-4GPU"  # 实验名称，对应 experiments/ 下的目录
+  name: "qwen2.5-14B-medqa-2GPU"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
-  name: "Qwen/Qwen2.5-0.5B-Instruct"
+  # name: "Qwen/Qwen2.5-0.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
-  # name: "Qwen/Qwen2.5-14B-Instruct"
+  name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
@@ -28,11 +28,11 @@ training:
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
-  steps_per_iteration: 5 # in one epoch
+  steps_per_iteration: 100 # in one epoch
   save_interval: 5 # steps
 
   generation:
-    num_generations: 4
+    num_generations: 16
     max_new_tokens: 200
     max_length_for_gather: 100000
     max_generate_iterations: 3

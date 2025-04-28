@@ -192,7 +192,7 @@ def evaluate(
             gathered = sorted(gathered, key=lambda x: x["id"])
             _save_results("evaluation_after_grpo", gathered)
             filtered = [r for r in gathered if r["predicted"]]
-            from utils.evaluate import evaluate_with_llm
+            from src.utils.evaluate import evaluate_with_llm
 
             c, t, acc, _ = evaluate_with_llm(prompt, filtered)
             stats["post_grpo_correct"] = c
