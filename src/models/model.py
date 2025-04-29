@@ -1,4 +1,5 @@
 import logging
+import pdb
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -282,6 +283,97 @@ class AgenticRAGModel(PreTrainedModel):
         padded = padded[:, skip:] if skip < padded.size(1) else padded[:, :1]
         return padded
 
+    def prompt_left_generation_right_padding(
+        self,
+        input_ids: torch.LongTensor,
+        outputs: List[Optional[torch.LongTensor]],
+        device: torch.device,
+        max_length_for_gather: int,
+    ) -> torch.LongTensor:
+        """
+        Align input and generated parts with left padding for input and right padding for generation.
+
+        Args:
+            input_ids (torch.LongTensor): Input token IDs with left padding.
+            outputs (List[Optional[torch.LongTensor]]): List of generated sequences.
+            device (torch.device): Target device for output tensor.
+            max_length_for_gather (int): Maximum sequence length.
+
+        Returns:
+            torch.LongTensor: Combined tensor with left-padded input and right-padded generation.
+        """
+        # pdb.set_trace()
+        batch_size = input_ids.size(0)
+        input_contents = []
+        generation_parts = []
+        max_gen_len = 0
+
+        # extract input contents and generation parts
+        for i in range(batch_size):
+            input_seq = input_ids[i]
+            non_pad_mask = input_seq != self.tokenizer.eos_token_id
+            non_pad_len = non_pad_mask.sum().item()
+            input_content = input_seq[-non_pad_len:]  # Get the actual input content
+            input_contents.append(input_content)
+
+            if outputs[i] is None:
+                generation_parts.append(None)
+                continue
+
+            output_seq = outputs[i]
+            input_len = len(input_content)
+            output_len = len(output_seq)
+            input_end_pos = output_len  # Default to end if not found
+
+            non_pad_mask = output_seq != self.tokenizer.eos_token_id
+            first_non_pad = torch.nonzero(non_pad_mask, as_tuple=True)[0]
+            if len(first_non_pad) > 0:
+                start_pos = first_non_pad[0].item()
+                if start_pos + input_len <= output_len and torch.equal(
+                    output_seq[start_pos : start_pos + input_len], input_content
+                ):
+                    input_end_pos = start_pos + input_len
+
+            gen_part = output_seq[input_end_pos:]
+            generation_parts.append(gen_part)
+            max_gen_len = max(max_gen_len, len(gen_part))
+
+        max_gen_len = min(max_gen_len, max_length_for_gather)
+
+        # combine input and padded generation parts
+        final_outputs = []
+        for i in range(batch_size):
+            input_content = input_contents[i]
+            gen_part = generation_parts[i]
+
+            if gen_part is None:
+                # If no generation, just use input with right padding
+                padded = torch.full(
+                    (max_gen_len + len(input_ids[i]),),
+                    self.tokenizer.eos_token_id,
+                    dtype=torch.long,
+                    device=device,
+                )
+                padded[: len(input_ids[i])] = input_ids[i]  # Use original input_ids with left padding
+            else:
+                # Right pad the generation part
+                padded_gen = torch.full(
+                    (max_gen_len,),
+                    self.tokenizer.eos_token_id,
+                    dtype=torch.long,
+                    device=device,
+                )
+                gen_len = min(len(gen_part), max_gen_len)
+                padded_gen[:gen_len] = gen_part[:gen_len]
+
+                # Combine original input_ids with padded generation
+                padded = torch.cat([input_ids[i], padded_gen])
+
+            final_outputs.append(padded)
+
+        # pdb.set_trace()
+        return torch.stack(final_outputs)
+
     def generate_with_think_interruption(
         self,
         input_ids: torch.LongTensor,
@@ -408,4 +500,5 @@ class AgenticRAGModel(PreTrainedModel):
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
 
-        return self.padding_and_truncate(outputs, device, max_length_for_gather)
+        final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
+        return final_output

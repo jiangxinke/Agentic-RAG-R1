@@ -1,18 +1,20 @@
 import copy
 import logging
 import os
+import pdb
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import deepspeed
+import pudb
 import swanlab
 import torch
 import torch.nn.functional as F
 from accelerate import Accelerator
+from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from deepspeed import DeepSpeedEngine
 from peft import LoraConfig, PeftModel, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 
 from src.models.model import AgenticRAGModel
 from src.models.reward import overall_reward
@@ -130,6 +132,7 @@ def generate_completions(
     Raises:
         RuntimeError: On generation failure or device mismatch.
     """
+    # pdb.set_trace()
     device = next(model.parameters()).device
     tokenizer.padding_side = "left"
 
@@ -144,7 +147,7 @@ def generate_completions(
     prompt_mask = prompt_mask.repeat_interleave(num_generations, dim=0)
 
     # Generate sequences
-    outputs = model(
+    completion_ids = model(
         prompt_ids,
         attention_mask=prompt_mask,
         max_new_tokens=max_new_tokens,
@@ -153,7 +156,7 @@ def generate_completions(
         temperature=temperature,
         max_generate_iterations=max_generate_iterations,
     )
-    completion_ids = outputs[:, prompt_len:]
+    # completion_ids = outputs[:, prompt_len:]
 
     # Compute mask
     start_ids = tokenizer("<observation>").input_ids
@@ -401,14 +404,14 @@ def build_agentic_rag_model(
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config.model.name, padding_side="left")
     tokenizer.pad_token = tokenizer.eos_token
-    
+
     # Load base model
     base = AutoModelForCausalLM.from_pretrained(
         config.model.name,
         torch_dtype=getattr(torch, config.model.torch_dtype),
         trust_remote_code=True,
     ).to(device)
-    
+
     # Apply LoRA if needed
     if config.training.use_lora:
         lora_cfg = LoraConfig(
@@ -424,29 +427,25 @@ def build_agentic_rag_model(
             base = PeftModel.from_pretrained(base, weights_path, config=lora_cfg, is_trainable=True)
         else:
             base = get_peft_model(base, lora_cfg)
-            
+
     # Quantization config (if using Quant)
     if config.training.use_quant:
         bnb_quantization_config = BnbQuantizationConfig(
             load_in_4bit=config.qlora.load_in_4bit,
             bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
-            load_in_8bit= config.qlora.load_in_8bit,  # enable 8bit quantization
-            llm_int8_threshold = config.qlora.llm_int8_threshold, # if load_in_8bit is True
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,  # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,  # optional
+            load_in_8bit=config.qlora.load_in_8bit,  # enable 8bit quantization
+            llm_int8_threshold=config.qlora.llm_int8_threshold,  # if load_in_8bit is True
         )
-        
-        base = load_and_quantize_model(
-            base,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
-        )
-        
+
+        base = load_and_quantize_model(base, bnb_quantization_config=bnb_quantization_config, device_map="auto")
+
         logging.info(f"Using Quant: {config.qlora}")
     else:
         bnb_quantization_config = None
         logging.info("Not using Quant")
-    
+
     # Optimize memory usage
     base = optimize_model_memory(base)
     # Wrap and return AgenticRAGModel
@@ -505,13 +504,13 @@ def train_with_grpo(
 
     Raises:
         RuntimeError: On training failures or save errors.
-    """    
+    """
     optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
     policy_model.train()
     policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
-    
-    zero_stage = policy_model.config['zero_optimization']['stage']
-    
+
+    zero_stage = policy_model.config["zero_optimization"]["stage"]
+
     sum_steps = current_step
     for it in range(1, num_iterations + 1):
         logging.info(f"start GRPO iteration {it}/{num_iterations}")
@@ -529,10 +528,10 @@ def train_with_grpo(
             lora_sd = {k: v for k, v in sd.items() if "lora" in k}
             ref_model.load_state_dict(lora_sd, strict=False)
             ref_model.to(accelerator.device)
-            
+
         if zero_stage != 2:
             ref_model = accelerator.prepare(ref_model)  # 如果是 Stage 3，准备模型
-        else:   # 如果是Stage 2，因为ref model不需要优化，所以ref model不需要用zero 2的优化optimizer
+        else:  # 如果是Stage 2，因为ref model不需要优化，所以ref model不需要用zero 2的优化optimizer
             pass
 
         step = 0
@@ -566,7 +565,7 @@ def train_with_grpo(
                 swanlab.log(
                     {
                         "Iteration": it,
-                        "Step": step+1,
+                        "Step": step + 1,
                         "Loss": loss_val,
                         "Avg Reward": avg_r,
                     }
@@ -586,5 +585,5 @@ def train_with_grpo(
 
             accelerator.wait_for_everyone()
 
-        del ref_model       # 清除历史的ref model，节约内存
+        del ref_model  # 清除历史的ref model，节约内存
         torch.cuda.empty_cache()

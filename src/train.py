@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 from rich.traceback import install
+from rich.logging import RichHandler
+from rich import print
 
 load_dotenv()
 install()

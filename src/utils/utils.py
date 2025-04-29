@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import yaml
 from dotmap import DotMap
+from rich.logging import RichHandler
 
 
 def load_config(config_file: str = "src/config/config.yaml") -> DotMap:
@@ -94,7 +95,7 @@ def print_memory_usage():
 
 
 def setup_logging(log_dir=None, level=logging.INFO):
-    handlers = [logging.StreamHandler()]
+    handlers = [RichHandler(show_time=False, show_path=False)]
 
     if log_dir is not None:
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -102,6 +103,6 @@ def setup_logging(log_dir=None, level=logging.INFO):
 
     logging.basicConfig(
         level=level,
-        format=("[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s"),
+        format=("[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] \n%(message)s"),
         handlers=handlers,
     )
