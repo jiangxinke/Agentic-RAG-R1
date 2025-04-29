@@ -185,6 +185,7 @@ Our Qwen 2.5-7B-Instruct model was evaluated on the MedQA test set using Qwen‑
 ## Roadmap 🗺️
 
 - [ ] Add more tools
+- [ ] Support vllm for multi-turn KV Cache Accelerate when generate rollout
 - [ ] [Additional planned features]
 
 ## Acknowledgements 🙏
