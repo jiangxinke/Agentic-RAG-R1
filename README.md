@@ -206,7 +206,7 @@ If you use this work in your research, please cite:
 ```bibtex
 @misc{Agentic_RAG_R1,
   title       = {Agentic RAG-R1: Enhance Agentic RAG Reasoning Capacity via Reinforcement Learning},
-  author      = {Xinke Jiang, Jiaran Gao, Rihong Qiu, Wentao Zhang, Yue Fang},
+  author      = {Xinke Jiang, Jiaran Gao, Rihong Qiu, Wentao Zhang, Yue Fang, Hongxin Ding},
   year        = {2025},
   howpublished= {\url{https://github.com/jiangxinke/Agentic-RAG-R1}},
   note        = {GitHub repository},
