@@ -8,13 +8,13 @@ from typing import Any
 import torch
 from accelerate import Accelerator
 from dotenv import load_dotenv
+from models.evaluater import evaluate
 from rich.traceback import install
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.prepare_dataset import prepare_dataset
 from data.prompt import LLM_EVAL_PROMPT
-from models.evaluater import evaluate
 from utils.utils import (
     load_config,
     optimize_model_memory,
@@ -46,7 +46,7 @@ def main() -> None:
 
     _, eval_dataset = prepare_dataset(
         split="train",
-        name=config.dataset.name,
+        dataset_name=config.dataset.name,
         eval_size=config.dataset.num_eval,
     )
     if len(eval_dataset) == 0:
