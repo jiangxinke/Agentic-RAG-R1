@@ -1,3 +1,4 @@
+import contextlib
 import copy
 import logging
 import os
@@ -14,6 +15,7 @@ from accelerate import Accelerator
 from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from deepspeed import DeepSpeedEngine
 from peft import LoraConfig, PeftModel, get_peft_model
+from peft.utils import get_peft_model_state_dict
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from src.models.model import AgenticRAGModel
@@ -453,6 +455,40 @@ def build_agentic_rag_model(
     return AgenticRAGModel(base, tokenizer)
 
 
+def _unwrap_peft(model):
+    """
+    Sequentially unwrap DeepSpeedEngine / AgenticRAGModel, and return the PeftModel
+    """
+    if isinstance(model, deepspeed.DeepSpeedEngine):
+        model = model.module  # --> AgenticRAGModel
+
+    if hasattr(model, "model"):
+        model = model.model  # --> PeftModel
+
+    if not isinstance(model, PeftModel):
+        raise ValueError("Underlying model is not a PeftModel")
+
+    return model
+
+
+def save_lora_only_in_zero2(engine, tokenizer, ckpt_dir):
+    """
+    save lora only for ZeRO‑2
+    """
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    peft_model = _unwrap_peft(engine)
+    lora_params = [p for n, p in peft_model.named_parameters() if "lora" in n]
+
+    enabled = isinstance(engine, deepspeed.DeepSpeedEngine) and engine.zero_optimization_stage() == 2
+
+    with deepspeed.zero.GatheredParameters(lora_params, enabled=enabled):
+        lora_state = get_peft_model_state_dict(peft_model)
+
+    peft_model.save_pretrained(ckpt_dir, state_dict=lora_state)
+    tokenizer.save_pretrained(ckpt_dir)
+
+
 def train_with_grpo(
     config: Dict[str, Any],
     device: torch.device,
@@ -577,10 +613,16 @@ def train_with_grpo(
             step += 1
             if sum_steps % save_interval == 0 and sum_steps > current_step:
                 if accelerator.is_local_main_process:
+                    logging.info(f"save checkpoint at step {sum_steps}")
                     ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
                     os.makedirs(ckpt, exist_ok=True)
-                    policy_model.save_pretrained(ckpt)
-                    tokenizer.save_pretrained(ckpt)
+                    if zero_stage == 2:
+                        save_lora_only_in_zero2(policy_model, tokenizer, ckpt)
+                    elif zero_stage == 3:
+                        policy_model.save_pretrained(ckpt)
+                        tokenizer.save_pretrained(ckpt)
+                    else:
+                        raise ValueError(f"Unsupported zero stage: {zero_stage}")
             if step >= steps_per_iteration:
                 break
 

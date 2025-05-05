@@ -26,14 +26,14 @@ training:
 
   use_lora: true
   use_quant: true
-  batch_size: 2
+  batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
-  steps_per_iteration: 100 # in one epoch
-  save_interval: 5 # steps
+  steps_per_iteration: 2 # in one epoch
+  save_interval: 1 # steps
 
   generation:
-    num_generations: 2
+    num_generations: 4
     max_new_tokens: 100
     max_length_for_gather: 100000
     max_generate_iterations: 3
