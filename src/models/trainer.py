@@ -304,6 +304,7 @@ def compute_group_relative_advantages(
     Returns:
         torch.Tensor: Advantages of shape (batch*num_gen, 1).
     """
+    # TODO add if else
     groups = rewards.view(-1, num_generations)
     means = groups.mean(dim=1)
     stds = groups.std(dim=1)
@@ -371,7 +372,7 @@ def maximize_grpo_objective(
 
     adv = compute_group_relative_advantages(rewards, rollout_data["num_generations"])
     surr1 = ratio * adv
-    surr2 = torch.clamp(ratio, 1 - epsilon, 1 + epsilon) * adv
+    surr2 = torch.clamp(ratio, 1 - epsilon, 1 + 1.5 * epsilon) * adv
     surr = torch.min(surr1, surr2)
 
     kl = torch.exp(ref_lp - curr_lp) - (ref_lp - curr_lp) - 1
