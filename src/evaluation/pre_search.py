@@ -47,7 +47,7 @@ def main() -> None:
 
     _, eval_dataset = prepare_dataset(
         split="train",
-        dataset_name=config.dataset.name,
+        name=config.dataset.name,
         eval_size=config.dataset.num_eval,
     )
     if len(eval_dataset) == 0:
