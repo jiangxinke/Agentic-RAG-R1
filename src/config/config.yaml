@@ -26,6 +26,7 @@ training:
 
   use_lora: true
   use_quant: true
+  use_KV_Cache: true
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
