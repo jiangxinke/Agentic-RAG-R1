@@ -159,6 +159,7 @@ def main():
     # GRPO fine-tuning
     logging.info("Starting GRPO fine-tuning...")
     training_config = {
+        "use_KV_Cache": config.training.use_KV_Cache,
         "num_iterations": config.training.num_iterations,
         "steps_per_iteration": config.training.steps_per_iteration,
         "num_generations": config.training.generation.num_generations,

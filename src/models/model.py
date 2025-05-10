@@ -96,6 +96,7 @@ class AgenticRAGModel(PreTrainedModel):
         logits_to_keep: Optional[int] = None,
         obtain_logits: bool = False,
         max_generate_iterations: int = 8,
+        use_KV_Cache: bool = False,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -111,6 +112,7 @@ class AgenticRAGModel(PreTrainedModel):
             logits_to_keep (Optional[int]): If logging probabilities, number of tokens.
             obtain_logits (bool): Switch to logits-only mode.
             max_generate_iterations (int): Iterations for think interruptions.
+            use_KV_Cache (bool): Whether to use KV cache.
             **kwargs: Extra args forwarded to generate.
 
         Returns:
@@ -119,19 +121,34 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: If model generation fails.
         """
+        pdb.set_trace()
         if not obtain_logits:
-            return self.generate_with_think_interruption(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=max_new_tokens,
-                max_length_for_gather=max_length_for_gather,
-                do_sample=do_sample,
-                temperature=temperature,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-                max_generate_iterations=max_generate_iterations,
-                **kwargs,
-            )
+            if use_KV_Cache:
+                return self.generate_with_think_interruption_KV_Cache(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=max_new_tokens,
+                    max_length_for_gather=max_length_for_gather,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    max_generate_iterations=max_generate_iterations,
+                    **kwargs,
+                )
+            else:
+                return self.generate_with_think_interruption(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=max_new_tokens,
+                    max_length_for_gather=max_length_for_gather,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    max_generate_iterations=max_generate_iterations,
+                    **kwargs,
+                )
         logits = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -150,6 +167,7 @@ class AgenticRAGModel(PreTrainedModel):
         pad_token_id: Optional[int] = None,
         eos_token_id: Optional[int] = None,
         max_generate_iterations: int = 8,
+        use_KV_Cache: bool = False,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -166,6 +184,7 @@ class AgenticRAGModel(PreTrainedModel):
             do_sample=do_sample,
             temperature=temperature,
             max_generate_iterations=max_generate_iterations,
+            use_KV_Cache=use_KV_Cache,
             **kwargs,
         )
 
@@ -499,6 +518,152 @@ class AgenticRAGModel(PreTrainedModel):
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
+
+        final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
+        return final_output
+
+    def generate_with_think_interruption_KV_Cache(
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: Optional[torch.LongTensor],
+        max_new_tokens: int,
+        max_length_for_gather: int,
+        do_sample: bool,
+        temperature: float,
+        pad_token_id: int,
+        eos_token_id: int,
+        max_generate_iterations: int,
+    ) -> torch.LongTensor:
+        """
+        Perform iterative generation with tool calls based on markers in text. Use KV Cache to accelerate it.
+
+        The loop:
+          1. Generate tokens.
+          2. If '</answer>' appears, finalize that sample.
+          3. If '<search>...</search>' appears, call tool, insert '<observation>' block, and continue.
+          4. Otherwise, continue generating until EOS or max iterations.
+
+        Args:
+            input_ids (torch.LongTensor): Starting tokens.
+            attention_mask (Optional[torch.LongTensor]): Attention mask.
+            max_new_tokens (int): Tokens per generation iteration.
+            max_length_for_gather (int): Final gather length.
+            do_sample (bool): Sampling flag.
+            temperature (float): Sampling temperature.
+            pad_token_id (int): Padding token ID.
+            eos_token_id (int): End-of-sequence token ID.
+            max_generate_iterations (int): Max loop iterations.
+
+        Returns:
+            torch.LongTensor: Padded output IDs for all samples.
+
+        Raises:
+            RuntimeError: On generation or tool-calling failures.
+        """
+        device = input_ids.device
+        batch_size = input_ids.size(0)
+        if attention_mask is None:
+            attention_mask = torch.ones_like(input_ids)
+
+        should_gen = torch.ones(batch_size, dtype=torch.bool, device=device)
+        outputs: List[Optional[torch.LongTensor]] = [None] * batch_size
+        criteria = StoppingCriteriaList([SearchTagStoppingCriteria(self.tokenizer)])
+
+        current_ids = input_ids.clone()
+        current_mask = attention_mask.clone()
+
+        past_key_values: Optional[List[Tuple[torch.Tensor]]] = None
+
+        for _ in range(max_generate_iterations):
+            # Skip leading EOS columns
+            skip_len = 0
+            for pos in range(current_ids.size(1)):
+                if (current_ids[:, pos] == eos_token_id).all():
+                    skip_len += 1
+                else:
+                    break
+            if skip_len:
+                current_ids = current_ids[:, skip_len:]
+                current_mask = current_mask[:, skip_len:]
+
+            if not should_gen.any():
+                break
+
+            active = torch.nonzero(should_gen).squeeze(1)
+
+            # Drop past_key_values entries for finished samples
+            if past_key_values is not None:
+                past_key_values = tuple(tuple(tensor[active] for tensor in layer) for layer in past_key_values)
+
+            gen_out_dict = self.model.generate(
+                input_ids=current_ids,
+                attention_mask=current_mask,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                pad_token_id=pad_token_id,
+                eos_token_id=eos_token_id,
+                stopping_criteria=criteria,
+                use_cache=True,
+                past_key_values=past_key_values,
+                return_dict_in_generate=True,
+            )
+
+            past_key_values = gen_out_dict.past_key_values
+            gen_out = gen_out_dict.sequences
+
+            next_prompts = []
+
+            for idx, seq in enumerate(gen_out):
+                b = active[idx].item()
+                old_len = current_ids.size(1) - 1
+                new_tokens = seq[old_len:]
+                text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
+
+                # 1) Answer end
+                if "</answer>" in text:
+                    end = text.index("</answer>") + len("</answer>")
+                    prev = self.tokenizer.decode(seq[:old_len], skip_special_tokens=False)
+                    final = prev + text[:end]
+                    outputs[b] = torch.tensor(self.tokenizer.encode(final), device=device)
+                    should_gen[b] = False
+                    continue
+
+                # 2) Search and observation
+                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
+                    part = text
+                    s = part.index("<search>") + len("<search>")
+                    e = part.index("</search>")
+                    query = part[s:e].strip()
+                    try:
+                        pname, pargs = self.parse_latest_plugin_call(query)
+                        obs = self.call_plugin(pname, pargs)
+                    except Exception as exc:
+                        obs = f"<observation>Error: {exc}"  # preserve flow
+                    sub = part[: e + len("</search>")]
+                    merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
+                    merged += sub + obs + "\n"
+                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+
+                    continue
+
+                # 3) Continue or finish
+                eos_found = eos_token_id in new_tokens.tolist()
+                if not eos_found and (_ < max_generate_iterations - 1):
+                    continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
+                    next_prompts.append(continue_ids)
+                else:
+                    outputs[b] = seq
+                    should_gen[b] = False
+
+            # Prepare next round
+            if next_prompts:
+                texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
+                enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
+                current_ids = enc.input_ids.to(device)
+                current_mask = enc.attention_mask.to(device)
+            else:
+                past_key_values = None  # reset if no prompt continuation
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         return final_output

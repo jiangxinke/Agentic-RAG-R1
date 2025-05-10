@@ -107,6 +107,7 @@ def generate_completions(
     temperature: float = 0.7,
     do_sample: bool = True,
     max_generate_iterations: int = 8,
+    use_KV_Cache: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate multiple completions per prompt and compute masks for valid tokens.
@@ -157,6 +158,7 @@ def generate_completions(
         do_sample=do_sample,
         temperature=temperature,
         max_generate_iterations=max_generate_iterations,
+        use_KV_Cache=use_KV_Cache,
     )
     # completion_ids = outputs[:, prompt_len:]
 
@@ -232,6 +234,7 @@ def generate_rollout_data(
     temperature: float,
     do_sample: bool,
     max_generate_iterations: int,
+    use_KV_Cache: bool,
 ) -> Dict[str, Any]:
     """
     Generate completions and compute log-probabilities for rollouts.
@@ -247,6 +250,7 @@ def generate_rollout_data(
         temperature (float): Sampling temperature.
         do_sample (bool): Sampling flag.
         max_generate_iterations (int): Maximum generate iterations.
+        use_KV_Cache (bool): Use KV Cache flag.
     Returns:
         Dict[str, Any]: Rollout data including IDs, masks, log-probs, completions, etc.
     """
@@ -265,6 +269,7 @@ def generate_rollout_data(
             temperature,
             do_sample,
             max_generate_iterations,
+            use_KV_Cache,
         )
         input_ids = torch.cat([p_ids, c_ids], dim=1)
         attention_mask = torch.cat([p_mask, c_mask], dim=1)
@@ -513,6 +518,7 @@ def train_with_grpo(
     checkpoint_dir: Optional[str] = None,
     current_step: int = 0,
     save_interval: int = 5,
+    use_KV_Cache: bool = False,
 ) -> None:
     """
     Train policy model using GRPO fine-tuning with periodic checkpointing.
@@ -586,6 +592,7 @@ def train_with_grpo(
                     temperature,
                     do_sample,
                     max_generate_iterations,
+                    use_KV_Cache,
                 )
             logging.info(f"success to generate rollout data")
             for _ in range(mu):
