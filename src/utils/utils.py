@@ -48,8 +48,7 @@ def optimize_model_memory(model):
     model.train()
 
     # Disable caching for gradient checkpointing
-    # model.config.use_cache = False
-    model.config.use_cache = True
+    model.config.use_cache = False
 
     # Enable gradient checkpointing
     model.gradient_checkpointing_enable()
