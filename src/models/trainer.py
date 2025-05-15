@@ -11,6 +11,7 @@ import pudb
 import swanlab
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 from accelerate import Accelerator
 from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from deepspeed import DeepSpeedEngine
@@ -636,4 +637,285 @@ def train_with_grpo(
             accelerator.wait_for_everyone()
 
         del ref_model  # 清除历史的ref model，节约内存
+        torch.cuda.empty_cache()
+
+
+def generate_rollout_data_ppo(
+    policy_model: torch.nn.Module,
+    critic_model: torch.nn.Module,
+    tokenizer: AutoTokenizer,
+    batch_samples: Dict[str, List[Any]],
+    num_generations: int,
+    max_new_tokens: int,
+    max_length_for_gather: int,
+    temperature: float,
+    do_sample: bool,
+    max_generate_iterations: int,
+    use_KV_Cache: bool,
+) -> Dict[str, Any]:
+    """
+    PPO采样：生成completions、奖励、log概率、Critic前向。
+    """
+    device = next(policy_model.parameters()).device
+    prompts = batch_samples["prompt"]
+    answers = batch_samples["answer"]
+    with torch.no_grad():
+        p_ids, p_mask, c_ids, c_mask = generate_completions(
+            policy_model,
+            tokenizer,
+            prompts,
+            num_generations,
+            max_new_tokens,
+            max_length_for_gather,
+            temperature,
+            do_sample,
+            max_generate_iterations,
+            use_KV_Cache,
+        )
+        input_ids = torch.cat([p_ids, c_ids], dim=1)
+        attention_mask = torch.cat([p_mask, c_mask], dim=1)
+        k = c_ids.size(1)
+        old_log_probs = compute_log_probabilities(policy_model, input_ids, attention_mask, k)
+        formatted = [[{"content": tokenizer.decode(ids, skip_special_tokens=True)}] for ids in c_ids]
+        repeated_prompts = [p for p in prompts for _ in range(num_generations)]
+        repeated_answers = [a for a in answers for _ in range(num_generations)]
+        # 奖励
+        from src.models.reward import overall_reward
+        rewards_dict = overall_reward(
+            prompts=repeated_prompts,
+            completions=formatted,
+            answers=repeated_answers,
+        )
+        rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=old_log_probs.device)
+        # Critic前向
+        values = critic_model(input_ids=input_ids, attention_mask=attention_mask).detach()
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "completion_mask": c_mask,
+        "old_log_probs": old_log_probs,
+        "rewards": rewards,
+        "values": values,
+        "formatted_completions": formatted,
+        "repeated_prompts": repeated_prompts,
+        "repeated_answers": repeated_answers,
+        "logits_to_keep": k,
+        "batch_size": len(prompts),
+        "num_generations": num_generations,
+    }
+
+
+def compute_advantages_ppo(rewards: torch.Tensor, values: torch.Tensor) -> torch.Tensor:
+    """PPO优势函数：A = R - V"""
+    return rewards - values
+
+
+def maximize_ppo_objective(
+    policy_model: torch.nn.Module,
+    rollout_data: Dict[str, Any],
+    optimizer: torch.optim.Optimizer,
+    epsilon: float,
+    accelerator: Accelerator,
+) -> float:
+    """
+    计算PPO损失并反向传播，优化policy。
+    """
+    input_ids = rollout_data["input_ids"]
+    attention_mask = rollout_data["attention_mask"]
+    comp_mask = rollout_data["completion_mask"]
+    old_lp = rollout_data["old_log_probs"]
+    advantages = rollout_data["advantages"]
+    k = rollout_data["logits_to_keep"]
+    # 当前策略log概率
+    curr_lp = compute_log_probabilities(policy_model, input_ids, attention_mask, k)
+    ratio = torch.exp(curr_lp - old_lp)
+    surr1 = ratio * advantages
+    surr2 = torch.clamp(ratio, 1 - epsilon, 1 + epsilon) * advantages
+    loss = -((torch.min(surr1, surr2) * comp_mask).sum(dim=1) / comp_mask.sum(dim=1)).mean()
+    optimizer.zero_grad()
+    accelerator.backward(loss)
+    optimizer.step()
+    return float(loss)
+
+
+def maximize_critic_objective(
+    critic_model: torch.nn.Module,
+    rollout_data: Dict[str, Any],
+    optimizer: torch.optim.Optimizer,
+    accelerator: Accelerator,
+) -> float:
+    """
+    计算Critic损失（MSE）并反向传播，优化Critic。
+    """
+    input_ids = rollout_data["input_ids"]
+    attention_mask = rollout_data["attention_mask"]
+    rewards = rollout_data["rewards"]
+    values_pred = critic_model(input_ids=input_ids, attention_mask=attention_mask)
+    loss = nn.MSELoss()(values_pred, rewards)
+    optimizer.zero_grad()
+    accelerator.backward(loss)
+    optimizer.step()
+    return float(loss)
+
+
+def train_with_ppo(
+    config: Dict[str, Any],
+    device: torch.device,
+    policy_model: torch.nn.Module,
+    critic_model: torch.nn.Module,
+    tokenizer: AutoTokenizer,
+    accelerator: Optional[Accelerator] = None,
+    dataloader: Optional[torch.utils.data.DataLoader] = None,
+    num_iterations: int = 1,
+    steps_per_iteration: int = 500,
+    num_generations: int = 4,
+    max_new_tokens: int = 128,
+    max_length_for_gather: int = 2000,
+    max_generate_iterations: int = 8,
+    temperature: float = 0.7,
+    do_sample: bool = True,
+    learning_rate: float = 5e-6,
+    critic_lr: float = 5e-6,
+    epsilon: float = 0.2,
+    reward_function: Callable[..., Dict[str, Any]] = None,
+    checkpoint_dir: Optional[str] = None,
+    current_step: int = 0,
+    save_interval: int = 5,
+    use_KV_Cache: bool = False,
+) -> None:
+    policy_optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
+    critic_optimizer = torch.optim.Adam(critic_model.parameters(), lr=critic_lr)
+    policy_model.train()
+    critic_model.train()
+    policy_model, policy_optimizer, dataloader = accelerator.prepare(policy_model, policy_optimizer, dataloader)
+    critic_model, critic_optimizer = accelerator.prepare(critic_model, critic_optimizer)
+    sum_steps = current_step
+    for it in range(1, num_iterations + 1):
+        logging.info(f"start PPO iteration {it}/{num_iterations}")
+        torch.cuda.empty_cache()
+        step = 0
+        for batch in dataloader:
+            logging.info(f"start to generate rollout data, step {step+1}/{min(steps_per_iteration, len(dataloader))}")
+            rollout = generate_rollout_data_ppo(
+                policy_model,
+                critic_model,
+                tokenizer,
+                batch,
+                num_generations,
+                max_new_tokens,
+                max_length_for_gather,
+                temperature,
+                do_sample,
+                max_generate_iterations,
+                use_KV_Cache,
+            )
+            rollout["advantages"] = compute_advantages_ppo(rollout["rewards"], rollout["values"])
+            loss_policy = maximize_ppo_objective(
+                policy_model, rollout, policy_optimizer, epsilon, accelerator
+            )
+            loss_critic = maximize_critic_objective(
+                critic_model, rollout, critic_optimizer, accelerator
+            )
+            avg_reward = float(rollout["rewards"].mean())
+            print(
+                f"Iteration {it}/{num_iterations}, Step {step+1}/{min(steps_per_iteration, len(dataloader))}, "
+                f"Policy Loss: {loss_policy:.6f}, Critic Loss: {loss_critic:.6f}, Avg Reward: {avg_reward:.2f}"
+            )
+            if accelerator.is_local_main_process:
+                import swanlab
+                swanlab.log(
+                    {
+                        "Iteration": it,
+                        "Step": step + 1,
+                        "Policy Loss": loss_policy,
+                        "Critic Loss": loss_critic,
+                        "Avg Reward": avg_reward,
+                    }
+                )
+            sum_steps += 1
+            step += 1
+            if sum_steps % save_interval == 0 and sum_steps > current_step:
+                if accelerator.is_local_main_process:
+                    logging.info(f"save checkpoint at step {sum_steps}")
+                    ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
+                    os.makedirs(ckpt, exist_ok=True)
+                    policy_model.save_pretrained(ckpt)
+                    critic_model.save_pretrained(ckpt + "_critic")
+                    tokenizer.save_pretrained(ckpt)
+            if step >= steps_per_iteration:
+                break
+            accelerator.wait_for_everyone()
+        torch.cuda.empty_cache()
+
+
+def prepare_sft_batch(tokenizer, prompts, answers, device):
+    inputs = [p + a for p, a in zip(prompts, answers)]
+    tokenized = tokenizer(inputs, return_tensors="pt", padding=True, truncation=True)
+    input_ids = tokenized["input_ids"].to(device)
+    attention_mask = tokenized["attention_mask"].to(device)
+    prompt_tokenized = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
+    prompt_lens = prompt_tokenized["input_ids"].shape[1]
+    labels = input_ids.clone()
+    labels[:, :prompt_lens] = -100
+    return input_ids, attention_mask, labels
+
+
+def train_with_sft(
+    config: dict,
+    device: torch.device,
+    model: torch.nn.Module,
+    tokenizer: AutoTokenizer,
+    accelerator: Optional[Accelerator] = None,
+    dataloader: Optional[torch.utils.data.DataLoader] = None,
+    num_epochs: int = 1,
+    steps_per_epoch: int = 500,
+    learning_rate: float = 5e-6,
+    checkpoint_dir: Optional[str] = None,
+    current_step: int = 0,
+    save_interval: int = 5,
+) -> None:
+    """
+    SFT训练主循环。
+    """
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+    model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
+    sum_steps = current_step
+    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+    for epoch in range(1, num_epochs + 1):
+        logging.info(f"start SFT epoch {epoch}/{num_epochs}")
+        torch.cuda.empty_cache()
+        step = 0
+        for batch in dataloader:
+            prompts = batch["prompt"]
+            answers = batch["answer"]
+            input_ids, attention_mask, labels = prepare_sft_batch(tokenizer, prompts, answers, accelerator.device)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
+            # logits: (batch, seq_len, vocab_size), labels: (batch, seq_len)
+            loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+            optimizer.zero_grad()
+            accelerator.backward(loss)
+            optimizer.step()
+            loss_val = float(loss.detach().cpu())
+            print(f"Epoch {epoch}/{num_epochs}, Step {step+1}/{min(steps_per_epoch, len(dataloader))}, Loss: {loss_val:.6f}")
+            if accelerator.is_local_main_process:
+                import swanlab
+                swanlab.log({
+                    "Epoch": epoch,
+                    "Step": step + 1,
+                    "Loss": loss_val,
+                })
+            sum_steps += 1
+            step += 1
+            if sum_steps % save_interval == 0 and sum_steps > current_step:
+                if accelerator.is_local_main_process:
+                    logging.info(f"save checkpoint at step {sum_steps}")
+                    ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
+                    os.makedirs(ckpt, exist_ok=True)
+                    model.save_pretrained(ckpt)
+                    tokenizer.save_pretrained(ckpt)
+            if step >= steps_per_epoch:
+                break
+            accelerator.wait_for_everyone()
         torch.cuda.empty_cache()
