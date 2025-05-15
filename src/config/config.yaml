@@ -21,8 +21,11 @@ dataset:
   num_eval: 1000
 
 training:
+  train_method: grpo #可以更改为ppo和sft
   continue_training: false
   current_step: 0
+  # num_epochs: 3       # 这两个参数用于SFT
+  # steps_per_epoch: 500
 
   use_lora: true
   use_quant: true

@@ -26,7 +26,8 @@ from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from src.data.prepare_dataset import prepare_dataset
 from src.models.model import AgenticRAGModel
 from src.models.reward import overall_reward
-from src.models.trainer import train_with_grpo
+from src.models.trainer import train_with_grpo, train_with_ppo, train_with_sft
+from src.models.critic import AgenticRAGCritic
 from src.utils.utils import (
     load_config,
     optimize_model_memory,
@@ -190,18 +191,55 @@ def main():
     else:
         current_step = 0
 
-    train_with_grpo(
-        config=config,
-        device=device,
-        policy_model=policy_model,
-        ref_base_model=reference_model,
-        tokenizer=tokenizer,
-        accelerator=accelerator,
-        dataloader=train_dataloader,
-        checkpoint_dir=checkpoint_dir,
-        current_step=current_step,
-        **training_config,
-    )
+    if getattr(config.training, 'train_method', 'grpo') == 'grpo':
+        train_with_grpo(
+            config=config,
+            device=device,
+            policy_model=policy_model,
+            ref_base_model=reference_model,
+            tokenizer=tokenizer,
+            accelerator=accelerator,
+            dataloader=train_dataloader,
+            checkpoint_dir=checkpoint_dir,
+            current_step=current_step,
+            **training_config,
+        )
+    elif config.training.train_method == 'ppo':
+        # 初始化Critic模型
+        critic_model = AgenticRAGCritic(
+            model_name=config.model.name,
+            device=device,
+            torch_dtype=config.model.torch_dtype
+        )
+        train_with_ppo(
+            config=config,
+            device=device,
+            policy_model=policy_model,
+            critic_model=critic_model,
+            tokenizer=tokenizer,
+            accelerator=accelerator,
+            dataloader=train_dataloader,
+            checkpoint_dir=checkpoint_dir,
+            current_step=current_step,
+            **training_config,
+        )
+    elif config.training.train_method == 'sft':
+        train_with_sft(
+            config=config,
+            device=device,
+            model=policy_model,
+            tokenizer=tokenizer,
+            accelerator=accelerator,
+            dataloader=train_dataloader,
+            checkpoint_dir=checkpoint_dir,
+            current_step=current_step,
+            num_epochs=getattr(config.training, 'num_epochs', 1),
+            steps_per_epoch=getattr(config.training, 'steps_per_epoch', 500),
+            learning_rate=config.training.learning_rate,
+            save_interval=config.training.save_interval,
+        )
+    else:
+        raise ValueError(f"Unknown train_method: {config.training.train_method}")
     logging.info("Training completed")
 
     accelerator.wait_for_everyone()
