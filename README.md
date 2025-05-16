@@ -184,7 +184,6 @@ Our Qwen 2.5-7B-Instruct model was evaluated on the MedQA test set using Qwen‑
 
 ## Roadmap 🗺️
 
-- [ ] Support PPO and SFT
 - [ ] Add more tools
 - [ ] [Additional planned features]
 
