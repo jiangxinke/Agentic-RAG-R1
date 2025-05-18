@@ -207,7 +207,7 @@ def main():
     elif config.training.train_method == 'ppo':
         # 初始化Critic模型
         critic_model = AgenticRAGCritic(
-            model_name=config.model.name,
+            model_name=config.model.critic_name,
             device=device,
             torch_dtype=config.model.torch_dtype
         )

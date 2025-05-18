@@ -35,6 +35,10 @@ class AgenticRAGCritic(nn.Module):
         else:
             raise ValueError(f"Unsupported loss_type: {loss_type}")
 
+        # 关键补丁：设置pad_token_id
+        if not hasattr(self.model.config, "pad_token_id") or self.model.config.pad_token_id is None:
+            self.model.config.pad_token_id = self.model.config.eos_token_id
+
     def forward(self, input_ids, attention_mask, values=None):
         """
         推理模式：只输入input_ids和attention_mask，返回V值
