@@ -707,7 +707,9 @@ def generate_rollout_data_ppo(
 
 def compute_advantages_ppo(rewards: torch.Tensor, values: torch.Tensor) -> torch.Tensor:
     """PPO优势函数：A = R - V"""
-    return rewards - values
+    adv = rewards - values
+    adv = adv.unsqueeze(1)
+    return adv
 
 
 def maximize_ppo_objective(
@@ -751,8 +753,10 @@ def maximize_critic_objective(
     attention_mask = rollout_data["attention_mask"]
     rewards = rollout_data["rewards"]
     values_pred = critic_model(input_ids=input_ids, attention_mask=attention_mask)
+    rewards = rewards.to(values_pred.dtype)
     loss = nn.MSELoss()(values_pred, rewards)
     optimizer.zero_grad()
+    pdb.set_trace()
     accelerator.backward(loss)
     optimizer.step()
     return float(loss)
@@ -782,6 +786,9 @@ def train_with_ppo(
     current_step: int = 0,
     save_interval: int = 5,
     use_KV_Cache: bool = False,
+    ref_base_model: Optional[torch.nn.Module] = None,
+    beta: float = 0.1,
+    mu: int = 1,
 ) -> None:
     policy_optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
     critic_optimizer = torch.optim.Adam(critic_model.parameters(), lr=critic_lr)
@@ -840,7 +847,7 @@ def train_with_ppo(
                     ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
                     os.makedirs(ckpt, exist_ok=True)
                     policy_model.save_pretrained(ckpt)
-                    critic_model.save_pretrained(ckpt + "_critic")
+                    critic_model.module.save(ckpt + "_critic")
                     tokenizer.save_pretrained(ckpt)
             if step >= steps_per_iteration:
                 break
@@ -890,9 +897,14 @@ def train_with_sft(
             prompts = batch["prompt"]
             answers = batch["answer"]
             input_ids, attention_mask, labels = prepare_sft_batch(tokenizer, prompts, answers, accelerator.device)
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
-            # logits: (batch, seq_len, vocab_size), labels: (batch, seq_len)
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                obtain_logits=True,
+                logits_to_keep=labels.shape[1]
+            )
+            logits = outputs
+            # pdb.set_trace()
             loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
             optimizer.zero_grad()
             accelerator.backward(loss)

@@ -8,8 +8,10 @@ experiment:
   random_seed: 42
 
 model:
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
   # name: "Qwen/Qwen2.5-0.5B-Instruct"
-  name: "Qwen/Qwen2.5-7B-Instruct"
+  # name: "Qwen/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
   torch_dtype: "bfloat16"
@@ -21,15 +23,15 @@ dataset:
   num_eval: 1000
 
 training:
-  train_method: grpo #可以更改为ppo和sft
+  train_method: ppo #可以使用grpo、ppo和sft
   continue_training: false
   current_step: 0
   # num_epochs: 3       # 这两个参数用于SFT
-  # steps_per_epoch: 500
+  # steps_per_epoch: 500 # 这两个参数用于SFT
 
   use_lora: true
   use_quant: true
-  use_KV_Cache: true
+  use_KV_Cache: false
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
