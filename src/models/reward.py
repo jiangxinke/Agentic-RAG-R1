@@ -1,5 +1,5 @@
-from typing import Any, Dict, List
 import os
+from typing import Any, Dict, List
 
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
@@ -81,7 +81,7 @@ def format_reward(completions: List[List[Dict[str, Any]]]) -> List[float]:
             score += 0.2
         if "</backtrack>" in response:
             score += 0.2
-            
+
         # summary tags
         if "<summary>" in response:
             score += 0.2

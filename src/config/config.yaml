@@ -1,3 +1,5 @@
+swanlab: false
+
 project:
   name: "xiaobeir1"
   description: "under-construction"
@@ -9,7 +11,9 @@ experiment:
 
 model:
   # name: "Qwen/Qwen2.5-0.5B-Instruct"
-  name: "Qwen/Qwen2.5-7B-Instruct"
+  # name: "Qwen/Qwen2.5-7B-Instruct"
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
   torch_dtype: "bfloat16"
@@ -21,28 +25,39 @@ dataset:
   num_eval: 1000
 
 training:
-  train_method: grpo #可以更改为ppo和sft
+  train_method: grpo # [grpo, ppo, sft]
   continue_training: false
   current_step: 0
-  # num_epochs: 3       # 这两个参数用于SFT
-  # steps_per_epoch: 500
+  num_epochs: 3       # 这两个参数用于SFT
+  steps_per_epoch: 500
 
   use_lora: true
-  use_quant: true
-  use_KV_Cache: true
+  use_quant: false
+  use_KV_Cache: false
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
   steps_per_iteration: 2 # in one epoch
   save_interval: 1 # steps
 
+  reward_token_level: true
+
   generation:
-    num_generations: 4
+    # TODO
+    num_generations:
+      mode: "range"
+      constant: 8
+      range: [4, 8]
+      function: [lambda x: x * 2]
+    # num_generations: 8
     max_new_tokens: 100
     max_length_for_gather: 100000
     max_generate_iterations: 3
     temperature: 0.7
-    do_sample: True
+    do_sample: true
+
+    use_diverse_sampling: true
+    diversity_penalty: 1.0
   
   optimizer:
     beta: 0.04

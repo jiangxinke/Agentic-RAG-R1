@@ -1,13 +1,49 @@
-import logging
 import pdb
+import random
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import json5
 import torch
-from transformers import PreTrainedModel, StoppingCriteria, StoppingCriteriaList
+from transformers import (
+    LogitsProcessor,
+    LogitsProcessorList,
+    PreTrainedModel,
+    StoppingCriteria,
+    StoppingCriteriaList,
+)
 
 from src.utils.Tools import Tools
+
+
+class HammingDiversityLogitsProcessor(LogitsProcessor):
+    def __init__(self, beams_history, lambda_penalty=1.0, top_k=32):
+        super().__init__()
+        self.beams_history = beams_history
+        self.lambda_penalty = lambda_penalty
+        self.top_k = top_k
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        batch_size, vocab_size = scores.shape
+        for beam_idx in range(batch_size):
+            history = input_ids[beam_idx].tolist()
+            if self.top_k is None or self.top_k == 0 or self.top_k >= vocab_size:
+                token_indices = range(vocab_size)
+            else:
+                _, topk_indices = torch.topk(scores[beam_idx], self.top_k)
+                token_indices = topk_indices.tolist()
+            for token_id in token_indices:
+                penalty = 0.0
+                candidate_seq = history + [token_id]
+                for other_idx, other_history in enumerate(self.beams_history):
+                    if other_idx == beam_idx:
+                        continue
+                    min_len = min(len(candidate_seq), len(other_history))
+                    for i in range(min_len):
+                        if candidate_seq[i] == other_history[i]:
+                            penalty += (i + 1) / min_len
+                scores[beam_idx, token_id] -= self.lambda_penalty * penalty
+        return scores
 
 
 class SearchTagStoppingCriteria(StoppingCriteria):
@@ -97,6 +133,8 @@ class AgenticRAGModel(PreTrainedModel):
         obtain_logits: bool = False,
         max_generate_iterations: int = 8,
         use_KV_Cache: bool = False,
+        use_diverse_sampling: bool = False,
+        diversity_penalty: float = 1.0,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -121,7 +159,6 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: If model generation fails.
         """
-        pdb.set_trace()
         if not obtain_logits:
             if use_KV_Cache:
                 return self.generate_with_think_interruption_KV_Cache(
@@ -134,6 +171,8 @@ class AgenticRAGModel(PreTrainedModel):
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
                     max_generate_iterations=max_generate_iterations,
+                    use_diverse_sampling=use_diverse_sampling,
+                    diversity_penalty=diversity_penalty,
                     **kwargs,
                 )
             else:
@@ -147,6 +186,8 @@ class AgenticRAGModel(PreTrainedModel):
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
                     max_generate_iterations=max_generate_iterations,
+                    use_diverse_sampling=use_diverse_sampling,
+                    diversity_penalty=diversity_penalty,
                     **kwargs,
                 )
         logits = self.model(
@@ -168,6 +209,8 @@ class AgenticRAGModel(PreTrainedModel):
         eos_token_id: Optional[int] = None,
         max_generate_iterations: int = 8,
         use_KV_Cache: bool = False,
+        use_diverse_sampling: bool = False,
+        diversity_penalty: float = 1.0,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -185,6 +228,8 @@ class AgenticRAGModel(PreTrainedModel):
             temperature=temperature,
             max_generate_iterations=max_generate_iterations,
             use_KV_Cache=use_KV_Cache,
+            use_diverse_sampling=use_diverse_sampling,
+            diversity_penalty=diversity_penalty,
             **kwargs,
         )
 
@@ -404,6 +449,8 @@ class AgenticRAGModel(PreTrainedModel):
         pad_token_id: int,
         eos_token_id: int,
         max_generate_iterations: int,
+        use_diverse_sampling: bool = False,
+        diversity_penalty: float = 1.0,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text.
@@ -431,6 +478,11 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: On generation or tool-calling failures.
         """
+        # pdb.set_trace()
+
+        # FIXME diversity_penalty dynamic
+        diversity_penalty = diversity_penalty if diversity_penalty is not None else random.uniform(0.5, 1.0)
+
         device = input_ids.device
         batch_size = input_ids.size(0)
         if attention_mask is None:
@@ -443,6 +495,7 @@ class AgenticRAGModel(PreTrainedModel):
         current_ids = input_ids.clone()
         current_mask = attention_mask.clone()
 
+        beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
             # Skip leading EOS columns
             skip_len = 0
@@ -459,6 +512,11 @@ class AgenticRAGModel(PreTrainedModel):
                 break
 
             active = torch.nonzero(should_gen).squeeze(1)
+            logits_processor = None
+            if use_diverse_sampling:
+                logits_processor = LogitsProcessorList(
+                    [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
+                )
             gen_out = self.model.generate(
                 current_ids,
                 attention_mask=current_mask,
@@ -468,6 +526,7 @@ class AgenticRAGModel(PreTrainedModel):
                 pad_token_id=pad_token_id,
                 eos_token_id=eos_token_id,
                 stopping_criteria=criteria,
+                logits_processor=logits_processor,
             )
             next_prompts = []
 
@@ -475,6 +534,7 @@ class AgenticRAGModel(PreTrainedModel):
                 b = active[idx].item()
                 old_len = current_ids.size(1) - 1
                 new_tokens = seq[old_len:]
+                beams_history[b].extend(new_tokens.tolist())
                 text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
 
                 # 1) Answer end
@@ -533,6 +593,8 @@ class AgenticRAGModel(PreTrainedModel):
         pad_token_id: int,
         eos_token_id: int,
         max_generate_iterations: int,
+        use_diverse_sampling: bool = False,
+        diversity_penalty: float = 1.0,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text. Use KV Cache to accelerate it.
@@ -553,7 +615,8 @@ class AgenticRAGModel(PreTrainedModel):
             pad_token_id (int): Padding token ID.
             eos_token_id (int): End-of-sequence token ID.
             max_generate_iterations (int): Max loop iterations.
-
+            use_diverse_sampling (bool): Use diverse sampling.
+            diversity_penalty (float): Diversity penalty.
         Returns:
             torch.LongTensor: Padded output IDs for all samples.
 
@@ -574,6 +637,7 @@ class AgenticRAGModel(PreTrainedModel):
 
         past_key_values: Optional[List[Tuple[torch.Tensor]]] = None
 
+        beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
             # Skip leading EOS columns
             skip_len = 0
@@ -595,6 +659,12 @@ class AgenticRAGModel(PreTrainedModel):
             if past_key_values is not None:
                 past_key_values = tuple(tuple(tensor[active] for tensor in layer) for layer in past_key_values)
 
+            logits_processor = None
+            if use_diverse_sampling:
+                logits_processor = LogitsProcessorList(
+                    [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
+                )
+
             gen_out_dict = self.model.generate(
                 input_ids=current_ids,
                 attention_mask=current_mask,
@@ -607,6 +677,7 @@ class AgenticRAGModel(PreTrainedModel):
                 use_cache=True,
                 past_key_values=past_key_values,
                 return_dict_in_generate=True,
+                logits_processor=logits_processor,
             )
 
             past_key_values = gen_out_dict.past_key_values
@@ -618,6 +689,7 @@ class AgenticRAGModel(PreTrainedModel):
                 b = active[idx].item()
                 old_len = current_ids.size(1) - 1
                 new_tokens = seq[old_len:]
+                beams_history[b].extend(new_tokens.tolist())
                 text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
 
                 # 1) Answer end

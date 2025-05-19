@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
-from rich.traceback import install
-from rich.logging import RichHandler
 from rich import print
+from rich.logging import RichHandler
+from rich.traceback import install
 
 load_dotenv()
 install()
@@ -18,16 +18,17 @@ import deepspeed
 import swanlab
 import torch
 from accelerate import Accelerator, init_empty_weights
+from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from peft import LoraConfig, PeftModel, get_peft_model
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 
 from src.data.prepare_dataset import prepare_dataset
+from src.models.critic import AgenticRAGCritic
 from src.models.model import AgenticRAGModel
 from src.models.reward import overall_reward
+from src.models.reward_token_level import overall_reward_token_level
 from src.models.trainer import train_with_grpo, train_with_ppo, train_with_sft
-from src.models.critic import AgenticRAGCritic
 from src.utils.utils import (
     load_config,
     optimize_model_memory,
@@ -41,7 +42,7 @@ def main():
     config = load_config("src/config/config.yaml")
 
     accelerator = Accelerator()
-    if accelerator.is_local_main_process:
+    if accelerator.is_local_main_process and config.swanlab:
         swanlab.init(
             project=config.project.name,
             experiment_name=config.experiment.name,
@@ -133,32 +134,33 @@ def main():
         bnb_quantization_config = BnbQuantizationConfig(
             load_in_4bit=config.qlora.load_in_4bit,
             bnb_4bit_compute_dtype=getattr(torch, config.qlora.bnb_4bit_compute_dtype),  # optional
-            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,         # optional
-            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,               # optional
-            load_in_8bit= config.qlora.load_in_8bit,  # enable 8bit quantization
-            llm_int8_threshold = config.qlora.llm_int8_threshold, # if load_in_8bit is True
+            bnb_4bit_use_double_quant=config.qlora.bnb_4bit_use_double_quant,  # optional
+            bnb_4bit_quant_type=config.qlora.bnb_4bit_quant_type,  # optional
+            load_in_8bit=config.qlora.load_in_8bit,  # enable 8bit quantization
+            llm_int8_threshold=config.qlora.llm_int8_threshold,  # if load_in_8bit is True
         )
-        
-        base_model = load_and_quantize_model(
-            base_model,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
-        )
-        
+
+        base_model = load_and_quantize_model(base_model, bnb_quantization_config=bnb_quantization_config, device_map="auto")
+
         reference_base_model = load_and_quantize_model(
-            reference_base_model,
-            bnb_quantization_config=bnb_quantization_config,
-            device_map = "auto"
+            reference_base_model, bnb_quantization_config=bnb_quantization_config, device_map="auto"
         )
-        
+
         logging.info(f"Using Quant: {config.qlora}")
     else:
         bnb_quantization_config = None
         logging.info("Not using Quant")
-    
-    
+
     # GRPO fine-tuning
     logging.info("Starting GRPO fine-tuning...")
+
+    if config.training.reward_token_level:
+        reward_func = overall_reward_token_level
+        logging.info("Using token-level reward")
+    else:
+        reward_func = overall_reward
+        logging.info("Using normal reward")
+
     training_config = {
         "use_KV_Cache": config.training.use_KV_Cache,
         "num_iterations": config.training.num_iterations,
@@ -173,11 +175,13 @@ def main():
         "learning_rate": config.training.learning_rate,
         "mu": config.training.optimizer.mu,
         "epsilon": config.training.optimizer.epsilon,
-        "reward_function": overall_reward,
+        "reward_function": reward_func,
         "save_interval": config.training.save_interval,
+        "use_diverse_sampling": config.training.generation.use_diverse_sampling,
+        "diversity_penalty": config.training.generation.diversity_penalty,
     }
     logging.info(f"Training config: {training_config}")
-    
+
     # Optimize model memory usage
     base_model = optimize_model_memory(base_model)
     reference_base_model = optimize_model_memory(reference_base_model)
@@ -191,7 +195,7 @@ def main():
     else:
         current_step = 0
 
-    if getattr(config.training, 'train_method', 'grpo') == 'grpo':
+    if getattr(config.training, "train_method", "grpo") == "grpo":
         train_with_grpo(
             config=config,
             device=device,
@@ -204,13 +208,9 @@ def main():
             current_step=current_step,
             **training_config,
         )
-    elif config.training.train_method == 'ppo':
+    elif config.training.train_method == "ppo":
         # 初始化Critic模型
-        critic_model = AgenticRAGCritic(
-            model_name=config.model.name,
-            device=device,
-            torch_dtype=config.model.torch_dtype
-        )
+        critic_model = AgenticRAGCritic(model_name=config.model.name, device=device, torch_dtype=config.model.torch_dtype)
         train_with_ppo(
             config=config,
             device=device,
@@ -223,7 +223,7 @@ def main():
             current_step=current_step,
             **training_config,
         )
-    elif config.training.train_method == 'sft':
+    elif config.training.train_method == "sft":
         train_with_sft(
             config=config,
             device=device,
@@ -233,8 +233,8 @@ def main():
             dataloader=train_dataloader,
             checkpoint_dir=checkpoint_dir,
             current_step=current_step,
-            num_epochs=getattr(config.training, 'num_epochs', 1),
-            steps_per_epoch=getattr(config.training, 'steps_per_epoch', 500),
+            num_epochs=getattr(config.training, "num_epochs", 1),
+            steps_per_epoch=getattr(config.training, "steps_per_epoch", 500),
             learning_rate=config.training.learning_rate,
             save_interval=config.training.save_interval,
         )

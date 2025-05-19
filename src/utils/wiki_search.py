@@ -2,7 +2,10 @@ import os
 
 import elasticsearch
 import pytest
+from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
+
+load_dotenv()
 
 
 class WikiSearcher:

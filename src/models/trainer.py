@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import pdb
+import random
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -10,8 +11,8 @@ import deepspeed
 import pudb
 import swanlab
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 from accelerate import Accelerator
 from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 from deepspeed import DeepSpeedEngine
@@ -19,8 +20,9 @@ from peft import LoraConfig, PeftModel, get_peft_model
 from peft.utils import get_peft_model_state_dict
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
+from models.reward import overall_reward
+from models.reward_token_level import overall_reward_token_level
 from src.models.model import AgenticRAGModel
-from src.models.reward import overall_reward
 from src.utils.extractor import analyze_completions
 from src.utils.utils import optimize_model_memory
 
@@ -109,6 +111,8 @@ def generate_completions(
     do_sample: bool = True,
     max_generate_iterations: int = 8,
     use_KV_Cache: bool = False,
+    use_diverse_sampling: bool = False,
+    diversity_penalty: float = 1.0,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate multiple completions per prompt and compute masks for valid tokens.
@@ -160,6 +164,8 @@ def generate_completions(
         temperature=temperature,
         max_generate_iterations=max_generate_iterations,
         use_KV_Cache=use_KV_Cache,
+        use_diverse_sampling=use_diverse_sampling,
+        diversity_penalty=diversity_penalty,
     )
     # completion_ids = outputs[:, prompt_len:]
 
@@ -236,6 +242,8 @@ def generate_rollout_data(
     do_sample: bool,
     max_generate_iterations: int,
     use_KV_Cache: bool,
+    use_diverse_sampling: bool,
+    diversity_penalty: float,
 ) -> Dict[str, Any]:
     """
     Generate completions and compute log-probabilities for rollouts.
@@ -271,6 +279,8 @@ def generate_rollout_data(
             do_sample,
             max_generate_iterations,
             use_KV_Cache,
+            use_diverse_sampling,
+            diversity_penalty,
         )
         input_ids = torch.cat([p_ids, c_ids], dim=1)
         attention_mask = torch.cat([p_mask, c_mask], dim=1)
@@ -286,6 +296,7 @@ def generate_rollout_data(
     return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
+        "completion_ids": c_ids,
         "completion_mask": c_mask,
         "old_log_probs": old_log_probs,
         "ref_log_probs": ref_log_probs,
@@ -298,7 +309,48 @@ def generate_rollout_data(
     }
 
 
+# def compute_group_relative_advantages(
+#     config: Dict[str, Any],
+#     rewards: torch.Tensor,
+#     num_generations: int,
+# ) -> torch.Tensor:
+#     """
+#     Normalize rewards within each prompt group and handle degenerate cases.
+
+#     Args:
+#         rewards (torch.Tensor): Flat tensor of rewards (batch*num_gen,).
+#         num_generations (int): Number of completions per prompt.
+
+#     Returns:
+#         torch.Tensor: Advantages of shape (batch*num_gen, 1).
+#     """
+#     # TODO add if else
+#     # pdb.set_trace()
+#     if not config.training.reward_token_level:
+#         groups = rewards.view(-1, num_generations)
+#         means = groups.mean(dim=1)
+#         stds = groups.std(dim=1)
+#         mins = groups.min(dim=1).values
+#         maxs = groups.max(dim=1).values
+
+#         degenerate = (means == mins) | (means == maxs)
+#         exp_means = means.repeat_interleave(num_generations)
+#         exp_stds = stds.repeat_interleave(num_generations)
+#         mask = degenerate.repeat_interleave(num_generations)
+#         # pdb.set_trace()
+
+#         adv = (rewards - exp_means) / (exp_stds + 1e-4)
+#         # Random ±1 for degenerate groups
+#         rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
+#         adv[mask] = rand[mask]
+#         return adv.unsqueeze(1)
+#     elif config.training.reward_token_level:
+#         pdb.set_trace()
+#         raise NotImplementedError("Token-level reward is not implemented yet")
+
+
 def compute_group_relative_advantages(
+    config: Dict[str, Any],
     rewards: torch.Tensor,
     num_generations: int,
 ) -> torch.Tensor:
@@ -306,32 +358,74 @@ def compute_group_relative_advantages(
     Normalize rewards within each prompt group and handle degenerate cases.
 
     Args:
-        rewards (torch.Tensor): Flat tensor of rewards (batch*num_gen,).
+        rewards (torch.Tensor):
+            If config.training.reward_token_level is False: shape = (batch*num_gen,)
+            If config.training.reward_token_level is True:  shape = (batch, seq_len)
         num_generations (int): Number of completions per prompt.
 
     Returns:
-        torch.Tensor: Advantages of shape (batch*num_gen, 1).
+        torch.Tensor:
+            If reward_token_level is False: (batch*num_gen, 1)
+            If reward_token_level is True:  (batch, seq_len)
     """
-    # TODO add if else
-    groups = rewards.view(-1, num_generations)
-    means = groups.mean(dim=1)
-    stds = groups.std(dim=1)
-    mins = groups.min(dim=1).values
-    maxs = groups.max(dim=1).values
+    if not config.training.reward_token_level:
+        groups = rewards.view(-1, num_generations)
+        means = groups.mean(dim=1)
+        stds = groups.std(dim=1)
+        mins = groups.min(dim=1).values
+        maxs = groups.max(dim=1).values
 
-    degenerate = (means == mins) | (means == maxs)
-    exp_means = means.repeat_interleave(num_generations)
-    exp_stds = stds.repeat_interleave(num_generations)
-    mask = degenerate.repeat_interleave(num_generations)
+        degenerate = (means == mins) | (means == maxs)
+        exp_means = means.repeat_interleave(num_generations)
+        exp_stds = stds.repeat_interleave(num_generations)
+        mask = degenerate.repeat_interleave(num_generations)
 
-    adv = (rewards - exp_means) / (exp_stds + 1e-4)
-    # Random ±1 for degenerate groups
-    rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
-    adv[mask] = rand[mask]
-    return adv.unsqueeze(1)
+        adv = (rewards - exp_means) / (exp_stds + 1e-4)
+        # Random ±1 for degenerate groups
+        rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
+        adv[mask] = rand[mask]
+        return adv.unsqueeze(1)
+
+    else:
+        # Token-level reward
+        # rewards shape [B, length]
+        # 1. Sum over token dim for each example: shape [B]
+        total_rewards = rewards.sum(dim=1)  # shape [B]
+
+        # 2. Normalize across batch（即各个 batch 比较 advantage）
+        mean = total_rewards.mean()
+        std = total_rewards.std()
+        min_ = total_rewards.min()
+        max_ = total_rewards.max()
+
+        degenerate = (total_rewards == min_) | (total_rewards == max_)
+
+        # 3. 计算每个 sample 的归一化 advantage
+        adv = (total_rewards - mean) / (std + 1e-4)
+        rand = (torch.randint(0, 2, adv.shape, device=adv.device) * 2 - 1).float()
+        adv[degenerate] = rand[degenerate]
+
+        # 4. 将归一化 advantage 按比例分配回 token
+        #      单个 sample，每个 token 的 reward / sum(rewards)，乘归一化 advantage
+        #      注意总 reward 可能为 0
+        proportions = torch.zeros_like(rewards)
+        nonzero_mask = total_rewards != 0
+        proportions[nonzero_mask] = rewards[nonzero_mask] / total_rewards[nonzero_mask].unsqueeze(1)
+
+        # 每行都乘自己的归一化 advantage
+        adv_expanded = adv.unsqueeze(1).expand_as(proportions)
+        final_adv = proportions * adv_expanded
+
+        # 对于 degenerate 行，用随机 ±1 平分给每个 token
+        if degenerate.any():
+            for i in torch.where(degenerate)[0]:
+                final_adv[i, :] = rand[i] / rewards.size(1)
+        # pdb.set_trace()
+        return final_adv  # shape: [B, length]
 
 
 def maximize_grpo_objective(
+    config: Dict[str, Any],
     model: torch.nn.Module,
     ref_model: torch.nn.Module,
     rollout_data: Dict[str, Any],
@@ -359,37 +453,53 @@ def maximize_grpo_objective(
     Returns:
         Tuple[float, float, Dict[str, Any]]: Loss value, average reward, full reward dict.
     """
+    # pdb.set_trace()
     input_ids = rollout_data["input_ids"]
     attention_mask = rollout_data["attention_mask"]
-    comp_mask = rollout_data["completion_mask"]
+    completion_ids = rollout_data["completion_ids"]
+    completion_mask = rollout_data["completion_mask"]
     old_lp = rollout_data["old_log_probs"]
     ref_lp = rollout_data["ref_log_probs"]
     k = rollout_data["logits_to_keep"]
-
+    # pdb.set_trace()
     # Current policy log probs
     curr_lp = compute_log_probabilities(model, input_ids, attention_mask, k)
     ratio = torch.exp(curr_lp - old_lp)
 
-    rewards_dict = reward_function(
-        prompts=rollout_data["repeated_prompts"],
-        completions=rollout_data["formatted_completions"],
-        answers=rollout_data["repeated_answers"],
-    )
-    rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
-    avg_reward = float(rewards.mean())
+    # pdb.set_trace()
+    if not config.training.reward_token_level:
+        rewards_dict = reward_function(
+            prompts=rollout_data["repeated_prompts"],
+            completions=rollout_data["formatted_completions"],
+            answers=rollout_data["repeated_answers"],
+        )
+        rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
+        avg_reward = float(rewards.mean())
+    elif config.training.reward_token_level:
+        rewards_dict = reward_function(
+            prompts=rollout_data["repeated_prompts"],
+            completions=rollout_data["formatted_completions"],
+            answers=rollout_data["repeated_answers"],
+            completion_ids=completion_ids,
+            tokenizer=tokenizer,
+        )
+        rewards = rewards_dict["token_rewards"]
+        avg_reward = float(rewards.mean())
 
-    adv = compute_group_relative_advantages(rewards, rollout_data["num_generations"])
+    adv = compute_group_relative_advantages(config, rewards, rollout_data["num_generations"])
+    # pdb.set_trace()
     surr1 = ratio * adv
     surr2 = torch.clamp(ratio, 1 - epsilon, 1 + 1.5 * epsilon) * adv
     surr = torch.min(surr1, surr2)
 
     kl = torch.exp(ref_lp - curr_lp) - (ref_lp - curr_lp) - 1
     per_token = surr - beta * kl
-    loss = -((per_token * comp_mask).sum(dim=1) / comp_mask.sum(dim=1)).mean()
+    loss = -((per_token * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
 
     optimizer.zero_grad()
     accelerator.backward(loss)
     optimizer.step()
+    # pdb.set_trace()
     return float(loss), avg_reward, rewards_dict
 
 
@@ -520,6 +630,8 @@ def train_with_grpo(
     current_step: int = 0,
     save_interval: int = 5,
     use_KV_Cache: bool = False,
+    use_diverse_sampling: bool = False,
+    diversity_penalty: float = 1.0,
 ) -> None:
     """
     Train policy model using GRPO fine-tuning with periodic checkpointing.
@@ -556,6 +668,7 @@ def train_with_grpo(
     zero_stage = policy_model.config["zero_optimization"]["stage"]
 
     sum_steps = current_step
+    base_num_generations = config.training.generation.num_generations
     for it in range(1, num_iterations + 1):
         logging.info(f"start GRPO iteration {it}/{num_iterations}")
         torch.cuda.empty_cache()
@@ -580,6 +693,17 @@ def train_with_grpo(
 
         step = 0
         for batch in dataloader:
+            # new feature: num_generations dynamic
+            num_generations = base_num_generations
+            if num_generations["mode"] == "constant":
+                num_generations = num_generations["constant"]
+            elif num_generations["mode"] == "range":
+                num_generations = random.randint(num_generations["range"][0], num_generations["range"][1])
+            elif num_generations["mode"] == "function":  # FIXME no check
+                num_generations = num_generations["function"](num_generations["range"])
+            # pdb.set_trace()
+            logging.info(f" step {step+1}/{min(steps_per_iteration, len(dataloader))}, num_generations: {num_generations}")
+
             logging.info(f"start to generate rollout data, step {step+1}/{min(steps_per_iteration, len(dataloader))}")
             with torch.no_grad():
                 rollout = generate_rollout_data(
@@ -594,11 +718,13 @@ def train_with_grpo(
                     do_sample,
                     max_generate_iterations,
                     use_KV_Cache,
+                    use_diverse_sampling,
+                    diversity_penalty,
                 )
             logging.info(f"success to generate rollout data")
             for _ in range(mu):
                 loss_val, avg_r, rdict = maximize_grpo_objective(
-                    policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+                    config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
                 )
             logging.info(f"success to maximize grpo objective")
 
@@ -606,7 +732,7 @@ def train_with_grpo(
                 f"Iteration {it}/{num_iterations}, Step {step+1}/{min(steps_per_iteration, len(dataloader))}, "
                 f"Loss: {loss_val:.6f}, Avg Reward: {avg_r:.2f}"
             )
-            if accelerator.is_local_main_process:
+            if accelerator.is_local_main_process and config.swanlab:
                 swanlab.log(
                     {
                         "Iteration": it,
@@ -680,7 +806,8 @@ def generate_rollout_data_ppo(
         repeated_prompts = [p for p in prompts for _ in range(num_generations)]
         repeated_answers = [a for a in answers for _ in range(num_generations)]
         # 奖励
-        from src.models.reward import overall_reward
+        from models.reward_token_level import overall_reward
+
         rewards_dict = overall_reward(
             prompts=repeated_prompts,
             completions=formatted,
@@ -810,19 +937,14 @@ def train_with_ppo(
                 use_KV_Cache,
             )
             rollout["advantages"] = compute_advantages_ppo(rollout["rewards"], rollout["values"])
-            loss_policy = maximize_ppo_objective(
-                policy_model, rollout, policy_optimizer, epsilon, accelerator
-            )
-            loss_critic = maximize_critic_objective(
-                critic_model, rollout, critic_optimizer, accelerator
-            )
+            loss_policy = maximize_ppo_objective(policy_model, rollout, policy_optimizer, epsilon, accelerator)
+            loss_critic = maximize_critic_objective(critic_model, rollout, critic_optimizer, accelerator)
             avg_reward = float(rollout["rewards"].mean())
             print(
                 f"Iteration {it}/{num_iterations}, Step {step+1}/{min(steps_per_iteration, len(dataloader))}, "
                 f"Policy Loss: {loss_policy:.6f}, Critic Loss: {loss_critic:.6f}, Avg Reward: {avg_reward:.2f}"
             )
-            if accelerator.is_local_main_process:
-                import swanlab
+            if accelerator.is_local_main_process and config.swanlab:
                 swanlab.log(
                     {
                         "Iteration": it,
@@ -899,13 +1021,14 @@ def train_with_sft(
             optimizer.step()
             loss_val = float(loss.detach().cpu())
             print(f"Epoch {epoch}/{num_epochs}, Step {step+1}/{min(steps_per_epoch, len(dataloader))}, Loss: {loss_val:.6f}")
-            if accelerator.is_local_main_process:
-                import swanlab
-                swanlab.log({
-                    "Epoch": epoch,
-                    "Step": step + 1,
-                    "Loss": loss_val,
-                })
+            if accelerator.is_local_main_process and config.swanlab:
+                swanlab.log(
+                    {
+                        "Epoch": epoch,
+                        "Step": step + 1,
+                        "Loss": loss_val,
+                    }
+                )
             sum_steps += 1
             step += 1
             if sum_steps % save_interval == 0 and sum_steps > current_step:
