@@ -182,7 +182,8 @@ def overall_reward_token_level(
 
         # --- correctness (uniform)
         if correctness_scores[idx_sample] != 0 and seq_len:
-            bonus = correctness_scores[idx_sample] / seq_len
+            # bonus = correctness_scores[idx_sample] / seq_len
+            bonus = correctness_scores[idx_sample]
             per_token = [v + bonus for v in per_token]
 
         # Offsets (align with tokenizer)
@@ -200,7 +201,8 @@ def overall_reward_token_level(
         rag_spans = _collect_char_spans(search_block_re, comp_text)
         rag_token_idxs = _token_indices_from_spans(offsets, rag_spans)
         if rag_token_idxs and rag_scores[idx_sample] != 0:
-            bonus = rag_scores[idx_sample] / len(rag_token_idxs)
+            # bonus = rag_scores[idx_sample] / len(rag_token_idxs)
+            bonus = rag_scores[idx_sample]
             for j in rag_token_idxs:
                 per_token[j] += bonus
 
@@ -209,7 +211,8 @@ def overall_reward_token_level(
             for span in _collect_char_spans(re.escape(tag), comp_text):
                 tag_token_idxs = _token_indices_from_spans(offsets, [span])
                 if tag_token_idxs:
-                    bonus = tag_score / len(tag_token_idxs)
+                    # bonus = tag_score / len(tag_token_idxs)
+                    bonus = tag_score
                     for j in tag_token_idxs:
                         per_token[j] += bonus
 
@@ -222,7 +225,8 @@ def overall_reward_token_level(
             tag_spans = open_tags[:pair_cnt] + close_tags[:pair_cnt]
             idxs = _token_indices_from_spans(offsets, tag_spans)
             if idxs:
-                bonus = pair_score / len(idxs)
+                # bonus = pair_score / len(idxs)
+                bonus = pair_score
                 for j in idxs:
                     per_token[j] += bonus
 
@@ -232,7 +236,8 @@ def overall_reward_token_level(
             a_close = _collect_char_spans(re.escape("</answer>"), comp_text)[0]
             idxs = _token_indices_from_spans(offsets, [a_open, a_close])
             if idxs:
-                bonus = 0.4 / len(idxs)
+                # bonus = 0.4 / len(idxs)
+                bonus = 0.4
                 for j in idxs:
                     per_token[j] += bonus
 

@@ -368,60 +368,54 @@ def compute_group_relative_advantages(
             If reward_token_level is False: (batch*num_gen, 1)
             If reward_token_level is True:  (batch, seq_len)
     """
-    if not config.training.reward_token_level:
-        groups = rewards.view(-1, num_generations)
-        means = groups.mean(dim=1)
-        stds = groups.std(dim=1)
-        mins = groups.min(dim=1).values
-        maxs = groups.max(dim=1).values
+    groups = rewards.view(-1, num_generations)
+    means = groups.mean(dim=1)
+    stds = groups.std(dim=1)
+    mins = groups.min(dim=1).values
+    maxs = groups.max(dim=1).values
 
-        degenerate = (means == mins) | (means == maxs)
-        exp_means = means.repeat_interleave(num_generations)
-        exp_stds = stds.repeat_interleave(num_generations)
-        mask = degenerate.repeat_interleave(num_generations)
+    degenerate = (means == mins) | (means == maxs)
+    exp_means = means.repeat_interleave(num_generations)
+    exp_stds = stds.repeat_interleave(num_generations)
+    mask = degenerate.repeat_interleave(num_generations)
 
-        adv = (rewards - exp_means) / (exp_stds + 1e-4)
-        # Random ±1 for degenerate groups
-        rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
-        adv[mask] = rand[mask]
-        return adv.unsqueeze(1)
+    adv = (rewards - exp_means) / (exp_stds + 1e-4)
+    # Random ±1 for degenerate groups
+    rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
+    adv[mask] = rand[mask]
+    return adv.unsqueeze(1)
 
-    else:
-        # Token-level reward
-        # rewards shape [B, length]
-        # 1. Sum over token dim for each example: shape [B]
-        total_rewards = rewards.sum(dim=1)  # shape [B]
 
-        # 2. Normalize across batch（即各个 batch 比较 advantage）
-        mean = total_rewards.mean()
-        std = total_rewards.std()
-        min_ = total_rewards.min()
-        max_ = total_rewards.max()
+def compute_group_relative_advantages_token_level(
+    config: Dict[str, Any],
+    token_rewards: torch.Tensor,
+    total_rewards: torch.Tensor,
+    num_generations: int,
+) -> torch.Tensor:
+    """
+    Normalize rewards within each prompt group and handle degenerate cases.
 
-        degenerate = (total_rewards == min_) | (total_rewards == max_)
+    Args:
+        rewards (torch.Tensor):
+            If config.training.reward_token_level is False: shape = (batch*num_gen,)
+            If config.training.reward_token_level is True:  shape = (batch, seq_len)
+        num_generations (int): Number of completions per prompt.
 
-        # 3. 计算每个 sample 的归一化 advantage
-        adv = (total_rewards - mean) / (std + 1e-4)
-        rand = (torch.randint(0, 2, adv.shape, device=adv.device) * 2 - 1).float()
-        adv[degenerate] = rand[degenerate]
-
-        # 4. 将归一化 advantage 按比例分配回 token
-        #      单个 sample，每个 token 的 reward / sum(rewards)，乘归一化 advantage
-        #      注意总 reward 可能为 0
-        proportions = torch.zeros_like(rewards)
-        nonzero_mask = total_rewards != 0
-        proportions[nonzero_mask] = rewards[nonzero_mask] / total_rewards[nonzero_mask].unsqueeze(1)
-
-        # 每行都乘自己的归一化 advantage
-        adv_expanded = adv.unsqueeze(1).expand_as(proportions)
-        final_adv = proportions * adv_expanded
-
-        # 对于 degenerate 行，用随机 ±1 平分给每个 token
-        if degenerate.any():
-            for i in torch.where(degenerate)[0]:
-                final_adv[i, :] = rand[i] / rewards.size(1)
-        # pdb.set_trace()
-        return final_adv  # shape: [B, length]
+    Returns:
+        torch.Tensor:
+            If reward_token_level is False: (batch*num_gen, 1)
+            If reward_token_level is True:  (batch, seq_len)
+    """
+    # pdb.set_trace()
+    mean = total_rewards.mean()
+    std = total_rewards.std()
+    adv = (total_rewards - mean) / (std + 1e-4)  # shape [B, 1]
+    adv_expanded = adv.unsqueeze(1).expand_as(token_rewards)
+    final_adv = token_rewards * adv_expanded
+    total_expanded = total_rewards.unsqueeze(1).expand_as(token_rewards)
+    final_adv = final_adv / total_expanded
+    # pdb.set_trace()
+    return final_adv
 
 
 def maximize_grpo_objective(
@@ -475,6 +469,7 @@ def maximize_grpo_objective(
         )
         rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
         avg_reward = float(rewards.mean())
+        adv = compute_group_relative_advantages(config, rewards, rollout_data["num_generations"])
     elif config.training.reward_token_level:
         rewards_dict = reward_function(
             prompts=rollout_data["repeated_prompts"],
@@ -483,10 +478,11 @@ def maximize_grpo_objective(
             completion_ids=completion_ids,
             tokenizer=tokenizer,
         )
-        rewards = rewards_dict["token_rewards"]
-        avg_reward = float(rewards.mean())
+        total_rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
+        token_rewards = rewards_dict["token_rewards"]
+        avg_reward = float(token_rewards.mean())
+        adv = compute_group_relative_advantages_token_level(config, token_rewards, total_rewards, rollout_data["num_generations"])
 
-    adv = compute_group_relative_advantages(config, rewards, rollout_data["num_generations"])
     # pdb.set_trace()
     surr1 = ratio * adv
     surr2 = torch.clamp(ratio, 1 - epsilon, 1 + 1.5 * epsilon) * adv
