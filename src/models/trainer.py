@@ -978,10 +978,7 @@ def train_with_sft(
             answers = batch["answer"]
             input_ids, attention_mask, labels = prepare_sft_batch(tokenizer, prompts, answers, accelerator.device)
             outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                obtain_logits=True,
-                logits_to_keep=labels.shape[1]
+                input_ids=input_ids, attention_mask=attention_mask, obtain_logits=True, logits_to_keep=labels.shape[1]
             )
             logits = outputs
             # pdb.set_trace()
