@@ -309,46 +309,6 @@ def generate_rollout_data(
     }
 
 
-# def compute_group_relative_advantages(
-#     config: Dict[str, Any],
-#     rewards: torch.Tensor,
-#     num_generations: int,
-# ) -> torch.Tensor:
-#     """
-#     Normalize rewards within each prompt group and handle degenerate cases.
-
-#     Args:
-#         rewards (torch.Tensor): Flat tensor of rewards (batch*num_gen,).
-#         num_generations (int): Number of completions per prompt.
-
-#     Returns:
-#         torch.Tensor: Advantages of shape (batch*num_gen, 1).
-#     """
-#     # TODO add if else
-#     # pdb.set_trace()
-#     if not config.training.reward_token_level:
-#         groups = rewards.view(-1, num_generations)
-#         means = groups.mean(dim=1)
-#         stds = groups.std(dim=1)
-#         mins = groups.min(dim=1).values
-#         maxs = groups.max(dim=1).values
-
-#         degenerate = (means == mins) | (means == maxs)
-#         exp_means = means.repeat_interleave(num_generations)
-#         exp_stds = stds.repeat_interleave(num_generations)
-#         mask = degenerate.repeat_interleave(num_generations)
-#         # pdb.set_trace()
-
-#         adv = (rewards - exp_means) / (exp_stds + 1e-4)
-#         # Random ±1 for degenerate groups
-#         rand = (torch.randint(0, 2, rewards.shape, device=rewards.device) * 2 - 1).float()
-#         adv[mask] = rand[mask]
-#         return adv.unsqueeze(1)
-#     elif config.training.reward_token_level:
-#         pdb.set_trace()
-#         raise NotImplementedError("Token-level reward is not implemented yet")
-
-
 def compute_group_relative_advantages(
     config: Dict[str, Any],
     rewards: torch.Tensor,
@@ -665,6 +625,7 @@ def train_with_grpo(
 
     sum_steps = current_step
     base_num_generations = config.training.generation.num_generations
+    all_steps = config.training.num_iterations * config.training.steps_per_iteration
     for it in range(1, num_iterations + 1):
         logging.info(f"start GRPO iteration {it}/{num_iterations}")
         torch.cuda.empty_cache()
@@ -696,10 +657,11 @@ def train_with_grpo(
             elif num_generations["mode"] == "range":
                 num_generations = random.randint(num_generations["range"][0], num_generations["range"][1])
             elif num_generations["mode"] == "function":  # FIXME no check
-                num_generations = num_generations["function"](num_generations["range"])
+                num_generations = int(8 - (sum_steps / all_steps) * 4)
             # pdb.set_trace()
+            logging.info(f"=" * 50)
             logging.info(f" step {step+1}/{min(steps_per_iteration, len(dataloader))}, num_generations: {num_generations}")
-
+            logging.info(f"=" * 50)
             logging.info(f"start to generate rollout data, step {step+1}/{min(steps_per_iteration, len(dataloader))}")
             with torch.no_grad():
                 rollout = generate_rollout_data(

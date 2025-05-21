@@ -37,7 +37,7 @@ training:
   batch_size: 1
   learning_rate: 0.000005
   num_iterations: 2 # epoch
-  steps_per_iteration: 2 # in one epoch
+  steps_per_iteration: 5 # in one epoch
   save_interval: 1 # steps
 
   reward_token_level: true
@@ -45,7 +45,7 @@ training:
   generation:
     # TODO
     num_generations:
-      mode: "range"
+      mode: "function"
       constant: 8
       range: [4, 8]
       function: [lambda x: x * 2]
