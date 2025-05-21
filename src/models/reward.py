@@ -1,6 +1,6 @@
-from typing import Any, Dict, List
 import os
 import re
+from typing import Any, Dict, List
 
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
@@ -82,7 +82,7 @@ def format_reward(completions: List[List[Dict[str, Any]]]) -> List[float]:
             score += 0.2
         if "</backtrack>" in response:
             score += 0.2
-            
+
         # summary tags
         if "<summary>" in response:
             score += 0.2
@@ -184,59 +184,3 @@ def overall_reward(prompts: List[str], completions: List[List[Dict[str, Any]]], 
         "format_scores": format_scores,
         "rag_scores": rag_scores,
     }
-
-
-def token_level_advanced_scores(prompts: List[str], completions: List[List[Dict[str, Any]]], answers: List[str]) -> List[List[float]]:
-    """
-    对每个token进行分析，计算奖励：(1-mask)*r + act*总分
-    mask: 在<search></search>内为1，否则0
-    act: 在<action></action>内为1，否则0
-    r: 总分/该回答token数
-    """
-    all_scores = overall_reward(prompts, completions, answers)
-    total_scores = all_scores["total_scores"]
-    token_rewards = []
-
-    for idx, completion in enumerate(completions):
-        text = completion[0]["content"]
-        tokens = text.split()  # 可替换为更细致的分词方式
-        n_tokens = len(tokens)
-        if n_tokens == 0:
-            token_rewards.append([])
-            continue
-        r = total_scores[idx] / n_tokens
-
-        # 记录每个token的mask和act
-        mask_flags = [0] * n_tokens
-        act_flags = [0] * n_tokens
-
-        # 计算每个token的起止字符位置
-        token_spans = []
-        pos = 0
-        for t in tokens:
-            start = text.find(t, pos)
-            end = start + len(t)
-            token_spans.append((start, end))
-            pos = end
-
-        # 找出所有<search>...</search>和<action>...</action>区间
-        search_spans = [(m.start(), m.end()) for m in re.finditer(r"<search>(.*?)</search>", text, re.DOTALL)]
-        action_spans = [(m.start(), m.end()) for m in re.finditer(r"<action>(.*?)</action>", text, re.DOTALL)]
-
-        # 判断每个token是否在这些区间内
-        for i, (start, end) in enumerate(token_spans):
-            for s_start, s_end in search_spans:
-                if start >= s_start and end <= s_end:
-                    mask_flags[i] = 1
-                    break
-            for a_start, a_end in action_spans:
-                if start >= a_start and end <= a_end:
-                    act_flags[i] = 1
-                    break
-
-        # 计算奖励
-        rewards = [(1 - mask_flags[i]) * r + act_flags[i] * total_scores[idx] for i in range(n_tokens)]
-        token_rewards.append(rewards)
-
-    return token_rewards
-
