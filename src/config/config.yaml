@@ -10,10 +10,10 @@ experiment:
   random_seed: 42
 
 model:
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
   # name: "Qwen/Qwen2.5-0.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
-  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
-  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
   torch_dtype: "bfloat16"
