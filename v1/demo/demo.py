@@ -112,6 +112,17 @@ def selective_log_softmax(logits, token_ids):
 
 
 def compute_log_probabilities(model, input_token_ids, attention_mask, generation_length):
+    input_token_ids = (
+        input_token_ids.to(model.device)
+        if isinstance(input_token_ids, torch.Tensor)
+        else torch.tensor(input_token_ids, device=model.device)
+    )
+    attention_mask = (
+        attention_mask.to(model.device)
+        if isinstance(attention_mask, torch.Tensor)
+        else torch.tensor(attention_mask, device=model.device)
+    )
+
     output = model(
         input_ids=input_token_ids, attention_mask=attention_mask, logits_to_keep=generation_length + 1, obtain_logits=True
     ).logits  # NOTE 如果在自己定义的模型中实现了 .logits 这里就不用 .logits
@@ -140,7 +151,7 @@ class RolloutBatch:
 
 @ray.remote
 class ReferenceModelActor:
-    def __init__(self, model_path, num_gpus=1):
+    def __init__(self, model_path):
         self.device = torch.device("cuda")
         self.model, _ = load_model(model_path, device_map="auto")
         self.model.eval().to(self.device)
@@ -148,27 +159,20 @@ class ReferenceModelActor:
     def set_lora_weights(self, state_dict):
         load_lora_state_dict(self.model, state_dict)
 
-    def log_probability(self, prompt_token_ids, completion_token_ids):
+    def log_probability(self, input_token_ids, attention_mask, generation_length):
         with torch.no_grad():
-            ids_tensor = torch.tensor(prompt_token_ids, dtype=torch.long, device=self.device)
-            log_probs = torch.log_softmax(self.model(ids_tensor).logits[:, -1, :], -1)
-            token_tensor = torch.tensor(completion_token_ids, dtype=torch.long, device=self.device)
-            index = torch.arange(len(completion_token_ids), device=self.device)
-            return log_probs[index, token_tensor].cpu().numpy()
+            return (
+                compute_log_probabilities(self.model, input_token_ids, attention_mask, generation_length).detach().cpu().numpy()
+            )
 
 
 @ray.remote
 class RolloutWorker:
-    def __init__(self, model_path, num_gpus=1, generation_config=None):
+    def __init__(self, model_path, generation_config):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.model, self.tokenizer = load_model(model_path, device_map="auto")
         self.model.eval().to(self.device)
-        self.generation_config = generation_config or GenerationConfig(
-            max_new_tokens=512,
-            temperature=0.7,
-            top_p=0.9,
-            do_sample=True,
-        )
+        self.generation_config = generation_config
 
     def set_lora_weights(self, state_dict):
         load_lora_state_dict(self.model, state_dict)
@@ -199,11 +203,13 @@ class RolloutWorker:
         generation_length = generated.size(1) - repeated_token_ids.size(1)
         completion_token_ids = generated[:, -generation_length:]
         completion_mask = torch.ones_like(completion_token_ids, dtype=torch.int8)
+        all_ids = torch.cat([repeated_token_ids, completion_token_ids], 1)
+        all_mask = torch.cat([repeated_attention_mask, completion_mask], 1)
         old_log_probabilities = (
             compute_log_probabilities(
                 self.model,
-                torch.cat([repeated_token_ids, completion_token_ids], 1),
-                torch.cat([repeated_attention_mask, completion_mask], 1),
+                all_ids,
+                all_mask,
                 generation_length,
             )
             .detach()
@@ -216,8 +222,8 @@ class RolloutWorker:
             meta_list.extend([{"question_and_options": question_options, "answer": answer}] * num_generation)
         generation_text = self.tokenizer.batch_decode(completion_token_ids.cpu().numpy(), skip_special_tokens=True)
         return RolloutBatch(
-            all_ids=repeated_token_ids.cpu().numpy(),
-            all_mask=repeated_attention_mask.cpu().numpy(),
+            all_ids=all_ids.cpu().numpy(),
+            all_mask=all_mask.cpu().numpy(),
             generation_ids=completion_token_ids.cpu().numpy(),
             generation_mask=completion_mask.cpu().numpy(),
             generation_text=generation_text,
@@ -241,7 +247,7 @@ class RewardActor:
 
 @ray.remote
 class PolicyLearner:
-    def __init__(self, reference_model_actor, model_path, num_gpus=1, kl_coefficient=0.2, learning_rate=5e-4, epsilon=0.2):
+    def __init__(self, reference_model_actor, model_path, kl_coefficient=0.2, learning_rate=5e-4, epsilon=0.2):
         self.device = torch.device("cuda")
         self.model, _ = load_model(model_path, device_map="auto")
         self.model.to(self.device)
@@ -254,35 +260,35 @@ class PolicyLearner:
         return extract_lora_state_dict(self.model)
 
     def update(self, rollout_batch: RolloutBatch, rewards: List[float], num_generation: int):
-        batch_size, completion_length = rollout_batch.generation_ids.shape
+        batch_size, all_length = rollout_batch.all_ids.shape
+        generation_length = rollout_batch.generation_ids.shape[1]
         all_ids = torch.tensor(rollout_batch.all_ids, dtype=torch.long, device=self.device)
         all_mask = torch.tensor(rollout_batch.all_mask, dtype=torch.long, device=self.device)
         generation_ids = torch.tensor(rollout_batch.generation_ids, dtype=torch.long, device=self.device)
         generation_mask = torch.tensor(rollout_batch.generation_mask, dtype=torch.long, device=self.device)
+
         old_log_probabilities = torch.tensor(rollout_batch.old_log_probabilities, dtype=torch.float32, device=self.device)
         reward_tensor = torch.tensor(rewards, dtype=torch.float32, device=self.device)
-        current_log_probabilities = compute_log_probabilities(
-            self.model,
-            torch.cat([all_ids, generation_ids], 1),
-            torch.cat([all_mask, generation_mask], 1),
-            completion_length,
-        )
+
+        current_log_probabilities = compute_log_probabilities(self.model, all_ids, all_mask, generation_length)
         reference_log_probabilities = torch.tensor(
             ray.get(
-                self.reference_model_actor.log_probability.remote(all_ids.cpu().numpy(), generation_ids[:, -1].cpu().numpy())
+                self.reference_model_actor.log_probability.remote(
+                    all_ids.cpu().numpy(), all_mask.cpu().numpy(), generation_length
+                )
             ),
             dtype=torch.float32,
             device=self.device,
         )
+
         ratio = torch.exp(current_log_probabilities - old_log_probabilities)
         # FIXME num_generation 可以修改成从 rollout_batch 中获取
         advantage = compute_group_relative_advantages(reward_tensor, num_generation).to(self.device)
         surrogate_objective_1 = ratio * advantage
         surrogate_objective_2 = torch.clamp(ratio, 1 - self.epsilon, 1 + 1.5 * self.epsilon) * advantage
-        # FIXME : 这里需要计算kl散度
-        # kl_divergence = current_log_probabilities - reference_log_probabilities
-        kl_divergence = torch.zeros_like(surrogate_objective_1)
-        # pdb.set_trace()
+
+        kl_divergence = current_log_probabilities - reference_log_probabilities
+
         loss = (
             -((torch.min(surrogate_objective_1, surrogate_objective_2) - self.kl_coefficient * kl_divergence) * generation_mask)
             .sum(1)
@@ -309,7 +315,20 @@ def main():
         "training_batch_size": 1,  # for all workers, training batch size = number of workers * each worker's batch size
         "kl_coefficient": 0.2,
         "gpu_config": {"reference_model_gpus": 1, "rollout_worker_gpus": 1, "policy_learner_gpus": 1},
+        "sync_frequency": 10,  # Sync lora weights to reference model every N steps
+        "generation_config": GenerationConfig(
+            max_new_tokens=128,
+            temperature=0.7,
+            top_p=0.9,
+            do_sample=True,
+        ),
     }
+
+    assert CONFIG["number_of_workers"] == 1, "number of workers must be 1 (multi-worker not yet implemented)"
+    assert CONFIG["gpu_config"]["reference_model_gpus"] == 1, "reference model must use 1 GPU (multi-GPU not yet implemented)"
+    assert CONFIG["gpu_config"]["rollout_worker_gpus"] == 1, "rollout worker must use 1 GPU (multi-GPU not yet implemented)"
+    assert CONFIG["gpu_config"]["policy_learner_gpus"] == 1, "policy learner must use 1 GPU (multi-GPU not yet implemented)"
+    assert CONFIG["sync_frequency"] > 0, "sync frequency must be greater than 0"
 
     train_dataset, eval_dataset, test_dataset = prepare_dataset_medqa(
         "train", CONFIG["training_size"], CONFIG["evaluation_size"], CONFIG["testing_size"]
@@ -325,7 +344,9 @@ def main():
         CONFIG["model_path"]
     )
     rollout_workers = [
-        RolloutWorker.options(num_gpus=CONFIG["gpu_config"]["rollout_worker_gpus"]).remote(CONFIG["model_path"])
+        RolloutWorker.options(num_gpus=CONFIG["gpu_config"]["rollout_worker_gpus"]).remote(
+            CONFIG["model_path"], generation_config=CONFIG["generation_config"]
+        )
         for _ in range(CONFIG["number_of_workers"])
     ]
     reward_actor = RewardActor.remote()
@@ -356,7 +377,6 @@ def main():
                 ]
             )
             logging.info(f"success to load rollout_batches: {len(rollout_batches)}")
-            # pdb.set_trace()
 
             completions, meta_list = [], []
             # FIXME 如果是多个 rollout_batches 的话，需要修改
@@ -372,7 +392,7 @@ def main():
             logging.info(f"success to load loss: {loss}")
 
             logging.info(f"[step {step:04d}] loss={loss:.4f} | avgR={average_reward:.2f}")
-            if step % 10 == 9:
+            if step % CONFIG["sync_frequency"] == CONFIG["sync_frequency"] - 1:
                 reference_model_actor.set_lora_weights.remote(lora_state_dict)
 
     except KeyboardInterrupt:
