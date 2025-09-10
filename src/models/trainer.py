@@ -22,6 +22,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from models.reward import overall_reward
 from models.reward_token_level import overall_reward_token_level
+from models.decouple_layer import compute_loss_for_layers_simple, create_action_token_mask, create_args_content_mask
 from src.models.model import AgenticRAGModel
 from src.utils.extractor import analyze_completions
 from src.utils.utils import optimize_model_memory
@@ -113,6 +114,8 @@ def generate_completions(
     use_KV_Cache: bool = False,
     use_diverse_sampling: bool = False,
     diversity_penalty: float = 1.0,
+    # action_only: bool = False,
+    # args_only: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate multiple completions per prompt and compute masks for valid tokens.
@@ -170,6 +173,7 @@ def generate_completions(
     # completion_ids = outputs[:, prompt_len:]
 
     # Compute mask
+    # TODO Fixme Here, 这里需要对<search>, <reasoning>, <backtrack>, <summary>做编码，并且添加mask 
     start_ids = tokenizer("<observation>").input_ids
     end_ids = tokenizer("</observation>").input_ids
     completion_mask = create_completion_mask(
@@ -178,6 +182,17 @@ def generate_completions(
         start_ids,
         end_ids,
     )
+
+    # if action_only:  
+    #     # 对<search>,</search> <reasoning>,</reasoning> <backtrack>,</backtrack> <summary>,</summary>做编码，并且把其他的添加mask  
+    #     action_mask = create_action_token_mask(completion_ids, tokenizer, completion_mask)  
+    #     completion_mask = action_mask  
+  
+    # if args_only:  
+    #     # 在completion_mask的基础上，对除了action token的内容做mask  
+    #     args_mask = create_args_content_mask(completion_ids, tokenizer, completion_mask)  
+    #     completion_mask = args_mask 
+
     return prompt_ids, prompt_mask, completion_ids, completion_mask
 
 
@@ -451,7 +466,7 @@ def maximize_grpo_objective(
     kl = torch.exp(ref_lp - curr_lp) - (ref_lp - curr_lp) - 1
     per_token = surr - beta * kl
     loss = -((per_token * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
-
+    
     optimizer.zero_grad()
     accelerator.backward(loss)
     optimizer.step()
@@ -588,6 +603,7 @@ def train_with_grpo(
     use_KV_Cache: bool = False,
     use_diverse_sampling: bool = False,
     diversity_penalty: float = 1.0,
+    use_decouple_layer: bool = True,
 ) -> None:
     """
     Train policy model using GRPO fine-tuning with periodic checkpointing.
@@ -681,9 +697,31 @@ def train_with_grpo(
                 )
             logging.info(f"success to generate rollout data")
             for _ in range(mu):
-                loss_val, avg_r, rdict = maximize_grpo_objective(
-                    config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
-                )
+                if not use_decouple_layer: 
+                    loss_val, avg_r, rdict = maximize_grpo_objective(
+                        config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+                    )
+                else: 
+                    completion_mask_copy = rollout['completion_mask']
+                    completion_ids = rollout['completion_ids']
+                    
+                    # TODO: 这个地方是否可以实现解耦分次更新：先更新args，再更新action
+                    # Args Only
+                    logging.info(f"Optimize Args")
+                    rollout["completion_mask"] = create_action_token_mask(completion_ids, tokenizer, completion_mask_copy)
+                    loss_val, avg_r, rdict = maximize_grpo_objective(
+                        config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+                    )
+                    
+                    # Action Only
+                    logging.info(f"Optimize Action")
+                    rollout["completion_mask"] = create_args_content_mask(completion_ids, tokenizer, completion_mask_copy)  
+                    loss_val, avg_r, rdict = maximize_grpo_objective(
+                        config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+                    )
+
+                    rollout["completion_mask"] = completion_mask_copy
+
             logging.info(f"success to maximize grpo objective")
 
             print(
