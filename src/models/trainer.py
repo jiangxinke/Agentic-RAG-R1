@@ -20,9 +20,13 @@ from peft import LoraConfig, PeftModel, get_peft_model
 from peft.utils import get_peft_model_state_dict
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
+from models.decouple_layer import (
+    create_action_token_mask,
+    create_args_content_mask,
+    generate_grad_control_dicts,
+)
 from models.reward import overall_reward
 from models.reward_token_level import overall_reward_token_level
-from models.decouple_layer import generate_grad_control_dicts, create_action_token_mask, create_args_content_mask
 from src.models.model import AgenticRAGModel
 from src.utils.extractor import analyze_completions
 from src.utils.utils import optimize_model_memory
@@ -391,7 +395,7 @@ def maximize_grpo_objective(
     beta: float,
     epsilon: float,
     accelerator: Accelerator,
-    grad_control_dict: Dict[str, bool] = None,  # TODO: 新增参数字典  
+    grad_control_dict: Dict[str, bool] = None,  
 ) -> Tuple[float, float, Dict[str, Any]]:
     """
     Perform a single GRPO update step, computing loss and backpropagating.
@@ -454,29 +458,29 @@ def maximize_grpo_objective(
     kl = torch.exp(ref_lp - curr_lp) - (ref_lp - curr_lp) - 1
     per_token = surr - beta * kl
     loss = -((per_token * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
-    
+
     optimizer.zero_grad()
 
-    if grad_control_dict is not None:  
-        # 保存原始状态  
-        original_grad_state = {}  
-        for name, param in model.named_parameters():  
-            original_grad_state[name] = param.requires_grad  
-          
-        # 应用新的梯度控制  
-        for name, param in model.named_parameters():  
-            if name in grad_control_dict:  
-                param.requires_grad_(grad_control_dict[name])  
-            else:  
-                param.requires_grad_(False)  # 默认冻结未指定的参数  
+    if grad_control_dict is not None:
+        # 保存原始状态
+        original_grad_state = {}
+        for name, param in model.named_parameters():
+            original_grad_state[name] = param.requires_grad
+
+        # 应用新的梯度控制
+        for name, param in model.named_parameters():
+            if name in grad_control_dict:
+                param.requires_grad_(grad_control_dict[name])
+            else:
+                param.requires_grad_(False)  # 默认冻结\未指定的参数
 
     accelerator.backward(loss)
     optimizer.step()
 
-    # 恢复原始梯度状态  
-    if grad_control_dict is not None:  
-        for name, param in model.named_parameters():  
-            param.requires_grad_(original_grad_state[name])  
+    # 恢复原始梯度状态
+    if grad_control_dict is not None:
+        for name, param in model.named_parameters():
+            param.requires_grad_(original_grad_state[name])
 
     # pdb.set_trace()
     return float(loss), avg_reward, rewards_dict
@@ -584,51 +588,66 @@ def save_lora_only_in_zero2(engine, tokenizer, ckpt_dir):
     tokenizer.save_pretrained(ckpt_dir)
 
 
-def train_with_layered_optimization(  
-    config, policy_model, ref_model, rollout, tokenizer,   
-    reward_function, optimizer, beta, epsilon, accelerator  
-):  
-    """  
-    实现分层优化的训练函数  
-    """  
-    # 生成梯度控制字典  
-    action_train_dict, args_train_dict = generate_grad_control_dicts(policy_model)  
-      
-    # 保存原始completion_mask  
-    completion_ids = rollout["completion_ids"]  
-    completion_mask_copy = rollout["completion_mask"].clone()  
-      
-    total_loss = 0.0  
-      
-    # 1. 优化Action Token（前两层）  
-    logging.info(f"Optimize Action Tokens")  
-    rollout["completion_mask"] = create_action_token_mask(completion_ids, tokenizer, completion_mask_copy)  
-      
-    if rollout["completion_mask"].sum() > -1:  # FIXME: 这里后面要把"-1"修改为0， 确保有action token需要优化  
-        loss_val, avg_r, rdict = maximize_grpo_objective(  
-            config, policy_model, ref_model, rollout, tokenizer,   
-            reward_function, optimizer, beta, epsilon, accelerator,  
-            grad_control_dict=action_train_dict  
-        )  
-        total_loss += loss_val  
-        logging.info(f"Action optimization loss: {loss_val:.6f}")  
-      
-    # 2. 优化Args Content（后两层）  
-    logging.info(f"Optimize Args Content")  
-    rollout["completion_mask"] = create_args_content_mask(completion_ids, tokenizer, completion_mask_copy)  
-      
-    if rollout["completion_mask"].sum() > -1:  # 这里后面要把"-1"修改为0， 确保有args content需要优化  
-        loss_val, avg_r, rdict = maximize_grpo_objective(  
-            config, policy_model, ref_model, rollout, tokenizer,   
-            reward_function, optimizer, beta, epsilon, accelerator,  
-            grad_control_dict=args_train_dict  
-        )  
-        total_loss += loss_val  
-        logging.info(f"Args optimization loss: {loss_val:.6f}")  
-      
-    # 恢复原始mask  
-    rollout["completion_mask"] = completion_mask_copy  
-      
+def train_with_layered_optimization(
+    config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+):
+    """
+    实现分层优化的训练函数
+    """
+    # 生成梯度控制字典
+    action_train_dict, args_train_dict = generate_grad_control_dicts(policy_model)
+
+    # 保存原始completion_mask
+    completion_ids = rollout["completion_ids"]
+    completion_mask_copy = rollout["completion_mask"].clone()
+
+    total_loss = 0.0
+
+    # 1. 优化Action Token（前两层）
+    logging.info(f"Optimize Action Tokens")
+    rollout["completion_mask"] = create_action_token_mask(completion_ids, tokenizer, completion_mask_copy)
+
+    if rollout["completion_mask"].sum() > 0:  
+        loss_val, avg_r, rdict = maximize_grpo_objective(
+            config,
+            policy_model,
+            ref_model,
+            rollout,
+            tokenizer,
+            reward_function,
+            optimizer,
+            beta,
+            epsilon,
+            accelerator,
+            grad_control_dict=action_train_dict,
+        )
+        total_loss += loss_val
+        logging.info(f"Action optimization loss: {loss_val:.6f}")
+
+    # 2. 优化Args Content（后两层）
+    logging.info(f"Optimize Args Content")
+    rollout["completion_mask"] = create_args_content_mask(completion_ids, tokenizer, completion_mask_copy)
+
+    if rollout["completion_mask"].sum() > -1:  # 这里后面要把"-1"修改为0， 确保有args content需要优化
+        loss_val, avg_r, rdict = maximize_grpo_objective(
+            config,
+            policy_model,
+            ref_model,
+            rollout,
+            tokenizer,
+            reward_function,
+            optimizer,
+            beta,
+            epsilon,
+            accelerator,
+            grad_control_dict=args_train_dict,
+        )
+        total_loss += loss_val
+        logging.info(f"Args optimization loss: {loss_val:.6f}")
+
+    # 恢复原始mask
+    rollout["completion_mask"] = completion_mask_copy
+
     return total_loss, avg_r, rdict
 
 
@@ -753,15 +772,32 @@ def train_with_grpo(
                 )
             logging.info(f"success to generate rollout data")
             for _ in range(mu):
-                if not use_decouple_layer: 
+                if not use_decouple_layer:
                     loss_val, avg_r, rdict = maximize_grpo_objective(
-                        config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, epsilon, accelerator
+                        config,
+                        policy_model,
+                        ref_model,
+                        rollout,
+                        tokenizer,
+                        reward_function,
+                        optimizer,
+                        beta,
+                        epsilon,
+                        accelerator,
                     )
-                else: 
+                else:
                     # NOTE 这个地方是否可以实现解耦分次更新：先更新args，再更新action
-                    loss_val, avg_r, rdict = train_with_layered_optimization(  
-                        config, policy_model, ref_model, rollout, tokenizer,   
-                        reward_function, optimizer, beta, epsilon, accelerator  
+                    loss_val, avg_r, rdict = train_with_layered_optimization(
+                        config,
+                        policy_model,
+                        ref_model,
+                        rollout,
+                        tokenizer,
+                        reward_function,
+                        optimizer,
+                        beta,
+                        epsilon,
+                        accelerator,
                     )
 
             logging.info(f"success to maximize grpo objective")
@@ -1058,10 +1094,7 @@ def train_with_sft(
             answers = batch["answer"]
             input_ids, attention_mask, labels = prepare_sft_batch(tokenizer, prompts, answers, accelerator.device)
             outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                obtain_logits=True,
-                logits_to_keep=labels.shape[1]
+                input_ids=input_ids, attention_mask=attention_mask, obtain_logits=True, logits_to_keep=labels.shape[1]
             )
             logits = outputs
             # pdb.set_trace()
