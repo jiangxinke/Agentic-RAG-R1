@@ -678,7 +678,7 @@ def train_with_grpo(
     use_KV_Cache: bool = False,
     use_diverse_sampling: bool = False,
     diversity_penalty: float = 1.0,
-    use_decouple_layer: bool = True,
+    use_decouple_layer: bool = False,
 ) -> None:
     """
     Train policy model using GRPO fine-tuning with periodic checkpointing.

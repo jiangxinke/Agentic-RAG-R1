@@ -195,6 +195,9 @@ def main():
     else:
         current_step = 0
 
+    # whether to use decouple action and args
+    use_decouple_layer = config.decouple_layer.decouple_layer
+
     if getattr(config.training, "train_method", "grpo") == "grpo":
         train_with_grpo(
             config=config,
@@ -206,6 +209,7 @@ def main():
             dataloader=train_dataloader,
             checkpoint_dir=checkpoint_dir,
             current_step=current_step,
+            use_decouple_layer=use_decouple_layer,
             **training_config,
         )
     elif config.training.train_method == "ppo":

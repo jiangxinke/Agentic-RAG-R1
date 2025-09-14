@@ -42,6 +42,8 @@ training:
 
   reward_token_level: true
 
+  decouple_layer: true  # whether to use decouple action and arge
+
   generation:
     # TODO
     num_generations:
