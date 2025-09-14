@@ -135,6 +135,7 @@ class AgenticRAGModel(PreTrainedModel):
         use_KV_Cache: bool = False,
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
+        use_SSRL: bool = False,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -160,36 +161,47 @@ class AgenticRAGModel(PreTrainedModel):
             RuntimeError: If model generation fails.
         """
         if not obtain_logits:
-            if use_KV_Cache:
-                return self.generate_with_think_interruption_KV_Cache(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=max_new_tokens,
-                    max_length_for_gather=max_length_for_gather,
-                    do_sample=do_sample,
-                    temperature=temperature,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    max_generate_iterations=max_generate_iterations,
-                    use_diverse_sampling=use_diverse_sampling,
-                    diversity_penalty=diversity_penalty,
-                    **kwargs,
-                )
+            if use_SSRL:
+                return self.model.generate(
+                        input_ids,
+                        attention_mask=attention_mask,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=do_sample,
+                        temperature=temperature,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                    )
             else:
-                return self.generate_with_think_interruption(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=max_new_tokens,
-                    max_length_for_gather=max_length_for_gather,
-                    do_sample=do_sample,
-                    temperature=temperature,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    max_generate_iterations=max_generate_iterations,
-                    use_diverse_sampling=use_diverse_sampling,
-                    diversity_penalty=diversity_penalty,
-                    **kwargs,
-                )
+                if use_KV_Cache:
+                    return self.generate_with_think_interruption_KV_Cache(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        max_new_tokens=max_new_tokens,
+                        max_length_for_gather=max_length_for_gather,
+                        do_sample=do_sample,
+                        temperature=temperature,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        max_generate_iterations=max_generate_iterations,
+                        use_diverse_sampling=use_diverse_sampling,
+                        diversity_penalty=diversity_penalty,
+                        **kwargs,
+                    )
+                else:
+                    return self.generate_with_think_interruption(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        max_new_tokens=max_new_tokens,
+                        max_length_for_gather=max_length_for_gather,
+                        do_sample=do_sample,
+                        temperature=temperature,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        max_generate_iterations=max_generate_iterations,
+                        use_diverse_sampling=use_diverse_sampling,
+                        diversity_penalty=diversity_penalty,
+                        **kwargs,
+                    )
         logits = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,

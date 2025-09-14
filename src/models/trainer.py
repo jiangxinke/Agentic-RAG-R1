@@ -118,6 +118,7 @@ def generate_completions(
     use_KV_Cache: bool = False,
     use_diverse_sampling: bool = False,
     diversity_penalty: float = 1.0,
+    use_SSRL: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate multiple completions per prompt and compute masks for valid tokens.
@@ -171,6 +172,7 @@ def generate_completions(
         use_KV_Cache=use_KV_Cache,
         use_diverse_sampling=use_diverse_sampling,
         diversity_penalty=diversity_penalty,
+        use_SSRL=use_SSRL
     )
     # completion_ids = outputs[:, prompt_len:]
 
@@ -250,6 +252,7 @@ def generate_rollout_data(
     use_KV_Cache: bool,
     use_diverse_sampling: bool,
     diversity_penalty: float,
+    use_SSRL: bool
 ) -> Dict[str, Any]:
     """
     Generate completions and compute log-probabilities for rollouts.
@@ -287,6 +290,7 @@ def generate_rollout_data(
             use_KV_Cache,
             use_diverse_sampling,
             diversity_penalty,
+            use_SSRL,
         )
         input_ids = torch.cat([p_ids, c_ids], dim=1)
         attention_mask = torch.cat([p_mask, c_mask], dim=1)
@@ -487,7 +491,7 @@ def maximize_grpo_objective(
 
 
 from peft import LoraConfig, PeftModel, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, PreTrainedModel
 
 from src.models.model import AgenticRAGModel
 from src.utils.utils import optimize_model_memory
@@ -679,6 +683,7 @@ def train_with_grpo(
     use_diverse_sampling: bool = False,
     diversity_penalty: float = 1.0,
     use_decouple_layer: bool = False,
+    use_SSRL: bool = False
 ) -> None:
     """
     Train policy model using GRPO fine-tuning with periodic checkpointing.
@@ -769,6 +774,7 @@ def train_with_grpo(
                     use_KV_Cache,
                     use_diverse_sampling,
                     diversity_penalty,
+                    use_SSRL=use_SSRL,
                 )
             logging.info(f"success to generate rollout data")
             for _ in range(mu):

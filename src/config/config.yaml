@@ -10,7 +10,7 @@ experiment:
   random_seed: 42
 
 model:
-  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-0.5B-Instruct"
   # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
   # name: "Qwen/Qwen2.5-0.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
@@ -43,6 +43,7 @@ training:
   reward_token_level: true
 
   decouple_layer: true  # whether to use decouple action and arge
+  use_SSRL: true        # whether to use SSRL
 
   generation:
     # TODO
