@@ -17,10 +17,10 @@ def generate_grad_control_dicts(model):
 
     # 打印原始状态中哪些参数可以更新
     trainable_params = [name for name, requires_grad in original_grad_states.items() if requires_grad]
-    print(f"原始可训练参数数量: {len(trainable_params)}")
-    print("原始可训练参数:")
-    for name in trainable_params:
-        print(f"  {name}")
+    # print(f"原始可训练参数数量: {len(trainable_params)}")
+    # print("原始可训练参数:")
+    # for name in trainable_params:
+    #     print(f"  {name}")
 
     # 找出所有层数（Qwen2.5-1.5B通常有24层）
     layer_nums = set()
@@ -36,7 +36,7 @@ def generate_grad_control_dicts(model):
                         continue
 
     max_layer = max(layer_nums) if layer_nums else 23
-    print(f"检测到的层数范围: 0-{max_layer}")
+    # print(f"检测到的层数范围: 0-{max_layer}")
 
     # Action字典：只更新前两层的LoRA参数
     action_train_dict = {}
@@ -72,17 +72,17 @@ def generate_grad_control_dicts(model):
             args_train_dict[name] = False  # 保持原始的False状态
 
     # 打印结果对比
-    print(f"\nAction训练模式 (前两层):")
-    print(f"  可训练参数数量: {action_trainable_count}")
+    # print(f"\nAction训练模式 (前两层):")
+    # print(f"  可训练参数数量: {action_trainable_count}")
     action_true_params = [name for name, val in action_train_dict.items() if val]
-    for name in action_true_params:
-        print(f"  {name}")
+    # for name in action_true_params:
+    #     print(f"  {name}")
 
-    print(f"\nArgs训练模式 (后两层):")
-    print(f"  可训练参数数量: {args_trainable_count}")
+    # print(f"\nArgs训练模式 (后两层):")
+    # print(f"  可训练参数数量: {args_trainable_count}")
     args_true_params = [name for name, val in args_train_dict.items() if val]
-    for name in args_true_params:
-        print(f"  {name}")
+    # for name in args_true_params:
+    #     print(f"  {name}")
 
     return action_train_dict, args_train_dict
 

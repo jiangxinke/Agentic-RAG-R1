@@ -158,11 +158,12 @@ class Tools:
 
     def Wiki_RAG(self, input: str) -> str:
         logging.info(f"Using Wiki_RAG input: {input}")
-        wiki_searcher = create_wiki_searcher("zh")
+        # wiki_searcher = create_wiki_searcher("zh")
         # FIXME 先暂时mock一个
-        # wiki_searcher = create_wiki_searcher("en")
-        assert wiki_searcher is not None
+        wiki_searcher = create_wiki_searcher("en")
+        # assert wiki_searcher is not None
         RAG_result = wiki_searcher.search(input)
+        print(RAG_result)
         # RAG_result = "暂时无法使用工具，请不要使用"
         RAG_result = RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
         logging.info(f"Wiki_RAG result: {str(RAG_result)[:200]}")
@@ -196,5 +197,5 @@ def send_data(input, function_call_type):
 
 
 if __name__ == "__main__":
-    result = send_data("蛋糕", "DOC")
+    result = send_data("蛋糕", "Wiki_RAG")
     print(result[0][:50])
