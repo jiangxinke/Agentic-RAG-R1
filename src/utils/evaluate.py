@@ -15,7 +15,7 @@ client = OpenAI(
 
 
 def get_model_response(prompt, model="qwen2.5:72b", temperature=0.7):
-
+    
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
