@@ -24,7 +24,7 @@ def main():
     # Setup environment
     config = load_config("src/config/config.yaml")
 
-    output_dir: Path = Path(f"output_eval/infer/{config.exp}")
+    output_dir: Path = Path(f"output_eval/neuron/{config.exp}")
     output_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(output_dir, level=logging.INFO)
 

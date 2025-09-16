@@ -17,9 +17,7 @@ def evaluate_model(
     tokenizer: Any,
     eval_dataloader: DataLoader,
     device: torch.device,
-    use_interrupt: bool = False,
     evaluation_before_grpo: bool = False,
-    evaluation_after_grpo: bool = False,
 ) -> List[Dict[str, Union[int, str]]]:
     """
     Evaluate the model on a dataset and return detailed results.
@@ -86,7 +84,7 @@ def evaluate_model(
             seq = output_ids[0].tolist()
             input_len = input_ids.shape[1]
             response_text = tokenizer.decode(seq[input_len:], skip_special_tokens=True)
-            full_text = tokenizer.decode(seq, skip_special_tokens=True)
+            # full_text = tokenizer.decode(seq, skip_special_tokens=True)
 
             result: Dict[str, Union[int, str]] = {
                 "id": int(sample_id) if isinstance(sample_id, torch.Tensor) else sample_id,
@@ -185,7 +183,7 @@ def evaluate(
 
     if evaluation_after_grpo:
         logging.info("Running post-GRPO evaluation")
-        post_results = evaluate_model(model, tokenizer, eval_dataloader, device, evaluation_after_grpo=True)
+        post_results = evaluate_model(model, tokenizer, eval_dataloader, device, evaluation_before_grpo=False)
         accelerator.wait_for_everyone()
         gathered = accelerator.gather_for_metrics(post_results)
         if accelerator.is_main_process:
