@@ -10,12 +10,13 @@ experiment:
   random_seed: 42
 
 model:
-  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
   # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
   # name: "Qwen/Qwen2.5-1.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
 
@@ -36,19 +37,19 @@ training:
   use_KV_Cache: false
   batch_size: 1
   learning_rate: 0.000005
-  num_iterations: 2 # epoch
-  steps_per_iteration: 5 # in one epoch
+  num_iterations: 1 # epoch
+  steps_per_iteration: 300 # in one epoch
   save_interval: 1 # steps
 
   reward_token_level: true
 
-  decouple_layer: true  # whether to use decouple action and arge
-  use_SSRL: false        # whether to use SSRL
+  decouple_layer: true  # whether to use decouple action and args
+  use_SSRL: true        # whether to use SSRL
 
   generation:
     # TODO
     num_generations:
-      mode: "function"
+      mode: "constant"
       constant: 8
       range: [4, 8]
       function: [lambda x: x * 2]
@@ -61,6 +62,7 @@ training:
 
     use_diverse_sampling: true
     diversity_penalty: 1.0
+
   
   optimizer:
     beta: 0.04

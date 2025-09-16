@@ -160,7 +160,7 @@ class Tools:
         logging.info(f"Using Wiki_RAG input: {input}")
         # wiki_searcher = create_wiki_searcher("zh")
         # FIXME 先暂时mock一个
-        wiki_searcher = create_wiki_searcher("en")
+        wiki_searcher = create_wiki_searcher("zh")
         # assert wiki_searcher is not None
         RAG_result = wiki_searcher.search(input)
         print(RAG_result)
