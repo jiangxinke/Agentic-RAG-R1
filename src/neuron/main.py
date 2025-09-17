@@ -9,12 +9,12 @@ import logging
 from pathlib import Path
 
 import torch
-from accelerate import Accelerator
+# from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.data.prepare_dataset import prepare_dataset
-from src.models.evaluater import evaluate
+from src.neuron.locate_params import inference_model
 from src.models.model import AgenticRAGModel
 from src.utils.utils import (load_config, optimize_model_memory,
                              set_random_seed, setup_logging)
@@ -65,26 +65,33 @@ def main():
     retrieval_model = AgenticRAGModel(optimized_model, tokenizer)
     logging.info("AgenticRAGModel loaded successfully")
 
-
-    accelerator: Accelerator = Accelerator()
-    prepared_model, prepared_dataloader = accelerator.prepare(
-        retrieval_model,
-        eval_dataloader,
-    )
-    
-    logging.info("Starting evaluation...")
-    evaluate(
-        model=prepared_model,
+    # 测试版本
+    metrics = inference_model(
+        model=retrieval_model,
         tokenizer=tokenizer,
-        accelerator=accelerator,
-        eval_dataloader=prepared_dataloader,
+        eval_dataloader=eval_dataloader,
         device=device,
-        output_dir=output_dir,
-        evaluation_before_grpo=True,
-        evaluation_after_grpo=False,
     )
-    logging.info("Evaluation completed. Results saved to %s", output_dir)
 
+    # 分布式版本
+    # accelerator: Accelerator = Accelerator()
+    # prepared_model, prepared_dataloader = accelerator.prepare(
+    #     retrieval_model,
+    #     eval_dataloader,
+    # )
+    
+    # logging.info("Starting evaluation...")
+    # metrics = inference_model(
+    #     model=prepared_model,
+    #     tokenizer=tokenizer,
+    #     eval_dataloader=prepared_dataloader,
+    #     device=device,
+    # )
+    # accelerator.wait_for_everyone()
+    # gathered_metrics = accelerator.gather_for_metrics(metrics)
+    # logging.info("Evaluation completed. Results saved to %s", output_dir)
+
+    # accelerator.end_training()
 
 
 
