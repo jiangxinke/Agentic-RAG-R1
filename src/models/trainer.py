@@ -400,6 +400,7 @@ def maximize_grpo_objective(
     epsilon: float,
     accelerator: Accelerator,
     grad_control_dict: Dict[str, bool] = None,  
+    no_backtrack: bool = False,
 ) -> Tuple[float, float, Dict[str, Any]]:
     """
     Perform a single GRPO update step, computing loss and backpropagating.
@@ -463,8 +464,6 @@ def maximize_grpo_objective(
     per_token = surr - beta * kl
     loss = -((per_token * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
 
-    optimizer.zero_grad()
-
     if grad_control_dict is not None:
         # 保存原始状态
         original_grad_state = {}
@@ -478,8 +477,10 @@ def maximize_grpo_objective(
             else:
                 param.requires_grad_(False)  # 默认冻结\未指定的参数
 
-    accelerator.backward(loss)
-    optimizer.step()
+    if not no_backtrack:
+        accelerator.backward(loss)
+        optimizer.step()
+        optimizer.zero_grad()
 
     # 恢复原始梯度状态
     if grad_control_dict is not None:
@@ -624,6 +625,7 @@ def train_with_layered_optimization(
             epsilon,
             accelerator,
             grad_control_dict=action_train_dict,
+            no_backtrack=True,
         )
         total_loss += loss_val
         logging.info(f"Action optimization loss: {loss_val:.6f}")
@@ -792,7 +794,6 @@ def train_with_grpo(
                         accelerator,
                     )
                 else:
-                    # NOTE 这个地方是否可以实现解耦分次更新：先更新args，再更新action
                     loss_val, avg_r, rdict = train_with_layered_optimization(
                         config,
                         policy_model,

@@ -171,6 +171,8 @@ def create_args_content_mask(
             tokenizer.encode(token + " ", add_special_tokens=False),
             tokenizer.encode(token + "\n", add_special_tokens=False),
             tokenizer.encode(" " + token + "\n", add_special_tokens=False),
+            tokenizer.encode("\n" + token + "", add_special_tokens=False),
+            tokenizer.encode(" " + token + "", add_special_tokens=False),
             tokenizer.encode("\n" + token + "\n", add_special_tokens=False),
         ]
 

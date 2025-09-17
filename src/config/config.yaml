@@ -1,12 +1,12 @@
-swanlab: false
+swanlab: true
 
 project:
-  name: "xiaobeir1"
+  name: "agentic-rag-r1"
   description: "under-construction"
 
 experiment:
   # name: "qwen2.5-14B-medqa-2GPU"  # 实验名称，对应 experiments/ 下的目录
-  name: "debug"  # 实验名称，对应 experiments/ 下的目录
+  name: "qwen2.5-3B-noSSRL-nodecouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
@@ -29,22 +29,22 @@ training:
   train_method: grpo # [grpo, ppo, sft]
   continue_training: false
   current_step: 0
-  num_epochs: 3       # 这两个参数用于SFT
-  steps_per_epoch: 500
+  num_epochs: 3       # SFT 这两个参数用于SFT
+  steps_per_epoch: 500 # SFT
 
   use_lora: true
   use_quant: false
   use_KV_Cache: false
   batch_size: 1
   learning_rate: 0.000005
-  num_iterations: 1 # epoch
-  steps_per_iteration: 300 # in one epoch
-  save_interval: 1 # steps
+  num_iterations: 1 # GRPO epoch
+  steps_per_iteration: 300 # GRPO in one epoch
+  save_interval: 10 # GRPO steps
 
   reward_token_level: true
 
-  decouple_layer: true  # whether to use decouple action and args
-  use_SSRL: true        # whether to use SSRL
+  decouple_layer: false  # whether to use decouple action and args
+  use_SSRL: false        # whether to use SSRL
 
   generation:
     # TODO
