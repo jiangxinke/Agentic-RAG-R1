@@ -1,13 +1,13 @@
-import json
+
 import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from rich import print
 
 def inference_model(
     model: nn.Module,
@@ -40,13 +40,14 @@ def inference_model(
         RuntimeError: If generation fails or unexpected output format is encountered.
     """
     model.eval()
-    results: List[Dict[str, Union[int, str]]] = []
 
     total_batches = len(eval_dataloader)
     logging.info(f"Starting evaluation on {total_batches} batches")
 
+    cnt = 0
+    epoch_neuron_importance_dict = {}
     with torch.no_grad():
-        for batch in tqdm(eval_dataloader, desc="Evaluating"):
+        for batch in tqdm(eval_dataloader, desc="Evaluating", ncols=80):
             prompt: str = batch["prompt"]
             
             # Encode inputs
@@ -75,8 +76,18 @@ def inference_model(
             except Exception as gen_err:
                 raise RuntimeError("Model generation failed") from gen_err
 
-            print(neuron_importance_dict)
-            exit(0)
-            # results.append(result)
+            cnt += 1
+            if cnt % 10 == 0:
+                print(neuron_importance_dict)
+                # break
+            for key, value in neuron_importance_dict.items():
+                if key not in epoch_neuron_importance_dict:
+                    epoch_neuron_importance_dict[key] = value
+                else:
+                    for layer_idx, activation in value.items():
+                        if layer_idx not in epoch_neuron_importance_dict[key]:
+                            epoch_neuron_importance_dict[key][layer_idx] = activation
+                        else:
+                            epoch_neuron_importance_dict[key][layer_idx] += activation
 
-    return results
+    return epoch_neuron_importance_dict

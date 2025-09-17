@@ -1,12 +1,12 @@
 {
     "_map": {
-        "swanlab": false,
+        "swanlab": true,
         "project": {
-            "name": "xiaobeir1",
+            "name": "agentic-rag-r1",
             "description": "under-construction"
         },
         "experiment": {
-            "name": "debug",
+            "name": "qwen2.5-3B-noSSRL-nodecouple-4GPU",
             "random_seed": 42
         },
         "model": {
@@ -31,10 +31,10 @@
             "learning_rate": 5e-06,
             "num_iterations": 1,
             "steps_per_iteration": 300,
-            "save_interval": 1,
+            "save_interval": 10,
             "reward_token_level": true,
-            "decouple_layer": true,
-            "use_SSRL": true,
+            "decouple_layer": false,
+            "use_SSRL": false,
             "generation": {
                 "num_generations": {
                     "mode": "constant",

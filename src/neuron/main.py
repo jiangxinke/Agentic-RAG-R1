@@ -73,6 +73,9 @@ def main():
         device=device,
     )
 
+    with open(output_dir / "neuron_importance.json", "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=4)
+
     # 分布式版本
     # accelerator: Accelerator = Accelerator()
     # prepared_model, prepared_dataloader = accelerator.prepare(

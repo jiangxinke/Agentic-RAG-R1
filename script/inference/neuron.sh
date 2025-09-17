@@ -3,7 +3,7 @@
 
 export HF_ENDPOINT=https://hf-mirror.com
 
-CUDA_VISIBLE_DEVICES=4,5 accelerate launch \
+CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
     --config_file ./src/config/accelerate_config/eval_multigpu.yaml \
     --main_process_port 12342 \
     --num_processes 2 \

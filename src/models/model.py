@@ -2,7 +2,6 @@
 import random
 import re
 
-from collections import defaultdict
 from typing import Any, List, Optional, Tuple
 
 import json5
@@ -15,6 +14,7 @@ from transformers import (
     StoppingCriteriaList,
 )
 
+import src.neuron.parse_tokens as parse_tokens
 from src.utils.Tools import Tools
 
 
@@ -821,7 +821,7 @@ class AgenticRAGModel(PreTrainedModel):
         current_ids = input_ids.clone()
         current_mask = attention_mask.clone()
 
-        neuron_importance_dict = defaultdict(dict)
+        neuron_importance_dict = {}
         beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
             # Skip leading EOS columns
@@ -844,10 +844,10 @@ class AgenticRAGModel(PreTrainedModel):
                 current_ids,
                 attention_mask=current_mask,
                 max_new_tokens=max_new_tokens,
-                # do_sample=do_sample,
-                # temperature=temperature,
-                # pad_token_id=pad_token_id,
-                # eos_token_id=eos_token_id,
+                do_sample=do_sample,
+                temperature=temperature,
+                pad_token_id=pad_token_id,
+                eos_token_id=eos_token_id,
                 stopping_criteria=criteria,
                 return_dict_in_generate=True,
                 output_hidden_states=True,
@@ -855,11 +855,11 @@ class AgenticRAGModel(PreTrainedModel):
             
             # print(input_ids.size()) # (1, input_seq_len)
             # print(gen_out.sequences.size())   # (1, input_seq_len + gen_seq_len)
-            # print("--")
-            # print(type(gen_out))
-            # print(gen_out.keys())
-            # print(len(gen_out.hidden_states)) # (gen_seq_len)
-            # en_out.hidden_states[seq_index][layer_index] -> (batch_size, 1, hidden_size)
+            output_hidden_states = gen_out.hidden_states  # Tuple of (gen_seq_len, num_layers + 1, (batch_size, 1, hidden_size))
+            # print(len(output_hidden_states), len(output_hidden_states[0])) # (gen_seq_len, num_layers + 1)
+            # output_hidden_states[seq_index][layer_index] -> (batch_size, 1, hidden_size)
+            
+            
             next_prompts = []
 
             for idx, seq in enumerate(gen_out.sequences):
@@ -869,8 +869,10 @@ class AgenticRAGModel(PreTrainedModel):
                 beams_history[b].extend(new_tokens.tolist())
                 text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
 
-                print(new_tokens)
-                print(text)
+                # Calculate neuron importance for the newly generated tokens
+                token_spans = parse_tokens.locate_action_token_spans(new_tokens, self.tokenizer)
+                parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_importance_dict)
+                parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_importance_dict)
 
                 # 1) Answer end
                 if "</answer>" in text:

@@ -2,7 +2,7 @@ import re
 import torch
 from transformers import AutoTokenizer
 
-def parse_actions(output_tokens: torch.Tensor, tokenizer: AutoTokenizer):
+def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokenizer):
     """
     Parse the model output tokens to extract actions locations enclosed in specific tags.
 
@@ -75,6 +75,27 @@ def parse_actions(output_tokens: torch.Tensor, tokenizer: AutoTokenizer):
     # For example, output: {'reasoning': [(2, 15)], 'search': [(18, 27)], ...}
     return action_token_spans
 
+def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_states: tuple, neuron_importance_dict):
+    for action_name, action_spans in span_dict.items():
+        for start_token, end_token in action_spans:
+            token_span_hidden_states = output_hidden_states[start_token:end_token]  # (seq_len, num_layers + 1, hidden_size)
+            for layer_idx in range(1, len(token_span_hidden_states[0])):  # Skip embedding layer
+                layer_span_hidden_states = torch.stack([
+                    token_hidden_states[layer_idx] 
+                    for token_hidden_states in token_span_hidden_states
+                ]).squeeze()
+                # print(layer_span_hidden_states.shape)  # (span_len, hidden_size)
+                
+                mean_activations = torch.mean(layer_span_hidden_states).item()
+                            
+                key = f"{action_name}_{suffix}"
+                if key not in neuron_importance_dict:
+                    neuron_importance_dict[key] = {}
+                    
+                if layer_idx - 1 not in neuron_importance_dict[key]:
+                    neuron_importance_dict[key][layer_idx - 1] = mean_activations
+                else:
+                    neuron_importance_dict[key][layer_idx - 1] += mean_activations
 
 if __name__ == "__main__":
 
@@ -86,7 +107,7 @@ if __name__ == "__main__":
 <observation> The capital of France is Paris. </observation>
 <answer> The capital of France is Paris. </answer>"""
     output_tokens = tokenizer.encode(example_output, return_tensors="pt")[0]
-    actions = parse_actions(output_tokens, tokenizer)
+    actions = locate_action_token_spans(output_tokens, tokenizer)
     print("Extracted actions tags:", actions['tag'])
     print("Extracted actions args:", actions['arg'])
     print()
