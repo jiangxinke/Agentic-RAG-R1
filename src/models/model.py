@@ -913,4 +913,9 @@ class AgenticRAGModel(PreTrainedModel):
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
 
-        return neuron_importance_dict
+        output_ids = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
+        seq = output_ids[0].tolist()
+        input_len = input_ids.shape[1]
+        response_text = self.tokenizer.decode(seq[input_len:], skip_special_tokens=True)
+        
+        return response_text, neuron_importance_dict

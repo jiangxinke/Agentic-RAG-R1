@@ -9,6 +9,10 @@ from tqdm import tqdm
 
 from rich import print
 
+from src.data.prompt import LLM_EVAL_PROMPT
+from src.utils.evaluate import evaluate_with_llm
+from src.utils.extractor import extract_answer_from_model_output
+
 def inference_model(
     model: nn.Module,
     tokenizer: Any,
@@ -49,6 +53,10 @@ def inference_model(
     with torch.no_grad():
         for batch in tqdm(eval_dataloader, desc="Evaluating", ncols=80):
             prompt: str = batch["prompt"]
+            question: str = batch["question"]
+            expected: str = batch["answer"]
+            sample_id: Union[int, torch.Tensor] = batch["id"]
+            sample_id = int(sample_id) if isinstance(sample_id, torch.Tensor) else sample_id
             
             # Encode inputs
             inputs = tokenizer(
@@ -63,22 +71,46 @@ def inference_model(
             # Generation settings
             try:
                 actual_model = getattr(model, "module", model)
-                neuron_importance_dict = actual_model.generate(
+                response_text, neuron_importance_dict = actual_model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    max_new_tokens=200,
-                    # do_sample=False,
-                    # temperature=0.0,
+                    max_new_tokens=1000,
                     do_sample=True,
                     temperature=0.7,
                     locate_params=True,
                 )
             except Exception as gen_err:
-                raise RuntimeError("Model generation failed") from gen_err
+                logging.error(f"Generation failed for prompt: {prompt}\nError: {gen_err}")
+                continue
+                # raise RuntimeError("Model generation failed") from gen_err
+            
+            if not response_text:
+                logging.error("Failed to get valid response from model output for id %s", sample_id)
+                continue
+
+            try:
+                predicted = extract_answer_from_model_output(response_text)
+            except Exception:
+                logging.error("Failed to extract answer from model output for id %s", sample_id)
+                continue
+            
+            result: Dict[str, Union[int, str]] = {
+                "id": sample_id,
+                "prompt": prompt,
+                "question": question,
+                "expected": expected,
+                "response": response_text,
+                "predicted": predicted,
+            }
+
+            c, t, acc, _ = evaluate_with_llm(LLM_EVAL_PROMPT, [result])
+            if c == 0:
+                continue
 
             cnt += 1
             if cnt % 10 == 0:
                 print(neuron_importance_dict)
+                print(f"Response: {response_text}")
                 # break
             for key, value in neuron_importance_dict.items():
                 if key not in epoch_neuron_importance_dict:
