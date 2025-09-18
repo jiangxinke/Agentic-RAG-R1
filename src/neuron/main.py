@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.data.prepare_dataset import prepare_dataset
-from src.neuron.locate_params import inference_model
+from src.neuron.infer_utils import inference_model
 from src.models.model import AgenticRAGModel
 from src.utils.utils import (load_config, optimize_model_memory,
                              set_random_seed, setup_logging)
@@ -73,8 +73,8 @@ def main():
         device=device,
     )
 
-    with open(output_dir / "neuron_importance.json", "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=4)
+    save_path = output_dir / "neuron_importance.pt"
+    torch.save(metrics, save_path.as_posix())
 
     # 分布式版本
     # accelerator: Accelerator = Accelerator()

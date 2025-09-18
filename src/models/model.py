@@ -137,8 +137,8 @@ class AgenticRAGModel(PreTrainedModel):
         use_KV_Cache: bool = False,
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
+        calculate_param_importance: bool = False,
         use_SSRL: bool = False,
-        locate_params: bool = False,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -174,19 +174,6 @@ class AgenticRAGModel(PreTrainedModel):
                         pad_token_id=self.tokenizer.pad_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
                     )
-            elif locate_params:
-                return self.calculate_param_importance(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        max_new_tokens=max_new_tokens,
-                        max_length_for_gather=max_length_for_gather,
-                        do_sample=do_sample,
-                        temperature=temperature,
-                        pad_token_id=self.tokenizer.pad_token_id,
-                        eos_token_id=self.tokenizer.eos_token_id,
-                        max_generate_iterations=max_generate_iterations,
-                        **kwargs,
-                    )
             else:
                 if use_KV_Cache:
                     return self.generate_with_think_interruption_KV_Cache(
@@ -201,6 +188,7 @@ class AgenticRAGModel(PreTrainedModel):
                         max_generate_iterations=max_generate_iterations,
                         use_diverse_sampling=use_diverse_sampling,
                         diversity_penalty=diversity_penalty,
+                        calculate_param_importance=calculate_param_importance,
                         **kwargs,
                     )
                 else:
@@ -216,6 +204,7 @@ class AgenticRAGModel(PreTrainedModel):
                         max_generate_iterations=max_generate_iterations,
                         use_diverse_sampling=use_diverse_sampling,
                         diversity_penalty=diversity_penalty,
+                        calculate_param_importance=calculate_param_importance,
                         **kwargs,
                     )
         logits = self.model(
@@ -233,12 +222,11 @@ class AgenticRAGModel(PreTrainedModel):
         max_length_for_gather: int = 2000,
         do_sample: bool = True,
         temperature: float = 0.8,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[int] = None,
         max_generate_iterations: int = 8,
         use_KV_Cache: bool = False,
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
+        calculate_param_importance: bool = False,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -258,6 +246,7 @@ class AgenticRAGModel(PreTrainedModel):
             use_KV_Cache=use_KV_Cache,
             use_diverse_sampling=use_diverse_sampling,
             diversity_penalty=diversity_penalty,
+            calculate_param_importance=calculate_param_importance,
             **kwargs,
         )
 
@@ -479,6 +468,7 @@ class AgenticRAGModel(PreTrainedModel):
         max_generate_iterations: int,
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
+        calculate_param_importance: bool = False,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text.
@@ -555,15 +545,32 @@ class AgenticRAGModel(PreTrainedModel):
                 eos_token_id=eos_token_id,
                 stopping_criteria=criteria,
                 logits_processor=logits_processor,
+                return_dict_in_generate=calculate_param_importance,
+                output_hidden_states=calculate_param_importance,
             )
+
+            if calculate_param_importance:
+                sequences = gen_out.sequences
+                output_hidden_states = gen_out.hidden_states  # Tuple of (gen_seq_len, num_layers + 1, (batch_size, 1, hidden_size))
+                neuron_importance_dict = {}
+            else:
+                sequences = gen_out.sequences
+
             next_prompts = []
 
-            for idx, seq in enumerate(gen_out):
+            for idx, seq in enumerate(sequences):
                 b = active[idx].item()
                 old_len = current_ids.size(1) - 1
                 new_tokens = seq[old_len:]
                 beams_history[b].extend(new_tokens.tolist())
                 text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
+
+                if calculate_param_importance:
+                    # Calculate neuron importance for the newly generated tokens
+                    token_spans = parse_tokens.locate_action_token_spans(new_tokens, self.tokenizer)
+                    parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_importance_dict)
+                    parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_importance_dict)
+
 
                 # 1) Answer end
                 if "</answer>" in text:
@@ -608,7 +615,15 @@ class AgenticRAGModel(PreTrainedModel):
                 current_mask = enc.attention_mask.to(device)
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
-        return final_output
+        
+        if calculate_param_importance:
+            seq = final_output[0].tolist()
+            input_len = input_ids.shape[1]
+            response_text = self.tokenizer.decode(seq[input_len:], skip_special_tokens=True)
+            
+            return response_text, neuron_importance_dict
+        else:
+            return final_output
 
     def generate_with_think_interruption_KV_Cache(
         self,
@@ -623,6 +638,7 @@ class AgenticRAGModel(PreTrainedModel):
         max_generate_iterations: int,
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
+        calculate_param_importance: bool = False,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text. Use KV Cache to accelerate it.
@@ -651,6 +667,8 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: On generation or tool-calling failures.
         """
+        assert not calculate_param_importance, "Not Implemented"
+
         device = input_ids.device
         batch_size = input_ids.size(0)
         if attention_mask is None:
@@ -767,155 +785,3 @@ class AgenticRAGModel(PreTrainedModel):
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         return final_output
-
-    @torch.no_grad()
-    def calculate_param_importance(
-        self,
-        input_ids: torch.LongTensor,
-        attention_mask: Optional[torch.LongTensor],
-        max_new_tokens: int,
-        max_length_for_gather: int,
-        do_sample: bool,
-        temperature: float,
-        pad_token_id: int,
-        eos_token_id: int,
-        max_generate_iterations: int,
-    ) -> torch.LongTensor:
-        """
-        Perform iterative generation with tool calls based on markers in text.
-
-        The loop:
-          1. Generate tokens.
-          2. If '</answer>' appears, finalize that sample.
-          3. If '<search>...</search>' appears, call tool, insert '<observation>' block, and continue.
-          4. Otherwise, continue generating until EOS or max iterations.
-
-        Args:
-            input_ids (torch.LongTensor): Starting tokens.
-            attention_mask (Optional[torch.LongTensor]): Attention mask.
-            max_new_tokens (int): Tokens per generation iteration.
-            max_length_for_gather (int): Final gather length.
-            do_sample (bool): Sampling flag.
-            temperature (float): Sampling temperature.
-            pad_token_id (int): Padding token ID.
-            eos_token_id (int): End-of-sequence token ID.
-            max_generate_iterations (int): Max loop iterations.
-
-        Returns:
-            torch.LongTensor: Padded output IDs for all samples.
-
-        Raises:
-            RuntimeError: On generation or tool-calling failures.
-        """
-        # pdb.set_trace()
-
-        device = input_ids.device
-        batch_size = input_ids.size(0)
-        if attention_mask is None:
-            attention_mask = torch.ones_like(input_ids)
-
-        should_gen = torch.ones(batch_size, dtype=torch.bool, device=device)
-        outputs: List[Optional[torch.LongTensor]] = [None] * batch_size
-        criteria = StoppingCriteriaList([SearchTagStoppingCriteria(self.tokenizer)])
-
-        current_ids = input_ids.clone()
-        current_mask = attention_mask.clone()
-
-        neuron_importance_dict = {}
-        beams_history = [[] for _ in range(batch_size)]
-        for _ in range(max_generate_iterations):
-            # Skip leading EOS columns
-            skip_len = 0
-            for pos in range(current_ids.size(1)):
-                if (current_ids[:, pos] == eos_token_id).all():
-                    skip_len += 1
-                else:
-                    break
-            if skip_len:
-                current_ids = current_ids[:, skip_len:]
-                current_mask = current_mask[:, skip_len:]
-
-            if not should_gen.any():
-                break
-
-            active = torch.nonzero(should_gen).squeeze(1)
-            
-            gen_out = self.model.generate(
-                current_ids,
-                attention_mask=current_mask,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature,
-                pad_token_id=pad_token_id,
-                eos_token_id=eos_token_id,
-                stopping_criteria=criteria,
-                return_dict_in_generate=True,
-                output_hidden_states=True,
-            )
-            
-            # print(input_ids.size()) # (1, input_seq_len)
-            # print(gen_out.sequences.size())   # (1, input_seq_len + gen_seq_len)
-            output_hidden_states = gen_out.hidden_states  # Tuple of (gen_seq_len, num_layers + 1, (batch_size, 1, hidden_size))
-            # print(len(output_hidden_states), len(output_hidden_states[0])) # (gen_seq_len, num_layers + 1)
-            # output_hidden_states[seq_index][layer_index] -> (batch_size, 1, hidden_size)
-            
-            
-            next_prompts = []
-
-            for idx, seq in enumerate(gen_out.sequences):
-                b = active[idx].item()
-                old_len = current_ids.size(1) - 1
-                new_tokens = seq[old_len:]
-                beams_history[b].extend(new_tokens.tolist())
-                text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
-
-                # Calculate neuron importance for the newly generated tokens
-                token_spans = parse_tokens.locate_action_token_spans(new_tokens, self.tokenizer)
-                parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_importance_dict)
-                parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_importance_dict)
-
-                # 1) Answer end
-                if "</answer>" in text:
-                    end = text.index("</answer>") + len("</answer>")
-                    prev = self.tokenizer.decode(seq[:old_len], skip_special_tokens=False)
-                    final = prev + text[:end]
-                    outputs[b] = torch.tensor(self.tokenizer.encode(final), device=device)
-                    should_gen[b] = False
-                # 2) Search and observation
-                elif "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
-                    part = text
-                    s = part.index("<search>") + len("<search>")
-                    e = part.index("</search>")
-                    query = part[s:e].strip()
-                    try:
-                        pname, pargs = self.parse_latest_plugin_call(query)
-                        obs = self.call_plugin(pname, pargs)
-                    except Exception as exc:
-                        obs = f"<observation>Error: {exc}"  # preserve flow
-                    sub = part[: e + len("</search>")]
-                    merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
-                    merged += sub + obs + "\n"
-                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
-                else:
-                    # 3) Continue or finish
-                    eos_found = eos_token_id in new_tokens.tolist()
-                    if not eos_found and (_ < max_generate_iterations - 1):
-                        continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
-                        next_prompts.append(continue_ids)
-                    else:
-                        outputs[b] = seq
-                        should_gen[b] = False
-
-            # Prepare next round
-            if next_prompts:
-                texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
-                enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
-                current_ids = enc.input_ids.to(device)
-                current_mask = enc.attention_mask.to(device)
-
-        output_ids = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
-        seq = output_ids[0].tolist()
-        input_len = input_ids.shape[1]
-        response_text = self.tokenizer.decode(seq[input_len:], skip_special_tokens=True)
-        
-        return response_text, neuron_importance_dict
