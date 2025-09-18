@@ -73,8 +73,8 @@ def main():
         device=device,
     )
 
-    with open(output_dir / "neuron_importance.json", "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=4)
+    save_path = output_dir / "neuron_importance.pt"
+    torch.save(metrics, save_path.as_posix())
 
     # 分布式版本
     # accelerator: Accelerator = Accelerator()

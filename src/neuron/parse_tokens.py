@@ -75,6 +75,7 @@ def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokeni
     # For example, output: {'reasoning': [(2, 15)], 'search': [(18, 27)], ...}
     return action_token_spans
 
+@torch.no_grad()
 def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_states: tuple, neuron_importance_dict):
     for action_name, action_spans in span_dict.items():
         for start_token, end_token in action_spans:
@@ -83,10 +84,10 @@ def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_sta
                 layer_span_hidden_states = torch.stack([
                     token_hidden_states[layer_idx] 
                     for token_hidden_states in token_span_hidden_states
-                ]).squeeze()
-                # print(layer_span_hidden_states.shape)  # (span_len, hidden_size)
+                ]).squeeze() # (span_len, hidden_size)
                 
-                mean_activations = torch.mean(layer_span_hidden_states).item()
+                mean_activations = layer_span_hidden_states.mean(dim=0)
+                mean_activations = mean_activations.detach().cpu()
                             
                 key = f"{action_name}_{suffix}"
                 if key not in neuron_importance_dict:
