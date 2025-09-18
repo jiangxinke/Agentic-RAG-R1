@@ -554,7 +554,7 @@ class AgenticRAGModel(PreTrainedModel):
                 output_hidden_states = gen_out.hidden_states  # Tuple of (gen_seq_len, num_layers + 1, (batch_size, 1, hidden_size))
                 neuron_importance_dict = {}
             else:
-                sequences = gen_out.sequences
+                sequences = gen_out
 
             next_prompts = []
 
