@@ -15,6 +15,7 @@ from transformers import (
 )
 
 import src.neuron.parse_tokens as parse_tokens
+from src.neuron.neuron_metric import NeuronMetric
 from src.utils.Tools import Tools
 
 
@@ -552,7 +553,7 @@ class AgenticRAGModel(PreTrainedModel):
             if calculate_param_importance:
                 sequences = gen_out.sequences
                 output_hidden_states = gen_out.hidden_states  # Tuple of (gen_seq_len, num_layers + 1, (batch_size, 1, hidden_size))
-                neuron_importance_dict = {}
+                neuron_metric = NeuronMetric()
             else:
                 sequences = gen_out.sequences
 
@@ -568,8 +569,8 @@ class AgenticRAGModel(PreTrainedModel):
                 if calculate_param_importance:
                     # Calculate neuron importance for the newly generated tokens
                     token_spans = parse_tokens.locate_action_token_spans(new_tokens, self.tokenizer)
-                    parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_importance_dict)
-                    parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_importance_dict)
+                    parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_metric)
+                    parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_metric)
 
 
                 # 1) Answer end
@@ -621,7 +622,7 @@ class AgenticRAGModel(PreTrainedModel):
             input_len = input_ids.shape[1]
             response_text = self.tokenizer.decode(seq[input_len:], skip_special_tokens=True)
             
-            return response_text, neuron_importance_dict
+            return response_text, neuron_metric
         else:
             return final_output
 

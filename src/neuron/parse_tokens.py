@@ -75,9 +75,14 @@ def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokeni
     # For example, output: {'reasoning': [(2, 15)], 'search': [(18, 27)], ...}
     return action_token_spans
 
+from src.neuron.neuron_metric import NeuronMetric
+
 @torch.no_grad()
-def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_states: tuple, neuron_importance_dict):
+def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_states: tuple, neuron_metric: NeuronMetric):
     for action_name, action_spans in span_dict.items():
+
+        key = f"{action_name}_{suffix}"
+
         for start_token, end_token in action_spans:
             if end_token <= start_token:
                 continue
@@ -89,17 +94,18 @@ def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_sta
                     for token_hidden_states in token_span_hidden_states
                 ]).squeeze() # (span_len, hidden_size)
                 
-                mean_activations = layer_span_hidden_states.mean(dim=0)
-                mean_activations = mean_activations.detach().cpu()
-                            
-                key = f"{action_name}_{suffix}"
-                if key not in neuron_importance_dict:
-                    neuron_importance_dict[key] = {}
-                    
-                if layer_idx - 1 not in neuron_importance_dict[key]:
-                    neuron_importance_dict[key][layer_idx - 1] = mean_activations
-                else:
-                    neuron_importance_dict[key][layer_idx - 1] += mean_activations
+                # # mean over the span length
+                # mean_activations = layer_span_hidden_states.mean(dim=0)
+                # activations = mean_activations.detach().cpu()
+
+                # # mean over all tokens in the span
+                # activations = layer_span_hidden_states.mean().detach().cpu()
+
+                # sum over all activative in the span
+                positive_activations = (layer_span_hidden_states > 0).sum().item()
+                activations = positive_activations / layer_span_hidden_states.numel()
+                
+                neuron_metric.update(key, layer_idx - 1, activations)  # layer_idx - 1 to make it 0-indexed
 
 if __name__ == "__main__":
 

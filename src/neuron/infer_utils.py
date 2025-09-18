@@ -10,6 +10,7 @@ from tqdm import tqdm
 from rich import print
 
 from src.data.prompt import LLM_EVAL_PROMPT
+from src.neuron.neuron_metric import NeuronMetric
 from src.utils.evaluate import eval_item
 from src.utils.extractor import extract_answer_from_model_output
 
@@ -49,7 +50,7 @@ def inference_model(
     logging.info(f"Starting evaluation on {total_batches} batches")
 
     cnt = 0
-    epoch_neuron_importance_dict = {}
+    epoch_neuron_importance_dict = NeuronMetric()
     with torch.no_grad():
         for batch in tqdm(eval_dataloader, desc="Evaluating", ncols=80):
             prompt: str = batch["prompt"]
@@ -71,7 +72,7 @@ def inference_model(
             # Generation settings
             try:
                 actual_model = getattr(model, "module", model)
-                response_text, neuron_importance_dict = actual_model.generate(
+                response_text, neuron_metric = actual_model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=1000,
@@ -106,25 +107,16 @@ def inference_model(
 
             cnt += 1
             if cnt % 10 == 0:
-                print(neuron_importance_dict)
+                print(neuron_metric.metrics)
                 print(f"Response: {response_text}")
                 # break
 
             try:
-                for key, value in neuron_importance_dict.items():
-                    if key not in epoch_neuron_importance_dict:
-                        epoch_neuron_importance_dict[key] = value
-                    else:
-                        for layer_idx, activation in value.items():
-                            if layer_idx not in epoch_neuron_importance_dict[key]:
-                                epoch_neuron_importance_dict[key][layer_idx] = activation
-                            else:
-                                # check the shape matches
-                                assert epoch_neuron_importance_dict[key][layer_idx].shape == activation.shape, \
-                                    f"Shape mismatch for {key} layer {layer_idx}: {epoch_neuron_importance_dict[key][layer_idx].shape} vs {activation.shape}"
-                                epoch_neuron_importance_dict[key][layer_idx] += activation
+                for key in neuron_metric.keys:
+                    for layer_idx in neuron_metric.layer_indices:
+                        epoch_neuron_importance_dict.update(key, layer_idx, neuron_metric.get(key, layer_idx), neuron_metric.num_samples)
             except Exception as e:
                 logging.error(f"Failed to accumulate neuron importance for id {sample_id}: {e}")
                 continue
 
-    return epoch_neuron_importance_dict
+    return epoch_neuron_importance_dict.compute_average()
