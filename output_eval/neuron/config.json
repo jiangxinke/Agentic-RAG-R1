@@ -33,7 +33,7 @@
             "steps_per_iteration": 300,
             "save_interval": 10,
             "reward_token_level": true,
-            "decouple_layer": false,
+            "decouple_layer": true,
             "use_SSRL": false,
             "generation": {
                 "num_generations": {

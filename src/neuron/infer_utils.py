@@ -77,7 +77,8 @@ def inference_model(
                     max_new_tokens=1000,
                     do_sample=True,
                     temperature=0.7,
-                    locate_params=True,
+                    calculate_param_importance=True,
+                    use_KV_Cache=False,
                 )
             except Exception as gen_err:
                 logging.error(f"Generation failed for prompt: {prompt}\nError: {gen_err}")
