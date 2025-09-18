@@ -79,6 +79,9 @@ def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokeni
 def accumulate_neuron_importance(span_dict: dict, suffix: str, output_hidden_states: tuple, neuron_importance_dict):
     for action_name, action_spans in span_dict.items():
         for start_token, end_token in action_spans:
+            if end_token <= start_token:
+                continue
+            
             token_span_hidden_states = output_hidden_states[start_token:end_token]  # (seq_len, num_layers + 1, hidden_size)
             for layer_idx in range(1, len(token_span_hidden_states[0])):  # Skip embedding layer
                 layer_span_hidden_states = torch.stack([

@@ -10,7 +10,7 @@ from tqdm import tqdm
 from rich import print
 
 from src.data.prompt import LLM_EVAL_PROMPT
-from src.utils.evaluate import evaluate_with_llm
+from src.utils.evaluate import eval_item
 from src.utils.extractor import extract_answer_from_model_output
 
 def inference_model(
@@ -94,18 +94,14 @@ def inference_model(
             except Exception:
                 logging.error("Failed to extract answer from model output for id %s", sample_id)
                 continue
-            
-            result: Dict[str, Union[int, str]] = {
-                "id": sample_id,
-                "prompt": prompt,
-                "question": question,
-                "expected": expected,
-                "response": response_text,
-                "predicted": predicted,
-            }
 
-            c, t, acc, _ = evaluate_with_llm(LLM_EVAL_PROMPT, [result])
-            if c == 0:
+            try:
+                eval_result = eval_item(LLM_EVAL_PROMPT, question, expected, predicted)
+                if not eval_result:
+                    continue
+                # logging.info(f"Evaluation result for id {sample_id}: Correct={c}, Total={t}, Accuracy={acc:.4f}")
+            except Exception as eval_err:
+                logging.error(f"Evaluation failed for id {sample_id}: {eval_err}")
                 continue
 
             cnt += 1
@@ -114,14 +110,21 @@ def inference_model(
                 print(f"Response: {response_text}")
                 # break
 
-            for key, value in neuron_importance_dict.items():
-                if key not in epoch_neuron_importance_dict:
-                    epoch_neuron_importance_dict[key] = value
-                else:
-                    for layer_idx, activation in value.items():
-                        if layer_idx not in epoch_neuron_importance_dict[key]:
-                            epoch_neuron_importance_dict[key][layer_idx] = activation
-                        else:
-                            epoch_neuron_importance_dict[key][layer_idx] += activation
+            try:
+                for key, value in neuron_importance_dict.items():
+                    if key not in epoch_neuron_importance_dict:
+                        epoch_neuron_importance_dict[key] = value
+                    else:
+                        for layer_idx, activation in value.items():
+                            if layer_idx not in epoch_neuron_importance_dict[key]:
+                                epoch_neuron_importance_dict[key][layer_idx] = activation
+                            else:
+                                # check the shape matches
+                                assert epoch_neuron_importance_dict[key][layer_idx].shape == activation.shape, \
+                                    f"Shape mismatch for {key} layer {layer_idx}: {epoch_neuron_importance_dict[key][layer_idx].shape} vs {activation.shape}"
+                                epoch_neuron_importance_dict[key][layer_idx] += activation
+            except Exception as e:
+                logging.error(f"Failed to accumulate neuron importance for id {sample_id}: {e}")
+                continue
 
     return epoch_neuron_importance_dict
