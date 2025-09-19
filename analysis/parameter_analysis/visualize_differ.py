@@ -5,7 +5,7 @@ from matplotlib.colors import TwoSlopeNorm
 import os
 
 # -------------------------- 1. 基础配置与初始化 --------------------------
-DATA_PATH = "/home/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/output_eval/neuron/neuron_importance.pt"
+DATA_PATH = "/home/xiaobei/qrh/Agentic-RAG-R1/output_eval/neuron/neuron_importance.pt"
 SAVE_FIG_PATH = "/home/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/output_eval/neuron/heatmaps/"
 os.makedirs(SAVE_FIG_PATH, exist_ok=True)
 
