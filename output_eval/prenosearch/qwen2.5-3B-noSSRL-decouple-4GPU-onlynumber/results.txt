@@ -1,0 +1,5 @@
+{
+  "pre_grpo_correct": 127,
+  "pre_grpo_total": 170,
+  "pre_grpo_accuracy": 0.7470588235294118
+}

@@ -575,7 +575,7 @@ def _unwrap_peft(model):
     return model
 
 
-def save_lora_only_in_zero2(engine, tokenizer, ckpt_dir):
+def save_lora_only_in_zero2(engine, tokenizer, ckpt_dir, accelerator):
     """
     save lora only for ZeRO‑2
     """
@@ -586,11 +586,29 @@ def save_lora_only_in_zero2(engine, tokenizer, ckpt_dir):
 
     enabled = isinstance(engine, deepspeed.DeepSpeedEngine) and engine.zero_optimization_stage() == 2
 
+    # 打印参数信息，帮助调试
+    if accelerator.is_main_process:
+        logging.info(f"Found {len(lora_params)} LoRA parameters")
+        logging.info(f"LoRA parameters: {[n for n, p in peft_model.named_parameters() if 'lora' in n][:5]}")
+
+    # 确保在 GatheredParameters 上下文中完成所有保存操作
     with deepspeed.zero.GatheredParameters(lora_params, enabled=enabled):
         lora_state = get_peft_model_state_dict(peft_model)
+        
+        # 打印状态字典信息，帮助调试
+        if accelerator.is_main_process:
+            logging.info(f"LoRA state dict keys: {list(lora_state.keys())[:5]}")
+            logging.info(f"LoRA state dict size: {len(lora_state)}")
+        
+        # 在上下文中保存模型
+        if accelerator.is_main_process:
+            # 直接使用 peft_model.save_pretrained 而不传递 state_dict
+            peft_model.save_pretrained(ckpt_dir)
+            logging.info(f"Saved LoRA model to {ckpt_dir}")
 
-    peft_model.save_pretrained(ckpt_dir, state_dict=lora_state)
-    tokenizer.save_pretrained(ckpt_dir)
+    # 保存分词器
+    if accelerator.is_main_process:
+        tokenizer.save_pretrained(ckpt_dir)
 
 
 def train_with_layered_optimization(
@@ -832,7 +850,7 @@ def train_with_grpo(
                     ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
                     os.makedirs(ckpt, exist_ok=True)
                     if zero_stage == 2:
-                        save_lora_only_in_zero2(policy_model, tokenizer, ckpt)
+                        save_lora_only_in_zero2(policy_model, tokenizer, ckpt, accelerator)
                     elif zero_stage == 3:
                         policy_model.save_pretrained(ckpt)
                         tokenizer.save_pretrained(ckpt)

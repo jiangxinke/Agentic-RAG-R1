@@ -6,11 +6,11 @@ project:
 
 experiment:
   # name: "qwen2.5-14B-medqa-2GPU"  # 实验名称，对应 experiments/ 下的目录
-  name: "qwen2.5-3B-noSSRL-nodecouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
+  name: "qwen2.5-3B-noSSRL-decouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
-  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-0.5B-Instruct"
   # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
   # name: "Qwen/Qwen2.5-1.5B-Instruct"
   # name: "Qwen/Qwen2.5-7B-Instruct"
@@ -44,7 +44,7 @@ training:
   reward_token_level: true
 
   decouple_layer: true  # whether to use decouple action and args
-  use_SSRL: false        # whether to use SSRL
+  use_SSRL: true        # whether to use SSRL
 
   generation:
     # TODO
@@ -66,7 +66,7 @@ training:
   
   optimizer:
     beta: 0.04
-    mu: 1
+    mu: 2
     epsilon: 0.1
 
 lora:

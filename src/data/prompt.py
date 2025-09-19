@@ -47,6 +47,16 @@ TOOL_DESC = """{name_for_model}: 使用 {name_for_human} 这个API交互. 那么
 
 # FIXME HERE
 
+# SYSTEM_PROMPT_TOOLS = """
+# 请仔细思考问题并给出答案。
+# 你的回答需要放在以下标签中:
+# <answer>
+# 在这里详细阐述你的答案
+# </answer>
+
+# 请确保答案清晰、准确且完整。
+# """
+
 SYSTEM_PROMPT_TOOLS = """
 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
 推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，

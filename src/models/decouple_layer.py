@@ -87,7 +87,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 #     return action_train_dict, args_train_dict
 
-def generate_grad_control_dicts(model, param_importance_path=r"/home/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/output_eval/infer/DotMap()/neuron_importance.json", top_k=8):
+def generate_grad_control_dicts(model, param_importance_path=r"/home/xiaobei/qrh/Agentic-RAG-R1/output_eval/neuron/neuron_active_ratio.json", top_k=8):
     """
     为Qwen2.5-1.5B-Instruct模型生成action和args的梯度控制字典
     基于参数重要性字典，汇总tag/args得分后选择Top-K层参数，仅保留原始可训练参数的更新权限

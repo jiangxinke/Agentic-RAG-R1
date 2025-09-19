@@ -1,17 +1,29 @@
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate r1
+#!/bin/bash
 
 NUM_EVAL=200
-DATE="2025-04-20"
-# STEPS="100 95 90 85 80"
+DATE="2025-09-19"
 STEPS="100"
 
+export PYTHONPATH=$PYTHONPATH:/home/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1
+
+echo "Starting post-training evaluation..."
+echo "Date: $DATE"
+echo "Steps: $STEPS"
+echo "Number of evaluations: $NUM_EVAL"
+
 for STEP in $STEPS; do
-    CUDA_VISIBLE_DEVICES=2,3 accelerate launch \
+    echo "Evaluating checkpoint step: $STEP"
+    CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch \
         --config_file ./src/config/accelerate_config/eval_multigpu.yaml \
         --main_process_port 12341 \
-        --num_processes 2 \
-        ./post.py \
+        --num_processes 8 \
+        ./src/evaluation/unified_eval.py \
+        --mode post \
         --date "$DATE" \
         --checkpoint_step $STEP \
         --num_eval $NUM_EVAL
+    
+    echo "Completed evaluation for step $STEP"
 done
+
+echo "All post-training evaluations completed!"
