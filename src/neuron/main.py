@@ -73,8 +73,11 @@ def main():
         device=device,
     )
 
-    save_path = output_dir / "neuron_importance.pt"
-    torch.save(metrics, save_path.as_posix())
+    # save_path = output_dir / "neuron_importance.pt"
+    # torch.save(metrics, save_path.as_posix())
+
+    with open(output_dir / "neuron_active_ratio.json", "w") as rf:
+        json.dump(metrics, rf, indent=4)
 
     # 分布式版本
     # accelerator: Accelerator = Accelerator()

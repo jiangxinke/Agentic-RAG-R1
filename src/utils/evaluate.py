@@ -24,18 +24,21 @@ def get_model_response(prompt, model="qwen2.5:72b", temperature=0.7):
 
     return response.choices[0].message.content
 
+def eval_item(prompt, question, expected, predicted):
+    formatted_prompt = prompt.format(question=question, expected=expected, predicted=predicted)
+    response = get_model_response(formatted_prompt)
+    return response == "Yes"
 
 def evaluate_with_llm(prompt, data):
     correct = 0
     incorrect = 0
 
-    for i, item in tqdm(enumerate(data), total=len(data), desc="eval", leave=True):
+    for i, item in tqdm(enumerate(data), total=len(data), desc="eval", leave=True, ncols=80):
         question = item["question"]
         expected = item["expected"]
         predicted = item["predicted"]
-        formatted_prompt = prompt.format(question=question, expected=expected, predicted=predicted)
-        response = get_model_response(formatted_prompt)
-        if response == "Yes":
+        eval_result = eval_item(prompt, question, expected, predicted)
+        if eval_result:
             correct += 1
             item["eval"] = "true"
         else:
