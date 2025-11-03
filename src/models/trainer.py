@@ -388,6 +388,382 @@ def compute_group_relative_advantages_token_level(
     return final_adv
 
 
+def compute_dapo_loss(
+    ratio: torch.Tensor,
+    advantages: torch.Tensor,
+    completion_mask: torch.Tensor,
+    ref_log_probs: torch.Tensor,
+    curr_log_probs: torch.Tensor,
+    beta: float,
+    clip_ratio_low: float = 0.2,
+    clip_ratio_high: float = 0.28,
+    loss_agg_mode: str = "token-mean",
+) -> torch.Tensor:
+    """DAPO 损失：非对称裁剪 + 可选平均方式（token-mean, seq-mean-token-sum, seq-mean-token-mean）
+    """
+    pg_losses1 = -advantages * ratio
+    pg_losses2 = -advantages * torch.clamp(ratio, 1 - clip_ratio_low, 1 + clip_ratio_high)
+    pg_losses = torch.maximum(pg_losses1, pg_losses2)
+
+    kl = torch.exp(ref_log_probs - curr_log_probs) - (ref_log_probs - curr_log_probs) - 1
+    per_token = pg_losses - beta * kl
+
+    masked_loss = per_token * completion_mask
+
+    if loss_agg_mode == "token-mean":
+        loss = masked_loss.sum() / completion_mask.sum()
+    elif loss_agg_mode == "seq-mean-token-sum":
+        seq_losses = masked_loss.sum(dim=-1)
+        loss = seq_losses.mean()
+    elif loss_agg_mode == "seq-mean-token-mean":
+        seq_losses = masked_loss.sum(dim=-1) / completion_mask.sum(dim=-1).clamp(min=1)
+        loss = seq_losses.mean()
+    else:
+        raise ValueError(f"Invalid loss_agg_mode: {loss_agg_mode}")
+
+    return loss
+
+
+def filter_groups_by_metric(
+    rollout_data: Dict[str, Any],
+    metric_fn: Callable[[List[Any]], List[float]],
+    num_generations: int,
+) -> Tuple[Dict[str, Any], int]:
+    """按组过滤：丢弃组内 metric 全相同的 prompt 组。
+
+    返回 (过滤后的 rollout, 有效 prompt 数)。
+    """
+    metrics = metric_fn(rollout_data["formatted_completions"])
+    batch_size = len(metrics)
+    num_prompts = batch_size // num_generations
+
+    valid_prompt_indices: List[int] = []
+    for prompt_idx in range(num_prompts):
+        start_idx = prompt_idx * num_generations
+        end_idx = start_idx + num_generations
+        group_metrics = metrics[start_idx:end_idx]
+        if len(set(group_metrics)) > 1:
+            valid_prompt_indices.append(prompt_idx)
+
+    if not valid_prompt_indices:
+        logging.warning("No valid groups found after dynamic sampling filter; fallback to original batch")
+        return rollout_data, 0
+
+    valid_indices: List[int] = []
+    for prompt_idx in valid_prompt_indices:
+        start_idx = prompt_idx * num_generations
+        end_idx = start_idx + num_generations
+        valid_indices.extend(range(start_idx, end_idx))
+
+    filtered: Dict[str, Any] = {}
+    for key, value in rollout_data.items():
+        if isinstance(value, torch.Tensor):
+            filtered[key] = value[valid_indices]
+        elif isinstance(value, list):
+            filtered[key] = [value[i] for i in valid_indices]
+        else:
+            filtered[key] = value
+
+    filtered["batch_size"] = len(valid_prompt_indices)
+    filtered["num_generations"] = num_generations
+    return filtered, len(valid_prompt_indices)
+
+
+def compute_overlong_penalty(
+    completion_lengths: torch.Tensor,
+    max_response_length: int,
+    overlong_buffer_len: int,
+    penalty_factor: float = 1.0,
+) -> torch.Tensor:
+    """线性长度惩罚"""
+    expected_len = max_response_length - overlong_buffer_len
+    exceed_len = completion_lengths - expected_len
+    penalties = torch.clamp(
+        -exceed_len / overlong_buffer_len * penalty_factor,
+        max=0.0,
+    )
+    return penalties
+
+
+def maximize_dapo_objective(
+    config: Dict[str, Any],
+    model: torch.nn.Module,
+    ref_model: torch.nn.Module,
+    rollout_data: Dict[str, Any],
+    tokenizer: AutoTokenizer,
+    reward_function: Callable[..., Dict[str, Any]],
+    optimizer: torch.optim.Optimizer,
+    beta: float,
+    clip_ratio_low: float,
+    clip_ratio_high: float,
+    accelerator: Accelerator,
+    loss_agg_mode: str = "token-mean",
+    enable_overlong_penalty: bool = True,
+    max_response_length: int = 20480,
+    overlong_buffer_len: int = 4096,
+    overlong_penalty_factor: float = 1.0,
+) -> Tuple[float, float, Dict[str, Any]]:
+    input_ids = rollout_data["input_ids"]
+    attention_mask = rollout_data["attention_mask"]
+    completion_mask = rollout_data["completion_mask"]
+    old_lp = rollout_data["old_log_probs"]
+    ref_lp = rollout_data["ref_log_probs"]
+    k = rollout_data["logits_to_keep"]
+
+    curr_lp = compute_log_probabilities(model, input_ids, attention_mask, k)
+    ratio = torch.exp(curr_lp - old_lp)
+
+    if not config.training.reward_token_level:
+        rewards_dict = reward_function(
+            prompts=rollout_data["repeated_prompts"],
+            completions=rollout_data["formatted_completions"],
+            answers=rollout_data["repeated_answers"],
+        )
+        rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
+
+        if enable_overlong_penalty:
+            completion_lengths = completion_mask.sum(dim=-1)
+            overlong_penalties = compute_overlong_penalty(
+                completion_lengths,
+                max_response_length,
+                overlong_buffer_len,
+                overlong_penalty_factor,
+            )
+            rewards = rewards + overlong_penalties
+
+        avg_reward = float(rewards.mean())
+        advantages = compute_group_relative_advantages(config, rewards, rollout_data["num_generations"])  # (B,1)
+    else:
+        rewards_dict = reward_function(
+            prompts=rollout_data["repeated_prompts"],
+            completions=rollout_data["formatted_completions"],
+            answers=rollout_data["repeated_answers"],
+            completion_ids=rollout_data["completion_ids"],
+            tokenizer=tokenizer,
+        )
+        total_rewards = torch.tensor(rewards_dict["total_scores"], dtype=torch.float32, device=curr_lp.device)
+        token_rewards = rewards_dict["token_rewards"]  # shape [B, L]
+        avg_reward = float(token_rewards.mean())
+        advantages = compute_group_relative_advantages_token_level(
+            config, token_rewards, total_rewards, rollout_data["num_generations"]
+        )  # shape [B, L]
+
+    loss = compute_dapo_loss(
+        ratio=ratio,
+        advantages=advantages,
+        completion_mask=completion_mask,
+        ref_log_probs=ref_lp,
+        curr_log_probs=curr_lp,
+        beta=beta,
+        clip_ratio_low=clip_ratio_low,
+        clip_ratio_high=clip_ratio_high,
+        loss_agg_mode=loss_agg_mode,
+    )
+
+    optimizer.zero_grad()
+    accelerator.backward(loss)
+    optimizer.step()
+
+    return float(loss), avg_reward, rewards_dict
+
+
+def train_with_dapo(
+    config: Dict[str, Any],
+    device: torch.device,
+    policy_model: torch.nn.Module,
+    ref_base_model: torch.nn.Module,
+    tokenizer: AutoTokenizer,
+    accelerator: Optional[Accelerator] = None,
+    dataloader: Optional[torch.utils.data.DataLoader] = None,
+    num_iterations: int = 1,
+    steps_per_iteration: int = 500,
+    num_generations: int = 4,
+    max_new_tokens: int = 128,
+    max_length_for_gather: int = 2000,
+    max_generate_iterations: int = 8,
+    temperature: float = 0.7,
+    do_sample: bool = True,
+    beta: float = 0.1,
+    learning_rate: float = 5e-6,
+    mu: int = 1,
+    clip_ratio_low: float = 0.2,
+    clip_ratio_high: float = 0.28,
+    loss_agg_mode: str = "token-mean",
+    enable_dynamic_sampling: bool = True,
+    gen_batch_size: Optional[int] = None,
+    train_batch_size: Optional[int] = None,
+    max_num_gen_batches: int = 10,
+    filter_metric: str = "acc",
+    enable_overlong_penalty: bool = False,
+    max_response_length: int = 2048,
+    overlong_buffer_len: int = 512,
+    overlong_penalty_factor: float = 1.0,
+    reward_function: Callable[..., Dict[str, Any]] = overall_reward,
+    checkpoint_dir: Optional[str] = None,
+    current_step: int = 0,
+    save_interval: int = 5,
+) -> None:
+    """DAPO 训练主循环（含动态采样/非对称裁剪/可选长度惩罚/灵活聚合）。"""
+    optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
+    policy_model.train()
+    policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
+
+    # 构造 Reference 模型（与 GRPO 对齐：保持 base 状态，不训练）
+    ref_model = build_agentic_rag_model(config, device)
+    ref_model.eval()
+    for p in ref_model.parameters():
+        p.requires_grad_(False)
+    ref_model.to(accelerator.device)
+
+    sum_steps = current_step
+    base_num_generations = config.training.generation.num_generations
+    all_steps = config.training.num_iterations * config.training.steps_per_iteration
+    for it in range(1, num_iterations + 1):
+        logging.info(f"Starting DAPO iteration {it}/{num_iterations}")
+        torch.cuda.empty_cache()
+        step = 0
+        for batch in dataloader:
+            # 动态解析 num_generations（支持 constant/range/function 模式）
+            num_generations = base_num_generations
+            if num_generations["mode"] == "constant":
+                num_generations = num_generations["constant"]
+            elif num_generations["mode"] == "range":
+                num_generations = random.randint(num_generations["range"][0], num_generations["range"][1])
+            elif num_generations["mode"] == "function":
+                num_generations = int(8 - (sum_steps / all_steps) * 4)
+
+            logging.info(
+                f"Generating rollout data, step {step+1}/{min(steps_per_iteration, len(dataloader))}"
+            )
+
+            # 动态采样：重复采样直到有效组数满足需求或达到上限
+            num_gen_batches = 0
+            valid_rollout: Optional[Dict[str, Any]] = None
+            num_valid_prompts = 0
+            target_prompts = train_batch_size if train_batch_size else len(batch["prompt"])
+
+            while True:
+                was_training = policy_model.training
+                policy_model.eval()
+                with torch.no_grad():
+                    rollout = generate_rollout_data(
+                        policy_model,
+                        ref_model,
+                        tokenizer,
+                        batch,
+                        num_generations,
+                        max_new_tokens,
+                        max_length_for_gather,
+                        temperature,
+                        do_sample,
+                        max_generate_iterations,
+                        use_KV_Cache=False,
+                        use_diverse_sampling=False,
+                        diversity_penalty=1.0,
+                        use_SSRL=False,
+                    )
+                if was_training:
+                    policy_model.train()
+
+                num_gen_batches += 1
+
+                if enable_dynamic_sampling:
+                    def metric_fn(completions: List[List[Dict[str, Any]]]) -> List[float]:
+                        vals: List[float] = []
+                        for comp in completions:
+                            content = comp[0]["content"] if comp else ""
+                            has_answer = ("answer:" in content.lower()) or ("final" in content.lower())
+                            vals.append(1.0 if has_answer else 0.0)
+                        return vals
+
+                    filtered_rollout, num_valid_prompts = filter_groups_by_metric(
+                        rollout,
+                        metric_fn,
+                        num_generations,
+                    )
+
+                    if num_valid_prompts >= target_prompts:
+                        valid_rollout = filtered_rollout
+                        logging.info(
+                            f"Dynamic sampling collected {num_valid_prompts} valid groups after {num_gen_batches} batches"
+                        )
+                        break
+                    if num_gen_batches >= max_num_gen_batches:
+                        logging.warning(
+                            f"Dynamic sampling reached max batches ({max_num_gen_batches}); using {num_valid_prompts} valid groups"
+                        )
+                        valid_rollout = filtered_rollout if num_valid_prompts > 0 else rollout
+                        break
+
+                    logging.info(
+                        f"Dynamic sampling only collected {num_valid_prompts}/{target_prompts} valid groups; continuing..."
+                    )
+                    continue
+
+                valid_rollout = rollout
+                break
+
+            logging.info("Rollout ready; optimizing DAPO objective")
+
+            for _ in range(mu):
+                loss_val, avg_r, rdict = maximize_dapo_objective(
+                    config=config,
+                    model=policy_model,
+                    ref_model=ref_model,
+                    rollout_data=valid_rollout if valid_rollout is not None else rollout,
+                    tokenizer=tokenizer,
+                    reward_function=reward_function,
+                    optimizer=optimizer,
+                    beta=beta,
+                    clip_ratio_low=clip_ratio_low,
+                    clip_ratio_high=clip_ratio_high,
+                    accelerator=accelerator,
+                    loss_agg_mode=loss_agg_mode,
+                    enable_overlong_penalty=enable_overlong_penalty,
+                    max_response_length=max_response_length,
+                    overlong_buffer_len=overlong_buffer_len,
+                    overlong_penalty_factor=overlong_penalty_factor,
+                )
+
+            logging.info(
+                f"[DAPO] Iter {it}/{num_iterations} Step {step+1}/{min(steps_per_iteration, len(dataloader))} | Loss {loss_val:.6f} | Avg Reward {avg_r:.2f}"
+            )
+            if accelerator.is_local_main_process and config.swanlab:
+                try:
+                    swanlab.log(
+                        {
+                            "Iteration": it,
+                            "Step": step + 1,
+                            "Loss": loss_val,
+                            "Avg Reward": avg_r,
+                            "Clip Low": clip_ratio_low,
+                            "Clip High": clip_ratio_high,
+                        }
+                    )
+                except Exception as exc:
+                    logging.warning(f"Failed to record SwanLab: {exc}")
+
+            sum_steps += 1
+            step += 1
+
+            if sum_steps % save_interval == 0 and sum_steps > current_step:
+                if accelerator.is_local_main_process:
+                    logging.info(f"save checkpoint at step {sum_steps}")
+                    ckpt = f"{checkpoint_dir}/step-{sum_steps:04d}"
+                    os.makedirs(ckpt, exist_ok=True)
+                    zero_stage = policy_model.config["zero_optimization"]["stage"] if hasattr(policy_model, "config") else 3
+                    if zero_stage == 2:
+                        save_lora_only_in_zero2(policy_model, tokenizer, ckpt, accelerator)
+                    else:
+                        policy_model.save_pretrained(ckpt)
+                        tokenizer.save_pretrained(ckpt)
+
+            if step >= steps_per_iteration:
+                break
+            accelerator.wait_for_everyone()
+
+        torch.cuda.empty_cache()
+
 def maximize_grpo_objective(
     config: Dict[str, Any],
     model: torch.nn.Module,

@@ -28,7 +28,7 @@ from src.models.critic import AgenticRAGCritic
 from src.models.model import AgenticRAGModel
 from src.models.reward import overall_reward
 from src.models.reward_token_level import overall_reward_token_level
-from src.models.trainer import train_with_grpo, train_with_ppo, train_with_sft
+from src.models.trainer import train_with_grpo, train_with_ppo, train_with_sft, train_with_dapo
 from src.utils.utils import (
     load_config,
     optimize_model_memory,
@@ -180,6 +180,44 @@ def main():
         "use_diverse_sampling": config.training.generation.use_diverse_sampling,
         "diversity_penalty": config.training.generation.diversity_penalty,
     }
+    optimizer_cfg = getattr(config.training, "optimizer", {})
+
+    def _extract_float(value, default):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _extract_loss_mode(value, default="token-mean"):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict) and "value" in value:
+            return str(value["value"])
+        if hasattr(value, "get") and callable(getattr(value, "get")):
+            maybe = value.get("value", None)
+            if isinstance(maybe, str):
+                return maybe
+        return default
+
+    epsilon_val = _extract_float(getattr(optimizer_cfg, "epsilon", None), 0.1)
+    clip_low = optimizer_cfg.get("clip_ratio_low", None) if hasattr(optimizer_cfg, "get") else None
+    clip_high = optimizer_cfg.get("clip_ratio_high", None) if hasattr(optimizer_cfg, "get") else None
+    loss_mode_cfg = getattr(config.training, "loss_agg_mode", "token-mean")
+
+    dapo_config = {
+        "clip_ratio_low": _extract_float(clip_low, epsilon_val),
+        "clip_ratio_high": _extract_float(clip_high, 1.4 * epsilon_val),
+        "loss_agg_mode": _extract_loss_mode(loss_mode_cfg),
+        "enable_dynamic_sampling": getattr(config.training, "enable_dynamic_sampling", True),
+        "gen_batch_size": getattr(config.training, "gen_batch_size", None),
+        "train_batch_size": getattr(config.training, "train_batch_size", None),
+        "max_num_gen_batches": getattr(config.training, "max_num_gen_batches", 10),
+        "filter_metric": getattr(config.training, "filter_metric", "acc"),
+        "enable_overlong_penalty": getattr(config.training, "enable_overlong_penalty", False),
+        "max_response_length": getattr(config.training, "max_response_length", 20480),
+        "overlong_buffer_len": getattr(config.training, "overlong_buffer_len", 4096),
+        "overlong_penalty_factor": getattr(config.training, "overlong_penalty_factor", 1.0),
+    }
     logging.info(f"Training config: {training_config}")
 
     # Optimize model memory usage
@@ -214,8 +252,44 @@ def main():
             use_SSRL=use_SSRL,
             **training_config,
         )
+    elif config.training.train_method == "dapo":
+        train_with_dapo(
+            config=config,
+            device=device,
+            policy_model=policy_model,
+            ref_base_model=reference_model,
+            tokenizer=tokenizer,
+            accelerator=accelerator,
+            dataloader=train_dataloader,
+            checkpoint_dir=checkpoint_dir,
+            current_step=current_step,
+            reward_function=reward_func,
+            num_iterations=training_config["num_iterations"],
+            steps_per_iteration=training_config["steps_per_iteration"],
+            num_generations=training_config["num_generations"],
+            max_new_tokens=training_config["max_new_tokens"],
+            max_length_for_gather=training_config["max_length_for_gather"],
+            max_generate_iterations=training_config["max_generate_iterations"],
+            temperature=training_config["temperature"],
+            do_sample=training_config["do_sample"],
+            beta=training_config["beta"],
+            learning_rate=training_config["learning_rate"],
+            mu=training_config["mu"],
+            save_interval=training_config["save_interval"],
+            clip_ratio_low=dapo_config["clip_ratio_low"],
+            clip_ratio_high=dapo_config["clip_ratio_high"],
+            loss_agg_mode=dapo_config["loss_agg_mode"],
+            enable_dynamic_sampling=dapo_config["enable_dynamic_sampling"],
+            gen_batch_size=dapo_config["gen_batch_size"],
+            train_batch_size=dapo_config["train_batch_size"],
+            max_num_gen_batches=dapo_config["max_num_gen_batches"],
+            filter_metric=dapo_config["filter_metric"],
+            enable_overlong_penalty=dapo_config["enable_overlong_penalty"],
+            max_response_length=dapo_config["max_response_length"],
+            overlong_buffer_len=dapo_config["overlong_buffer_len"],
+            overlong_penalty_factor=dapo_config["overlong_penalty_factor"],
+        )
     elif config.training.train_method == "ppo":
-        # 初始化Critic模型
         critic_model = AgenticRAGCritic(
             model_name=config.model.critic_name,
             device=device,
