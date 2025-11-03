@@ -46,6 +46,28 @@ SYSTEM_PROMPT = """
 TOOL_DESC = """{name_for_model}: 使用 {name_for_human} 这个API交互. 那么这个 {name_for_human} API 怎么使用呢? {description_for_model} 参数: {parameters} 格式需要是JSON对象."""
 
 # FIXME HERE
+SYSTEM_PROMPT_TOOLS = """
+用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+也就是 "<think> 在这里写推理过程 </think><answer> 在这里写最终答案 </answer>"。
+在思考过程中，**如果有必要，助手可以进行内心的搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询（只列出关键字，如 "keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+请注意！！！这里的<observation>检索结果你是**要自己生成**的，你需要用给定的工具来自己模拟生成结果，外界工具是无效的，是无法帮助你的！！！
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<answer>
+...
+</answer>
+"""
 
 # SYSTEM_PROMPT_TOOLS = """
 # 请仔细思考问题并给出答案。
@@ -57,41 +79,41 @@ TOOL_DESC = """{name_for_model}: 使用 {name_for_human} 这个API交互. 那么
 # 请确保答案清晰、准确且完整。
 # """
 
-SYSTEM_PROMPT_TOOLS = """
-用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
-推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
-1. 也就是 "<think> 在这里写推理过程 </think>
-2. <answer> 在这里写最终答案 </answer>"。
-3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
-4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
-5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
-"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[{tool_names}]: keyword_1 keyword_2 ..."）</search>"。
-**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
-"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+# SYSTEM_PROMPT_TOOLS = """
+# 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+# 推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+# 1. 也就是 "<think> 在这里写推理过程 </think>
+# 2. <answer> 在这里写最终答案 </answer>"。
+# 3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+# 4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+# 5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+# "<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[{tool_names}]: keyword_1 keyword_2 ..."）</search>"。
+# **一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+# "<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
 
-注意，所有动作均可执行多次。
+# 注意，所有动作均可执行多次。
 
-你有以下工具可以使用:
-{tool_descs}
+# 你有以下工具可以使用:
+# {tool_descs}
 
-请按照以下格式作答：
+# 请按照以下格式作答：
 
-<reasoning>
-...
-</reasoning>
-<search>
-...
-</search>
-<summary>
-...
-</summary>
-<backtrack>
-...
-</backtrack>
-<answer>
-...
-</answer>
-"""
+# <reasoning>
+# ...
+# </reasoning>
+# <search>
+# ...
+# </search>
+# <summary>
+# ...
+# </summary>
+# <backtrack>
+# ...
+# </backtrack>
+# <answer>
+# ...
+# </answer>
+# """
 
 SYSTEM_PROMPT_SSRL = """
 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。

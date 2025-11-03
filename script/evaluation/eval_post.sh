@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NUM_EVAL=200
+NUM_EVAL=100
 DATE="2025-09-19"
 STEPS="100"
 
@@ -15,7 +15,7 @@ for STEP in $STEPS; do
     echo "Evaluating checkpoint step: $STEP"
     CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch \
         --config_file ./src/config/accelerate_config/eval_multigpu.yaml \
-        --main_process_port 12341 \
+        --main_process_port 12342 \
         --num_processes 8 \
         ./src/evaluation/unified_eval.py \
         --mode post \

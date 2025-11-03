@@ -6,7 +6,7 @@ project:
 
 experiment:
   # name: "qwen2.5-14B-medqa-2GPU"  # 实验名称，对应 experiments/ 下的目录
-  name: "qwen2.5-3B-noSSRL-decouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
+  name: "qwen2.5-3B-noSSRL-nodecouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
@@ -43,8 +43,8 @@ training:
 
   reward_token_level: true
 
-  decouple_layer: true  # whether to use decouple action and args
-  use_SSRL: true        # whether to use SSRL
+  decouple_layer: false   # whether to use decouple action and args
+  use_SSRL: false        # whether to use SSRL
 
   generation:
     # TODO
