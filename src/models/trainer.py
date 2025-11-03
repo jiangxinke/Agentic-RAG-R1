@@ -25,7 +25,7 @@ from models.decouple_layer import (
     create_args_content_mask,
     generate_grad_control_dicts,
 )
-from models.reward import overall_reward
+from models.reward import overall_reward, correctness_reward
 from models.reward_token_level import overall_reward_token_level
 from src.models.model import AgenticRAGModel
 from src.utils.extractor import analyze_completions
@@ -668,13 +668,13 @@ def train_with_dapo(
                 num_gen_batches += 1
 
                 if enable_dynamic_sampling:
+                    # 使用 correctness_reward 作为过滤指标
                     def metric_fn(completions: List[List[Dict[str, Any]]]) -> List[float]:
-                        vals: List[float] = []
-                        for comp in completions:
-                            content = comp[0]["content"] if comp else ""
-                            has_answer = ("answer:" in content.lower()) or ("final" in content.lower())
-                            vals.append(1.0 if has_answer else 0.0)
-                        return vals
+                        return correctness_reward(
+                            prompts=rollout["repeated_prompts"],
+                            completions=completions,
+                            answers=rollout["repeated_answers"],
+                        )
 
                     filtered_rollout, num_valid_prompts = filter_groups_by_metric(
                         rollout,
