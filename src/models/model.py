@@ -68,12 +68,13 @@ class SearchTagStoppingCriteria(StoppingCriteria):
     def __init__(
         self,
         tokenizer: Any,
-        think_token: str = "</search>",
+        # stop_action_token: str = ["</search>", "</backtrack>", "</summary>"],
+        stop_action_token: str = ["</search>"],
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
-        self.target_ids_1: List[int] = tokenizer.encode(think_token)
-        self.target_ids_2: List[int] = tokenizer.encode(think_token + "\n")
+        self.target_ids_1: List[int] = [tokenizer.encode(token) for token in stop_action_token]
+        self.target_ids_2: List[int] = [tokenizer.encode(token + "\n") for token in stop_action_token]
 
     def __call__(
         self,
@@ -140,6 +141,7 @@ class AgenticRAGModel(PreTrainedModel):
         diversity_penalty: float = 1.0,
         calculate_param_importance: bool = False,
         use_SSRL: bool = False,
+        enable_2D_attention_mask: bool = True,
         **kwargs: Any,
     ) -> torch.LongTensor:
         """
@@ -164,8 +166,9 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: If model generation fails.
         """
+        # FIXME jxk: 在这个地方，不管是不是SSRL，只要遇到了需要加2D-attention mask的地方，都需要改动
         if not obtain_logits:
-            if use_SSRL:
+            if use_SSRL:    # TODO 这个地方还没有支持2D mask
                 return self.model.generate(
                         input_ids,
                         attention_mask=attention_mask,
@@ -174,9 +177,10 @@ class AgenticRAGModel(PreTrainedModel):
                         temperature=temperature,
                         pad_token_id=self.tokenizer.pad_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
+                        enable_2D_attention_mask=enable_2D_attention_mask,
                     )
             else:
-                if use_KV_Cache:
+                if use_KV_Cache:        # TODO 这个地方还没有支持2D mask
                     return self.generate_with_think_interruption_KV_Cache(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -190,9 +194,10 @@ class AgenticRAGModel(PreTrainedModel):
                         use_diverse_sampling=use_diverse_sampling,
                         diversity_penalty=diversity_penalty,
                         calculate_param_importance=calculate_param_importance,
+                        enable_2D_attention_mask=enable_2D_attention_mask,
                         **kwargs,
                     )
-                else:
+                else:      # FIXME 更新这里
                     return self.generate_with_think_interruption(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -206,8 +211,11 @@ class AgenticRAGModel(PreTrainedModel):
                         use_diverse_sampling=use_diverse_sampling,
                         diversity_penalty=diversity_penalty,
                         calculate_param_importance=calculate_param_importance,
+                        enable_2D_attention_mask=enable_2D_attention_mask,
                         **kwargs,
                     )
+        
+        # FIXME，这里的attention mask也需要被修改
         logits = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -470,6 +478,7 @@ class AgenticRAGModel(PreTrainedModel):
         use_diverse_sampling: bool = False,
         diversity_penalty: float = 1.0,
         calculate_param_importance: bool = False,
+        enable_2D_attention_mask: bool = True,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text.
@@ -478,7 +487,8 @@ class AgenticRAGModel(PreTrainedModel):
           1. Generate tokens.
           2. If '</answer>' appears, finalize that sample.
           3. If '<search>...</search>' appears, call tool, insert '<observation>' block, and continue.
-          4. Otherwise, continue generating until EOS or max iterations.
+          4. If <backtrack>/<summary> appears, reset the attention mask.
+          5. Otherwise, continue generating until EOS or max iterations.
 
         Args:
             input_ids (torch.LongTensor): Starting tokens.
@@ -513,6 +523,9 @@ class AgenticRAGModel(PreTrainedModel):
 
         current_ids = input_ids.clone()
         current_mask = attention_mask.clone()
+
+        # NOTE jxk 2D mask
+        masked_spans_per_sample: List[List[Tuple[int,int]]] = [[] for _ in range(batch_size)]
 
         beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
@@ -572,7 +585,6 @@ class AgenticRAGModel(PreTrainedModel):
                     parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_metric)
                     parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_metric)
 
-
                 # 1) Answer end
                 if "</answer>" in text:
                     end = text.index("</answer>") + len("</answer>")
@@ -598,6 +610,27 @@ class AgenticRAGModel(PreTrainedModel):
                     merged += sub + obs + "\n"
                     next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
                     continue
+                
+                # 3） backtrack or summary actions
+                # if ("</backtrack>" in text_new) or ("</summary>" in text_new):
+                #     token_spans = parse_tokens.locate_action_token_spans(combined_seq, self.tokenizer)
+                #     ref_spans = []
+                #     for k,v in token_spans.items():
+                #         ref_spans.extend(v)
+                #     if ref_spans:
+                #         last_ref = ref_spans[-1]
+                #         ref_start, ref_end = last_ref[0], last_ref[1]
+                #         masked_spans_per_sample[b].append((ref_start, ref_end))
+                #         # KV cache handling: zero out past_key_values corresponding to this span
+                #         if past_key_values is not None:
+                #             for layer_idx in range(len(past_key_values)):
+                #                 k, v = past_key_values[layer_idx]
+                #                 k[:, :, ref_start:ref_end, :] = 0
+                #                 v[:, :, ref_start:ref_end, :] = 0
+                #     next_prompts.append(combined_seq)
+                #     next_prompts_samples.append(b)
+                #     next_prompts_token_tensors.append(combined_seq.clone())
+                #     continue
 
                 # 3) Continue or finish
                 eos_found = eos_token_id in new_tokens.tolist()
@@ -614,6 +647,17 @@ class AgenticRAGModel(PreTrainedModel):
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
+
+                # if enable_2D_attention_mask:
+                #     enc_attention_mask = self._reapply_masked_spans(
+                #         enc_input_ids, enc_attention_mask_1d, next_prompts_samples, next_prompts_token_tensors,
+                #         masked_spans_per_sample, enable_2D_attention_mask=True
+                #     )
+                # else:
+                #     enc_attention_mask = self._reapply_masked_spans(
+                #         enc_input_ids, enc_attention_mask_1d, next_prompts_samples, next_prompts_token_tensors,
+                #         masked_spans_per_sample, enable_2D_attention_mask=False
+                #     )
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         
@@ -786,3 +830,71 @@ class AgenticRAGModel(PreTrainedModel):
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         return final_output
+
+    # ------------------ helper: find subsequence start ------------------
+    def _find_subsequence_start(self, full_row: torch.LongTensor, subseq: torch.LongTensor) -> Optional[int]:
+        if subseq.numel() == 0 or full_row.numel() == 0 or subseq.numel() > full_row.numel():
+            return None
+        n = full_row.size(0)
+        m = subseq.size(0)
+        for i in range(n - m + 1):
+            if torch.equal(full_row[i : i + m], subseq):
+                return i
+        return None
+
+    # ------------------ helper: reapply masked spans ------------------
+    def _reapply_masked_spans(
+        self,
+        enc_input_ids: torch.LongTensor,
+        base_mask: torch.LongTensor,
+        next_prompt_samples: List[int],
+        next_prompts_token_tensors: List[torch.LongTensor],
+        masked_spans_per_sample: List[List[Tuple[int,int]]],
+        enable_2D_attention_mask: bool,
+    ):
+        device = enc_input_ids.device
+        rows, seq_len = enc_input_ids.size(0), enc_input_ids.size(1)
+        if not enable_2D_attention_mask:
+            for row_idx in range(rows):
+                b = next_prompt_samples[row_idx]
+                seq_tensor = next_prompts_token_tensors[row_idx].to(device)
+                start_pos = self._find_subsequence_start(enc_input_ids[row_idx], seq_tensor)
+                if start_pos is None:
+                    non_pad_mask = enc_input_ids[row_idx] != self.tokenizer.eos_token_id
+                    nonzeros = torch.nonzero(non_pad_mask, as_tuple=True)[0]
+                    if len(nonzeros) == 0:
+                        continue
+                    start_pos = nonzeros[0].item()
+                spans = masked_spans_per_sample[b]
+                for (s,e) in spans:
+                    s_clamped = max(0,s)
+                    e_clamped = max(s_clamped,e)
+                    apply_s = start_pos + s_clamped
+                    apply_e = min(start_pos + e_clamped, seq_len)
+                    if apply_s >= apply_e:
+                        continue
+                    base_mask[row_idx, apply_s:apply_e] = 0
+            return base_mask
+
+        attention_mask_2d = base_mask.unsqueeze(1).repeat(1, seq_len, 1).clone()
+        for row_idx in range(rows):
+            b = next_prompt_samples[row_idx]
+            seq_tensor = next_prompts_token_tensors[row_idx].to(device)
+            start_pos = self._find_subsequence_start(enc_input_ids[row_idx], seq_tensor)
+            if start_pos is None:
+                non_pad_mask = enc_input_ids[row_idx] != self.tokenizer.eos_token_id
+                nonzeros = torch.nonzero(non_pad_mask, as_tuple=True)[0]
+                if len(nonzeros) == 0:
+                    continue
+                start_pos = nonzeros[0].item()
+            spans = masked_spans_per_sample[b]
+            for (s,e) in spans:
+                s_clamped = max(0,s)
+                e_clamped = max(s_clamped,e)
+                key_s = start_pos + s_clamped
+                key_e = min(start_pos + e_clamped, seq_len)
+                if key_s >= key_e:
+                    continue
+                for qpos in range(key_e, seq_len):
+                    attention_mask_2d[row_idx, qpos, key_s:key_e] = 0
+        return attention_mask_2d

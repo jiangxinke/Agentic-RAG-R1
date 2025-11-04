@@ -26,7 +26,7 @@ dataset:
   num_eval: 1000
 
 training:
-  train_method: grpo # [grpo, ppo, sft]
+  train_method: dapo # [grpo, ppo, sft, dapo]
   continue_training: false
   current_step: 0
   num_epochs: 3       # SFT 这两个参数用于SFT
@@ -44,7 +44,7 @@ training:
   reward_token_level: true
 
   decouple_layer: false   # whether to use decouple action and args
-  use_SSRL: false        # whether to use SSRL
+  use_SSRL: true        # whether to use SSRL
 
   generation:
     # TODO
