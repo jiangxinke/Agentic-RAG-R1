@@ -602,18 +602,18 @@ def train_with_dapo(
     checkpoint_dir: Optional[str] = None,
     current_step: int = 0,
     save_interval: int = 5,
+    use_KV_Cache: bool = False,
+    use_diverse_sampling: bool = False,
+    diversity_penalty: float = 1.0,
+    use_decouple_layer: bool = False,
+    use_SSRL: bool = False
 ) -> None:
     """DAPO 训练主循环（含动态采样/非对称裁剪/可选长度惩罚/灵活聚合）。"""
     optimizer = torch.optim.Adam(policy_model.parameters(), lr=learning_rate)
     policy_model.train()
     policy_model, optimizer, dataloader = accelerator.prepare(policy_model, optimizer, dataloader)
 
-    # 构造 Reference 模型（与 GRPO 对齐：保持 base 状态，不训练）
-    ref_model = build_agentic_rag_model(config, device)
-    ref_model.eval()
-    for p in ref_model.parameters():
-        p.requires_grad_(False)
-    ref_model.to(accelerator.device)
+    zero_stage = policy_model.config["zero_optimization"]["stage"]
 
     sum_steps = current_step
     base_num_generations = config.training.generation.num_generations
@@ -621,6 +621,26 @@ def train_with_dapo(
     for it in range(1, num_iterations + 1):
         logging.info(f"Starting DAPO iteration {it}/{num_iterations}")
         torch.cuda.empty_cache()
+
+        # 构造 Reference 模型（与 GRPO 对齐：保持 base 状态，不训练）
+        ref_model = build_agentic_rag_model(config, device)
+        ref_model.eval()
+        for p in ref_model.parameters():
+            p.requires_grad_(False)
+
+        # Sync LoRA weights to reference
+        lora_params = [p for n, p in policy_model.named_parameters() if "lora" in n]
+        with deepspeed.zero.GatheredParameters(lora_params, enabled=True):
+            sd = policy_model.state_dict()
+            lora_sd = {k: v for k, v in sd.items() if "lora" in k}
+            ref_model.load_state_dict(lora_sd, strict=False)
+            ref_model.to(accelerator.device)
+
+        if zero_stage != 2:
+            ref_model = accelerator.prepare(ref_model)  # 如果是 Stage 3，准备模型
+        else:  # 如果是Stage 2，因为ref model不需要优化，所以ref model不需要用zero 2的优化optimizer
+            pass
+
         step = 0
         for batch in dataloader:
             # 动态解析 num_generations（支持 constant/range/function 模式）
@@ -657,10 +677,10 @@ def train_with_dapo(
                         temperature,
                         do_sample,
                         max_generate_iterations,
-                        use_KV_Cache=False,
-                        use_diverse_sampling=False,
-                        diversity_penalty=1.0,
-                        use_SSRL=False,
+                        use_KV_Cache,
+                        use_diverse_sampling,
+                        diversity_penalty,
+                        use_SSRL=use_SSRL,
                     )
                 if was_training:
                     policy_model.train()
@@ -706,24 +726,44 @@ def train_with_dapo(
             logging.info("Rollout ready; optimizing DAPO objective")
 
             for _ in range(mu):
-                loss_val, avg_r, rdict = maximize_dapo_objective(
-                    config=config,
-                    model=policy_model,
-                    ref_model=ref_model,
-                    rollout_data=valid_rollout if valid_rollout is not None else rollout,
-                    tokenizer=tokenizer,
-                    reward_function=reward_function,
-                    optimizer=optimizer,
-                    beta=beta,
-                    clip_ratio_low=clip_ratio_low,
-                    clip_ratio_high=clip_ratio_high,
-                    accelerator=accelerator,
-                    loss_agg_mode=loss_agg_mode,
-                    enable_overlong_penalty=enable_overlong_penalty,
-                    max_response_length=max_response_length,
-                    overlong_buffer_len=overlong_buffer_len,
-                    overlong_penalty_factor=overlong_penalty_factor,
-                )
+                if not use_decouple_layer:
+                    loss_val, avg_r, rdict = maximize_dapo_objective(
+                        config=config,
+                        model=policy_model,
+                        ref_model=ref_model,
+                        rollout_data=valid_rollout if valid_rollout is not None else rollout,
+                        tokenizer=tokenizer,
+                        reward_function=reward_function,
+                        optimizer=optimizer,
+                        beta=beta,
+                        clip_ratio_low=clip_ratio_low,
+                        clip_ratio_high=clip_ratio_high,
+                        accelerator=accelerator,
+                        loss_agg_mode=loss_agg_mode,
+                        enable_overlong_penalty=enable_overlong_penalty,
+                        max_response_length=max_response_length,
+                        overlong_buffer_len=overlong_buffer_len,
+                        overlong_penalty_factor=overlong_penalty_factor,
+                    )
+                else:       # FIXME HERE jxk
+                    loss_val, avg_r, rdict = train_with_layered_optimization_dapo(
+                        config=config,
+                        policy_model=policy_model,
+                        ref_model=ref_model,
+                        rollout=valid_rollout if valid_rollout is not None else rollout,
+                        tokenizer=tokenizer,
+                        reward_function=reward_function,
+                        optimizer=optimizer,
+                        beta=beta,
+                        clip_ratio_low=clip_ratio_low,
+                        clip_ratio_high=clip_ratio_high,
+                        accelerator=accelerator,
+                        loss_agg_mode=loss_agg_mode,
+                        enable_overlong_penalty=enable_overlong_penalty,
+                        max_response_length=max_response_length,
+                        overlong_buffer_len=overlong_buffer_len,
+                        overlong_penalty_factor=overlong_penalty_factor,
+                    )
 
             logging.info(
                 f"[DAPO] Iter {it}/{num_iterations} Step {step+1}/{min(steps_per_iteration, len(dataloader))} | Loss {loss_val:.6f} | Avg Reward {avg_r:.2f}"
@@ -762,6 +802,7 @@ def train_with_dapo(
                 break
             accelerator.wait_for_everyone()
 
+        del ref_model  # 清除历史的ref model，节约内存
         torch.cuda.empty_cache()
 
 def maximize_grpo_objective(
@@ -1049,6 +1090,80 @@ def train_with_layered_optimization(
     rollout["completion_mask"] = completion_mask_copy
 
     return total_loss, avg_r, rdict
+
+def train_with_layered_optimization_dapo(
+    config, policy_model, ref_model, rollout, tokenizer, reward_function, optimizer, beta, clip_ratio_low, clip_ratio_high, accelerator,
+    loss_agg_mode, enable_overlong_penalty, max_response_length, overlong_buffer_len, overlong_penalty_factor
+):
+    """
+    实现分层优化的训练函数
+    """
+    # 生成梯度控制字典
+    action_train_dict, args_train_dict = generate_grad_control_dicts(policy_model)
+
+    # 保存原始completion_mask
+    completion_ids = rollout["completion_ids"]
+    completion_mask_copy = rollout["completion_mask"].clone()
+
+    total_loss = 0.0
+
+    # 1. 优化Action Token（前两层）
+    logging.info(f"Optimize Action Tokens")
+    rollout["completion_mask"] = create_action_token_mask(completion_ids, tokenizer, completion_mask_copy)
+
+    if rollout["completion_mask"].sum() > 0:  
+        loss_val, avg_r, rdict = maximize_dapo_objective(
+            config=config,
+            model=policy_model,
+            ref_model=ref_model,
+            rollout_data=rollout,
+            tokenizer=tokenizer,
+            reward_function=reward_function,
+            optimizer=optimizer,
+            beta=beta,
+            clip_ratio_low=clip_ratio_low,
+            clip_ratio_high=clip_ratio_high,
+            accelerator=accelerator,
+            loss_agg_mode=loss_agg_mode,
+            enable_overlong_penalty=enable_overlong_penalty,
+            max_response_length=max_response_length,
+            overlong_buffer_len=overlong_buffer_len,
+            overlong_penalty_factor=overlong_penalty_factor,
+        )
+        total_loss += loss_val
+        logging.info(f"Action optimization loss: {loss_val:.6f}")
+
+    # 2. 优化Args Content（后两层）
+    logging.info(f"Optimize Args Content")
+    rollout["completion_mask"] = create_args_content_mask(completion_ids, tokenizer, completion_mask_copy)
+
+    if rollout["completion_mask"].sum() > -1:  # 这里后面要把"-1"修改为0， 确保有args content需要优化
+        loss_val, avg_r, rdict = maximize_dapo_objective(
+            config=config,
+            model=policy_model,
+            ref_model=ref_model,
+            rollout_data=rollout,
+            tokenizer=tokenizer,
+            reward_function=reward_function,
+            optimizer=optimizer,
+            beta=beta,
+            clip_ratio_low=clip_ratio_low,
+            clip_ratio_high=clip_ratio_high,
+            accelerator=accelerator,
+            loss_agg_mode=loss_agg_mode,
+            enable_overlong_penalty=enable_overlong_penalty,
+            max_response_length=max_response_length,
+            overlong_buffer_len=overlong_buffer_len,
+            overlong_penalty_factor=overlong_penalty_factor,
+        )
+        total_loss += loss_val
+        logging.info(f"Args optimization loss: {loss_val:.6f}")
+
+    # 恢复原始mask
+    rollout["completion_mask"] = completion_mask_copy
+
+    return total_loss, avg_r, rdict
+
 
 
 def train_with_grpo(
