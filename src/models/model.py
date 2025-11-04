@@ -169,6 +169,7 @@ class AgenticRAGModel(PreTrainedModel):
         # FIXME jxk: 在这个地方，不管是不是SSRL，只要遇到了需要加2D-attention mask的地方，都需要改动
         if not obtain_logits:
             if use_SSRL:    # TODO 这个地方还没有支持2D mask
+                ## if not use 2D_mask:
                 return self.model.generate(
                         input_ids,
                         attention_mask=attention_mask,
@@ -179,6 +180,7 @@ class AgenticRAGModel(PreTrainedModel):
                         eos_token_id=self.tokenizer.eos_token_id,
                         enable_2D_attention_mask=enable_2D_attention_mask,
                     )
+                ## if use 2D_mask: self.generate_with_think_interruption ==> 把search给注释掉 # NOTE
             else:
                 if use_KV_Cache:        # TODO 这个地方还没有支持2D mask
                     return self.generate_with_think_interruption_KV_Cache(
@@ -612,6 +614,7 @@ class AgenticRAGModel(PreTrainedModel):
                     continue
                 
                 # 3） backtrack or summary actions
+                ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
                 # if ("</backtrack>" in text_new) or ("</summary>" in text_new):
                 #     token_spans = parse_tokens.locate_action_token_spans(combined_seq, self.tokenizer)
                 #     ref_spans = []
@@ -669,7 +672,8 @@ class AgenticRAGModel(PreTrainedModel):
             return response_text, neuron_metric
         else:
             return final_output
-
+    
+    # 不着急更新
     def generate_with_think_interruption_KV_Cache(
         self,
         input_ids: torch.LongTensor,
