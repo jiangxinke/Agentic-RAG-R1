@@ -13,15 +13,12 @@ client = OpenAI(
     base_url=os.getenv("EVAL_LLM_BASE_URL"),
 )
 
-
-def get_model_response(prompt, model="qwen2.5:72b", temperature=0.7):
-    
+def get_model_response(prompt, model=os.getenv("EVAL_LLM_MODEL_NAME"), temperature=0.7):
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         temperature=temperature,
     )
-
     return response.choices[0].message.content
 
 def eval_item(prompt, question, expected, predicted):

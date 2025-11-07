@@ -27,7 +27,6 @@ class RetrievalQualityEvaluator:
         sample = SingleTurnSample(user_input=user_input, retrieved_contexts=retrieved_contexts)
 
         score = self.scorer.single_turn_score(sample)
-
         return score
 
 
