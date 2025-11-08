@@ -175,18 +175,35 @@ class AgenticRAGModel(PreTrainedModel):
         # FIXME jxk: 在这个地方，不管是不是SSRL，只要遇到了需要加2D-attention mask的地方，都需要改动
         if not obtain_logits:
             if use_SSRL:    # TODO 这个地方还没有支持2D mask
-                ## if not use 2D_mask:
-                return self.model.generate(
-                        input_ids,
+                if not use_2D_mask:
+                    return self.model.generate(
+                            input_ids,
+                            attention_mask=attention_mask,
+                            max_new_tokens=max_new_tokens,
+                            do_sample=do_sample,
+                            temperature=temperature,
+                            pad_token_id=self.tokenizer.pad_token_id,
+                            eos_token_id=self.tokenizer.eos_token_id,
+                            enable_2D_attention_mask=enable_2D_attention_mask,
+                        )
+                if use_2D_mask:
+                    return self.generate_with_think_interruption(
+                        input_ids=input_ids,
                         attention_mask=attention_mask,
                         max_new_tokens=max_new_tokens,
+                        max_length_for_gather=max_length_for_gather,
                         do_sample=do_sample,
                         temperature=temperature,
                         pad_token_id=self.tokenizer.pad_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
+                        max_generate_iterations=max_generate_iterations,
+                        use_diverse_sampling=use_diverse_sampling,
+                        diversity_penalty=diversity_penalty,
+                        calculate_param_importance=calculate_param_importance,
                         enable_2D_attention_mask=enable_2D_attention_mask,
+                        use_SSRL=True
+                        **kwargs,
                     )
-                ## if use 2D_mask: self.generate_with_think_interruption ==> 把search给注释掉 # NOTE
             else:
                 if use_KV_Cache:        # TODO 这个地方还没有支持2D mask
                     return self.generate_with_think_interruption_KV_Cache(
@@ -205,7 +222,7 @@ class AgenticRAGModel(PreTrainedModel):
                         enable_2D_attention_mask=enable_2D_attention_mask,
                         **kwargs,
                     )
-                else:      # FIXME 更新这里
+                else:     
                     return self.generate_with_think_interruption(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -487,6 +504,7 @@ class AgenticRAGModel(PreTrainedModel):
         diversity_penalty: float = 1.0,
         calculate_param_importance: bool = False,
         enable_2D_attention_mask: bool = True,
+        use_SSRL: bool = False,
     ) -> torch.LongTensor:
         """
         Perform iterative generation with tool calls based on markers in text.
@@ -607,7 +625,7 @@ class AgenticRAGModel(PreTrainedModel):
                     continue
 
                 # 2) Search and observation
-                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
+                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
                     print("detect search")
                     part = text
                     s = part.index("<search>") + len("<search>")
