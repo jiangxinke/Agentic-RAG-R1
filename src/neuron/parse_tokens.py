@@ -36,7 +36,7 @@ def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokeni
         arg_span = (arg_span[0] + leading_spaces, arg_span[1] - trailing_spaces)
 
         actions.append((action_name, tag_span, arg_span))
-        # print(f"Found action '{action_name}' with tag chars [{tag_span[0]}, {tag_span[1]}) and arg chars [{arg_span[0]}, {arg_span[1]})")
+        print(f"Found action '{action_name}' with tag chars [{tag_span[0]}, {tag_span[1]}) and arg chars [{arg_span[0]}, {arg_span[1]})")
         
     # Step 3: For each token, get its corresponding (start,end) char position in output_text
     tokens = output_tokens.tolist()
@@ -54,7 +54,7 @@ def locate_action_token_spans(output_tokens: torch.Tensor, tokenizer: AutoTokeni
             # fallback (should almost never happen)
             idx = running
         token_spans.append((idx, idx+len(token_str)))
-        # print(f"Token '{token_str}' at chars [{idx}, {idx+len(token_str)})")
+        print(f"Token '{token_str}' at chars [{idx}, {idx+len(token_str)})")
         running = idx + len(token_str)
     
     # Step 4: For each action's arg span, find token idxs that cover it
@@ -112,23 +112,45 @@ if __name__ == "__main__":
     # Example usage
     model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-    example_output = """<think> I need to search for the capital of France. </think>
-<search> capital France </search>
-<observation> The capital of France is Paris. </observation>
-<answer> The capital of France is Paris. </answer>"""
+#     example_output = """<think> I need to search for the capital of France. </think>
+# <search> capital France </search>
+# <observation> The capital of France is Paris. </observation>
+# <answer> The capital of France is Paris. </answer>"""
+    example_output = """
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<answer>
+...
+</answer>
+Question: 女性，37岁，因短肠综合征入院。
+<reasoning>
+接下来需要进一步分析选项
+</reasoning>
+<search>
+{
+  "input": "寒战 高热"
+}
+</search>
+"""
     output_tokens = tokenizer.encode(example_output, return_tensors="pt")[0]
     actions = locate_action_token_spans(output_tokens, tokenizer)
     print("Extracted actions tags:", actions['tag'])
     print("Extracted actions args:", actions['arg'])
     print()
 
-    token_strs = [tokenizer.decode([tok], skip_special_tokens=True) for tok in output_tokens]
-    print("Output tokens: ", token_strs)
-    print()
+    # token_strs = [tokenizer.decode([tok], skip_special_tokens=True) for tok in output_tokens]
+    # print("Output tokens: ", token_strs)
+    # print()
 
-    for act, spans in actions['tag'].items():
-        for start, end in spans:
-            print(f"Action '{act}' tag tokens: ", tokenizer.decode(output_tokens[start:end], skip_special_tokens=True))
-    for act, spans in actions['arg'].items():
-        for start, end in spans:
-            print(f"Action '{act}' args tokens: ", tokenizer.decode(output_tokens[start:end], skip_special_tokens=True))
+    # for act, spans in actions['tag'].items():
+    #     for start, end in spans:
+    #         print(f"Action '{act}' tag tokens: ", tokenizer.decode(output_tokens[start:end], skip_special_tokens=True))
+    # for act, spans in actions['arg'].items():
+    #     for start, end in spans:
+    #         print(f"Action '{act}' args tokens: ", tokenizer.decode(output_tokens[start:end], skip_special_tokens=True))
