@@ -533,7 +533,7 @@ class AgenticRAGModel(PreTrainedModel):
         current_mask = attention_mask.clone()
 
         # NOTE jxk 2D mask
-        masked_spans_per_sample: List[List[Tuple[int,int]]] = [[] for _ in range(batch_size)]
+        masked_spans_per_sample: List[List[Tuple[int, int, int]]] = [[] for _ in range(batch_size)]
 
         beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
@@ -557,9 +557,12 @@ class AgenticRAGModel(PreTrainedModel):
                 logits_processor = LogitsProcessorList(
                     [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
                 )
+
+            print(attention_mask.shape)
+            
             gen_out = self.model.generate(
                 current_ids,
-                attention_mask=current_mask,
+                attention_mask=current_mask,   
                 max_new_tokens=max_new_tokens,
                 do_sample=do_sample,
                 temperature=temperature,
@@ -624,24 +627,11 @@ class AgenticRAGModel(PreTrainedModel):
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
                 if ("</backtrack>" in text) or ("</summary>" in text):
                     print("deteck backtrack or summary")
-                #     token_spans = parse_tokens.locate_action_token_spans(combined_seq, self.tokenizer)
-                #     ref_spans = []
-                #     for k,v in token_spans.items():
-                #         ref_spans.extend(v)
-                #     if ref_spans:
-                #         last_ref = ref_spans[-1]
-                #         ref_start, ref_end = last_ref[0], last_ref[1]
-                #         masked_spans_per_sample[b].append((ref_start, ref_end))
-                #         # KV cache handling: zero out past_key_values corresponding to this span
-                #         if past_key_values is not None:
-                #             for layer_idx in range(len(past_key_values)):
-                #                 k, v = past_key_values[layer_idx]
-                #                 k[:, :, ref_start:ref_end, :] = 0
-                #                 v[:, :, ref_start:ref_end, :] = 0
-                #     next_prompts.append(combined_seq)
-                #     next_prompts_samples.append(b)
-                #     next_prompts_token_tensors.append(combined_seq.clone())
-                #     continue
+                    spans = get_masked_spans_from_text(text)        # FIXME 这个地方需要修改一下
+                    # 保存到当前 batch 样本
+                    masked_spans_per_sample[b].extend(spans)
+                    print(f"masked_spans_per_sample[{b}]: {masked_spans_per_sample[b]}")
+                    continue
 
                 # 3) Continue or finish
                 eos_found = eos_token_id in new_tokens.tolist()
@@ -658,6 +648,7 @@ class AgenticRAGModel(PreTrainedModel):
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
+                # print(current_mask.shape)
 
                 # if enable_2D_attention_mask:
                 #     enc_attention_mask = self._reapply_masked_spans(
