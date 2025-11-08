@@ -558,8 +558,9 @@ class AgenticRAGModel(PreTrainedModel):
                     [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
                 )
 
-            print(attention_mask.shape)
+            current_mask = apply_masked_spans(current_mask, masked_spans_per_sample)
             
+            # 插入对attentiin mask的修改：
             gen_out = self.model.generate(
                 current_ids,
                 attention_mask=current_mask,   
@@ -649,17 +650,6 @@ class AgenticRAGModel(PreTrainedModel):
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
                 # print(current_mask.shape)
-
-                # if enable_2D_attention_mask:
-                #     enc_attention_mask = self._reapply_masked_spans(
-                #         enc_input_ids, enc_attention_mask_1d, next_prompts_samples, next_prompts_token_tensors,
-                #         masked_spans_per_sample, enable_2D_attention_mask=True
-                #     )
-                # else:
-                #     enc_attention_mask = self._reapply_masked_spans(
-                #         enc_input_ids, enc_attention_mask_1d, next_prompts_samples, next_prompts_token_tensors,
-                #         masked_spans_per_sample, enable_2D_attention_mask=False
-                #     )
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         
@@ -834,70 +824,32 @@ class AgenticRAGModel(PreTrainedModel):
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         return final_output
 
-    # ------------------ helper: find subsequence start ------------------
-    def _find_subsequence_start(self, full_row: torch.LongTensor, subseq: torch.LongTensor) -> Optional[int]:
-        if subseq.numel() == 0 or full_row.numel() == 0 or subseq.numel() > full_row.numel():
-            return None
-        n = full_row.size(0)
-        m = subseq.size(0)
-        for i in range(n - m + 1):
-            if torch.equal(full_row[i : i + m], subseq):
-                return i
-        return None
 
-    # ------------------ helper: reapply masked spans ------------------
-    def _reapply_masked_spans(
-        self,
-        enc_input_ids: torch.LongTensor,
-        base_mask: torch.LongTensor,
-        next_prompt_samples: List[int],
-        next_prompts_token_tensors: List[torch.LongTensor],
-        masked_spans_per_sample: List[List[Tuple[int,int]]],
-        enable_2D_attention_mask: bool,
-    ):
-        device = enc_input_ids.device
-        rows, seq_len = enc_input_ids.size(0), enc_input_ids.size(1)
-        if not enable_2D_attention_mask:
-            for row_idx in range(rows):
-                b = next_prompt_samples[row_idx]
-                seq_tensor = next_prompts_token_tensors[row_idx].to(device)
-                start_pos = self._find_subsequence_start(enc_input_ids[row_idx], seq_tensor)
-                if start_pos is None:
-                    non_pad_mask = enc_input_ids[row_idx] != self.tokenizer.eos_token_id
-                    nonzeros = torch.nonzero(non_pad_mask, as_tuple=True)[0]
-                    if len(nonzeros) == 0:
-                        continue
-                    start_pos = nonzeros[0].item()
-                spans = masked_spans_per_sample[b]
-                for (s,e) in spans:
-                    s_clamped = max(0,s)
-                    e_clamped = max(s_clamped,e)
-                    apply_s = start_pos + s_clamped
-                    apply_e = min(start_pos + e_clamped, seq_len)
-                    if apply_s >= apply_e:
-                        continue
-                    base_mask[row_idx, apply_s:apply_e] = 0
-            return base_mask
+def apply_masked_spans(
+    current_mask: torch.LongTensor,
+    masked_spans_per_sample: list[ list[tuple[int,int,int]] ],
+) -> torch.LongTensor:
+    """
+    根据 masked_spans_per_sample 动态屏蔽 attention mask。
 
-        attention_mask_2d = base_mask.unsqueeze(1).repeat(1, seq_len, 1).clone()
-        for row_idx in range(rows):
-            b = next_prompt_samples[row_idx]
-            seq_tensor = next_prompts_token_tensors[row_idx].to(device)
-            start_pos = self._find_subsequence_start(enc_input_ids[row_idx], seq_tensor)
-            if start_pos is None:
-                non_pad_mask = enc_input_ids[row_idx] != self.tokenizer.eos_token_id
-                nonzeros = torch.nonzero(non_pad_mask, as_tuple=True)[0]
-                if len(nonzeros) == 0:
-                    continue
-                start_pos = nonzeros[0].item()
-            spans = masked_spans_per_sample[b]
-            for (s,e) in spans:
-                s_clamped = max(0,s)
-                e_clamped = max(s_clamped,e)
-                key_s = start_pos + s_clamped
-                key_e = min(start_pos + e_clamped, seq_len)
-                if key_s >= key_e:
-                    continue
-                for qpos in range(key_e, seq_len):
-                    attention_mask_2d[row_idx, qpos, key_s:key_e] = 0
-        return attention_mask_2d
+    Args:
+        current_mask (torch.LongTensor): 当前 attention mask, shape (B, T)
+        masked_spans_per_sample (List[List[Tuple[int,int,int]]]): 
+            每个 batch 的 span 三元组列表 (prev_action_start, prev_action_end, backtrack_end)
+
+    Returns:
+        torch.LongTensor: 更新后的 attention mask
+    """
+    batch_size, seq_len = current_mask.shape
+    new_mask = current_mask.clone()
+
+    for b in range(batch_size):
+        for span in masked_spans_per_sample[b]:
+            prev_start, prev_end, backtrack_end = span
+            # 安全检查，防止越界
+            prev_start = max(0, prev_start)
+            prev_end = min(prev_end, seq_len)
+            if prev_start < prev_end:
+                new_mask[b, prev_start:prev_end] = 0  # 屏蔽前一个 action
+
+    return new_mask
