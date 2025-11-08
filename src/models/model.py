@@ -174,7 +174,7 @@ class AgenticRAGModel(PreTrainedModel):
         """
         # FIXME jxk: 在这个地方，不管是不是SSRL，只要遇到了需要加2D-attention mask的地方，都需要改动
         if not obtain_logits:
-            if use_SSRL:    # TODO 这个地方还没有支持2D mask
+            if use_SSRL:
                 if not use_2D_mask:
                     return self.model.generate(
                             input_ids,
@@ -186,7 +186,7 @@ class AgenticRAGModel(PreTrainedModel):
                             eos_token_id=self.tokenizer.eos_token_id,
                             enable_2D_attention_mask=enable_2D_attention_mask,
                         )
-                if use_2D_mask:
+                if use_2D_mask:     # TODO，把attention mask给传递出来
                     return self.generate_with_think_interruption(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -205,7 +205,7 @@ class AgenticRAGModel(PreTrainedModel):
                         **kwargs,
                     )
             else:
-                if use_KV_Cache:        # TODO 这个地方还没有支持2D mask
+                if use_KV_Cache:        # TODO jxk 这个地方还没有支持2D mask => 先不着急吧本次
                     return self.generate_with_think_interruption_KV_Cache(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -222,7 +222,7 @@ class AgenticRAGModel(PreTrainedModel):
                         enable_2D_attention_mask=enable_2D_attention_mask,
                         **kwargs,
                     )
-                else:     
+                else:      # TODO，把attention mask给传递出来
                     return self.generate_with_think_interruption(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
