@@ -50,31 +50,34 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
 
 
 class SearchTagStoppingCriteria(StoppingCriteria):
-    """
-    StoppingCriteria that halts generation when specific end-of-search tags appear.
-
-    This criteria checks the last three generated token IDs against predefined
-    sequences corresponding to '</search>' and '</search>\n'. When any sequence
-    in the batch matches, generation stops.
-
-    Args:
-        tokenizer (Any): Tokenizer used for decoding (provides token IDs).
-        think_token (str): The text tag marking the end of a search thought.
-
-    Raises:
-        None
-    """
+    """ 
+    StoppingCriteria that halts generation when specific end-of-search tags appear. 
+    This criteria checks the last three generated token IDs against predefined sequences corresponding
+    to '</search>' and '</search>\n', and backtrack, summary. When any sequence in the batch matches, generation stops. 
+     
+     Args: tokenizer (Any): Tokenizer used for decoding (provides token IDs). 
+     think_token (str): The text tag marking the end of a search thought. 
+     
+     Raises: None 
+     
+     """
 
     def __init__(
         self,
         tokenizer: Any,
-        # stop_action_token: str = ["</search>", "</backtrack>", "</summary>"],
-        stop_action_token: str = ["</search>"],
+        stop_action_token: List[str] = ["</search>", "</backtrack>", "</summary>"],
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
-        self.target_ids_1: List[int] = [tokenizer.encode(token) for token in stop_action_token]
-        self.target_ids_2: List[int] = [tokenizer.encode(token + "\n") for token in stop_action_token]
+
+        self.target_ids = []
+        for tok in stop_action_token:
+            ids = tokenizer.encode(tok)
+            if ids:
+                self.target_ids.append(ids)
+            ids2 = tokenizer.encode(tok + "\n")
+            if ids2:
+                self.target_ids.append(ids2)
 
     def __call__(
         self,
@@ -82,26 +85,29 @@ class SearchTagStoppingCriteria(StoppingCriteria):
         scores: torch.FloatTensor,
         **kwargs: Any,
     ) -> bool:
-        """
-        Check if generation should stop based on recently generated tokens.
 
-        Args:
-            input_ids (torch.LongTensor): Generated token IDs of shape (batch, seq_len).
-            scores (torch.FloatTensor): Model scores (unused here).
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            bool: True if any sequence ends with a stop tag, else False.
-        """
-        if input_ids.size(1) < 3:
-            return False
-
-        last_tokens = input_ids[:, -3:]
         device = input_ids.device
-        t1 = torch.tensor(self.target_ids_1, device=device)
-        t2 = torch.tensor(self.target_ids_2, device=device)
+        seq_len = input_ids.size(1)
 
-        return (last_tokens == t1).all(dim=1).any() or (last_tokens == t2).all(dim=1).any()
+        # 3 token candidates
+        if seq_len >= 3:
+            last_tokens = input_ids[:, -3:]
+            for ids in self.target_ids:
+                if len(ids) >= 3:
+                    t = torch.tensor(ids[-3:], device=device)
+                    if (last_tokens == t).all(dim=1).any():
+                        return True
+
+        # 4 token candidates
+        if seq_len >= 4:
+            last_tokens = input_ids[:, -4:]
+            for ids in self.target_ids:
+                if len(ids) >= 4:
+                    t = torch.tensor(ids[-4:], device=device)
+                    if (last_tokens == t).all(dim=1).any():
+                        return True
+
+        return False
 
 
 class AgenticRAGModel(PreTrainedModel):
@@ -598,6 +604,7 @@ class AgenticRAGModel(PreTrainedModel):
 
                 # 2) Search and observation
                 if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
+                    print("detect search")
                     part = text
                     s = part.index("<search>") + len("<search>")
                     e = part.index("</search>")
@@ -615,7 +622,8 @@ class AgenticRAGModel(PreTrainedModel):
                 
                 # 3） backtrack or summary actions
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
-                # if ("</backtrack>" in text_new) or ("</summary>" in text_new):
+                if ("</backtrack>" in text) or ("</summary>" in text):
+                    print("deteck backtrack or summary")
                 #     token_spans = parse_tokens.locate_action_token_spans(combined_seq, self.tokenizer)
                 #     ref_spans = []
                 #     for k,v in token_spans.items():

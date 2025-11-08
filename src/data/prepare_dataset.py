@@ -5,7 +5,7 @@ config = load_config("src/config/config.yaml")
 if config.training.use_ssrl:
     from src.data.prompt import SYSTEM_PROMPT_TOOLS_SSRL as SYSTEM_PROMPT
 else:
-    from src.data.prompt import SYSTEM_PROMPT_TOOLS as SYSTEM_PROMPT
+    from src.data.prompt import SYSTEM_PROMPT_TOOLS_BACKTRACK as SYSTEM_PROMPT
 
 from src.data.prompt import build_prompt, build_system_tools
 
