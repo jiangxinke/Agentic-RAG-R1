@@ -22,7 +22,7 @@ def compute_token_spans_by_offsets(output_tokens, tokenizer):
 def locate_action_token_spans_fast(output_tokens, tokenizer):
     output_text, token_spans = compute_token_spans_by_offsets(output_tokens, tokenizer)
 
-    pattern = re.compile(r'<(reasoning|search|summary|backtrack|answer)>(.*?)</\1>', re.DOTALL)
+    pattern = re.compile(r'<(reasoning|search|observation|summary|backtrack|answer)>(.*?)</\1>', re.DOTALL)
     matches = list(pattern.finditer(output_text))
 
     # 仍以“最后一次出现”为准
