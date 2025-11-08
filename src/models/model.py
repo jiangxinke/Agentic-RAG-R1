@@ -669,14 +669,12 @@ class AgenticRAGModel(PreTrainedModel):
                 
                 # 3） backtrack or summary actions
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
-                # if ("</backtrack>" in text) or ("</summary>" in text):    # NOTE 先用search把
-                if ("</search>" in text) or ("</search>" in text):
+                if ("</backtrack>" in text) or ("</summary>" in text): 
                     print("deteck backtrack or summary")
                     # 当前完整序列
                     full_seq = torch.cat([seq[:old_len], new_tokens], dim=0)
                     full_text = self.tokenizer.decode(full_seq, skip_special_tokens=False)
                     print(full_text)    
-                    # NOTE for rihong，注意这个地方需要最近的两个action，observation不需要做特殊处理；这个地方的old_len是包括system prompt的
                     '''
                     <<reasoning>>
                     ...
@@ -685,9 +683,7 @@ class AgenticRAGModel(PreTrainedModel):
                     [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 �服药 �疗程
                     </search>
                     '''
-                    spans = get_masked_spans_from_text(full_seq, self.tokenizer)        # FIXME 这个地方需要修改一下
-                    # print(spans)
-                    # 保存到当前 batch 样本
+                    spans = get_masked_spans_from_text(full_seq, self.tokenizer) 
                     self.masked_spans_per_sample[b].extend(spans)
                     print(f"masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
                     continue
