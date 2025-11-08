@@ -626,9 +626,23 @@ class AgenticRAGModel(PreTrainedModel):
                 
                 # 3） backtrack or summary actions
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
-                if ("</backtrack>" in text) or ("</summary>" in text):
+                # if ("</backtrack>" in text) or ("</summary>" in text):    # NOTE 先用search把
+                if ("</search>" in text) or ("</search>" in text):
                     print("deteck backtrack or summary")
-                    spans = get_masked_spans_from_text(text)        # FIXME 这个地方需要修改一下
+                    # 当前完整序列
+                    full_seq = torch.cat([seq[:old_len], new_tokens], dim=0)
+                    full_text = self.tokenizer.decode(full_seq, skip_special_tokens=False)
+                    print(full_text)    
+                    # NOTE for rihong，注意这个地方需要最近的两个action，observation不需要做特殊处理；这个地方的old_len是包括system prompt的
+                    '''
+                    <<reasoning>>
+                    ...
+                    </reasoning>
+                    <search>
+                    [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 �服药 �疗程
+                    </search>
+                    '''
+                    spans = get_masked_spans_from_text(full_text)        # FIXME 这个地方需要修改一下
                     # 保存到当前 batch 样本
                     masked_spans_per_sample[b].extend(spans)
                     print(f"masked_spans_per_sample[{b}]: {masked_spans_per_sample[b]}")
@@ -853,3 +867,18 @@ def apply_masked_spans(
                 new_mask[b, prev_start:prev_end] = 0  # 屏蔽前一个 action
 
     return new_mask
+
+
+def get_masked_spans_from_text(full_text: str) -> List[Tuple[int, int, int]]:
+    # TODO Rihong修改这里
+    """
+    Mock function: 给定完整文本，返回需要屏蔽的 span 三元组。
+    
+    这里先返回固定示例，后续你可以改成根据标记解析真实 span。
+    
+    Returns:
+        List of tuples: (prev_action_start, prev_action_end, backtrack_end)
+    """
+    # TODO: 根据 full_text 解析真实 span
+    # 现在先返回示例数据
+    return [(0, 5, 10), (12, 15, 20)]
