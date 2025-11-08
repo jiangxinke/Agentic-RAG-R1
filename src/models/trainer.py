@@ -297,6 +297,8 @@ def generate_rollout_data(
         k = c_ids.size(1)
 
         old_log_probs = compute_log_probabilities(model, input_ids, attention_mask, k)
+        # 这里的ref_logits拿不到attn_mask, 所以需要取一下
+        ref_model.masked_spans_per_sample, ref_model.masked_parellel_spans_per_sample = model.masked_spans_per_sample, model.masked_parallel_spans_per_sample
         ref_log_probs = compute_log_probabilities(ref_model, input_ids, attention_mask, k)
 
     formatted = [[{"content": tokenizer.decode(ids, skip_special_tokens=True)}] for ids in c_ids]
@@ -745,7 +747,7 @@ def train_with_dapo(
                         overlong_buffer_len=overlong_buffer_len,
                         overlong_penalty_factor=overlong_penalty_factor,
                     )
-                else:       # FIXME HERE jxk
+                else:       
                     loss_val, avg_r, rdict = train_with_layered_optimization_dapo(
                         config=config,
                         policy_model=policy_model,
@@ -1263,7 +1265,7 @@ def train_with_grpo(
                 num_generations = num_generations["constant"]
             elif num_generations["mode"] == "range":
                 num_generations = random.randint(num_generations["range"][0], num_generations["range"][1])
-            elif num_generations["mode"] == "function":  # FIXME no check
+            elif num_generations["mode"] == "function":  # FIXME gjr no check
                 num_generations = int(8 - (sum_steps / all_steps) * 4)
             # pdb.set_trace()
             logging.info(f"=" * 50)

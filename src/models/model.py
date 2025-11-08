@@ -17,6 +17,7 @@ from transformers import (
 import src.neuron.parse_tokens as parse_tokens
 from src.neuron.neuron_metric import NeuronMetric
 from src.utils.Tools import Tools
+from src.models.mask_utils import *
 
 
 class HammingDiversityLogitsProcessor(LogitsProcessor):
@@ -125,11 +126,14 @@ class AgenticRAGModel(PreTrainedModel):
         self,
         model: PreTrainedModel,
         tokenizer: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(model.config)
         self.model = model
         self.tokenizer = tokenizer
         self.tool = Tools()
+        self.masked_spans_per_sample = [] 
+        self.masked_parallel_spans_per_sample = []
 
     def forward(
         self,
@@ -172,10 +176,9 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: If model generation fails.
         """
-        # FIXME jxk: 在这个地方，不管是不是SSRL，只要遇到了需要加2D-attention mask的地方，都需要改动
         if not obtain_logits:
             if use_SSRL:
-                if not use_2D_mask:
+                if not enable_2D_attention_mask:
                     return self.model.generate(
                             input_ids,
                             attention_mask=attention_mask,
@@ -186,7 +189,7 @@ class AgenticRAGModel(PreTrainedModel):
                             eos_token_id=self.tokenizer.eos_token_id,
                             enable_2D_attention_mask=enable_2D_attention_mask,
                         )
-                if use_2D_mask:     # TODO，把attention mask给传递出来
+                if enable_2D_attention_mask:     # TODO，把attention mask给传递出来
                     return self.generate_with_think_interruption(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -239,14 +242,37 @@ class AgenticRAGModel(PreTrainedModel):
                         enable_2D_attention_mask=enable_2D_attention_mask,
                         **kwargs,
                     )
-        
-        # FIXME，这里的attention mask也需要被修改 => 需要讨论一下
-        logits = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            logits_to_keep=(logits_to_keep or 0) + 1,
-        ).logits
-        return logits
+
+        else:
+            # 不需要做打断的时候，就用原始的获取logits即可
+            if not enable_2D_attention_mask:
+                logits = self.model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    logits_to_keep=(logits_to_keep or 0) + 1,
+                ).logits
+                return logits
+            # 如果需要打断，则获取4D attention mask
+            else:       
+                # Step 1:
+                print(self.masked_spans_per_sample)
+                current_casual_mask = expand_to_causal_mask_backtrack(attention_mask, self.masked_spans_per_sample, dtype=self.dtype)
+                # Step 2: NOTE for jiaran
+                ## 并行屏蔽 span，jiaran你构造这样的形式：
+                ## self.masked_parellel_spans_per_sample是一个batch list：
+                ## self.masked_parellel_spans_per_sample是一个batch[0]又是一个list，代表一个rollout的多次检索
+                ## self.masked_parellel_spans_per_sample是一个batch[0][0]代表第1次检索
+                ## self.masked_parellel_spans_per_sample是一个batch[0][0]=[(a,b),(c,d),(e,f)]把彼此两两之间的attn设置为0就行
+                # NOTE for jiaran
+                # current_casual_mask = expand_to_causal_mask_parellel(attention_mask, dtype=self.dtype, self.masked_parellel_spans_per_sample)
+
+                # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
+                logits = self.model(
+                    input_ids=input_ids,
+                    attention_mask=current_casual_mask,
+                    logits_to_keep=(logits_to_keep or 0) + 1,
+                ).logits
+                return logits
 
     def generate(
         self,
@@ -551,7 +577,7 @@ class AgenticRAGModel(PreTrainedModel):
         current_mask = attention_mask.clone()
 
         # NOTE jxk 2D mask
-        masked_spans_per_sample: List[List[Tuple[int, int, int]]] = [[] for _ in range(batch_size)]
+        self.masked_spans_per_sample: List[List[Tuple[int, int, int]]] = [[] for _ in range(batch_size)]
 
         beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
@@ -576,8 +602,7 @@ class AgenticRAGModel(PreTrainedModel):
                     [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
                 )
 
-            current_mask = apply_masked_spans(current_mask, masked_spans_per_sample)
-            
+            current_mask = apply_masked_spans(current_mask, self.masked_spans_per_sample)
             # 插入对attentiin mask的修改：
             gen_out = self.model.generate(
                 current_ids,
@@ -663,8 +688,8 @@ class AgenticRAGModel(PreTrainedModel):
                     spans = get_masked_spans_from_text(full_seq, self.tokenizer)        # FIXME 这个地方需要修改一下
                     # print(spans)
                     # 保存到当前 batch 样本
-                    masked_spans_per_sample[b].extend(spans)
-                    print(f"masked_spans_per_sample[{b}]: {masked_spans_per_sample[b]}")
+                    self.masked_spans_per_sample[b].extend(spans)
+                    print(f"masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
                     continue
 
                 # 3) Continue or finish
@@ -858,48 +883,3 @@ class AgenticRAGModel(PreTrainedModel):
         return final_output
 
 
-def apply_masked_spans(
-    current_mask: torch.LongTensor,
-    masked_spans_per_sample: list[ list[tuple[int,int,int]] ],
-) -> torch.LongTensor:
-    """
-    根据 masked_spans_per_sample 动态屏蔽 attention mask。
-
-    Args:
-        current_mask (torch.LongTensor): 当前 attention mask, shape (B, T)
-        masked_spans_per_sample (List[List[Tuple[int,int,int]]]): 
-            每个 batch 的 span 三元组列表 (prev_action_start, prev_action_end, backtrack_end)
-
-    Returns:
-        torch.LongTensor: 更新后的 attention mask
-    """
-    batch_size, seq_len = current_mask.shape
-    new_mask = current_mask.clone()
-
-    for b in range(batch_size):
-        for span in masked_spans_per_sample[b]:
-            prev_start, prev_end, backtrack_end = span
-            # 安全检查，防止越界
-            prev_start = max(0, prev_start)
-            prev_end = min(prev_end, seq_len)
-            if prev_start < prev_end:
-                new_mask[b, prev_start:prev_end] = 0  # 屏蔽前一个 action
-
-    return new_mask
-
-def get_masked_spans_from_text(full_seq: str, tokenizer) -> List[Tuple[int, int, int]]:
-    # TODO Rihong修改这里
-    """
-    Mock function: 给定完整文本，返回需要屏蔽的 span 三元组。
-    
-    这里先返回固定示例，后续你可以改成根据标记解析真实 span。
-    
-    Returns:
-        List of tuples: (prev_action_start, prev_action_end, backtrack_end)
-    """
-    from neuron.action_utils import get_last_two_action_span
-
-    # TODO: 根据 full_text 解析真实 span
-    result = get_last_two_action_span(full_seq, tokenizer)
-    # 现在先返回示例数据
-    return [result]
