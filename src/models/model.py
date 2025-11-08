@@ -240,7 +240,7 @@ class AgenticRAGModel(PreTrainedModel):
                         **kwargs,
                     )
         
-        # FIXME，这里的attention mask也需要被修改
+        # FIXME，这里的attention mask也需要被修改 => 需要讨论一下
         logits = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -660,7 +660,8 @@ class AgenticRAGModel(PreTrainedModel):
                     [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 �服药 �疗程
                     </search>
                     '''
-                    spans = get_masked_spans_from_text(full_text)        # FIXME 这个地方需要修改一下
+                    spans = get_masked_spans_from_text(full_seq, self.tokenizer)        # FIXME 这个地方需要修改一下
+                    # print(spans)
                     # 保存到当前 batch 样本
                     masked_spans_per_sample[b].extend(spans)
                     print(f"masked_spans_per_sample[{b}]: {masked_spans_per_sample[b]}")
@@ -886,8 +887,7 @@ def apply_masked_spans(
 
     return new_mask
 
-
-def get_masked_spans_from_text(full_text: str) -> List[Tuple[int, int, int]]:
+def get_masked_spans_from_text(full_seq: str, tokenizer) -> List[Tuple[int, int, int]]:
     # TODO Rihong修改这里
     """
     Mock function: 给定完整文本，返回需要屏蔽的 span 三元组。
@@ -897,6 +897,9 @@ def get_masked_spans_from_text(full_text: str) -> List[Tuple[int, int, int]]:
     Returns:
         List of tuples: (prev_action_start, prev_action_end, backtrack_end)
     """
+    from neuron.action_utils import get_last_two_action_span
+
     # TODO: 根据 full_text 解析真实 span
+    result = get_last_two_action_span(full_seq, tokenizer)
     # 现在先返回示例数据
-    return [(0, 5, 10), (12, 15, 20)]
+    return [result]
