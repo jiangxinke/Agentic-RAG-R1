@@ -132,8 +132,8 @@ class AgenticRAGModel(PreTrainedModel):
         self.model = model
         self.tokenizer = tokenizer
         self.tool = Tools()
-        self.masked_spans_per_sample = [] 
-        self.masked_parallel_spans_per_sample = []
+        self.masked_spans_per_sample = []       # 三元组的list
+        self.masked_parallel_spans_per_sample = []  # 并行的search start/end list
 
     def forward(
         self,
@@ -263,8 +263,20 @@ class AgenticRAGModel(PreTrainedModel):
                 ## self.masked_parellel_spans_per_sample是一个batch[0]又是一个list，代表一个rollout的多次检索
                 ## self.masked_parellel_spans_per_sample是一个batch[0][0]代表第1次检索
                 ## self.masked_parellel_spans_per_sample是一个batch[0][0]=[(a,b),(c,d),(e,f)]把彼此两两之间的attn设置为0就行
+
+                ### self.masked_parellel_spans_per_sample[0] ： 第0个rollout
+                #### self.masked_parellel_spans_per_sample[0][6] ： 第0个rollout第6次并行search
+                ##### self.masked_parellel_spans_per_sample[0][6] = [(a,b),(c,d),(e,f)]： b=c-1, e=d+1: 这个地方是绝对id
+                ###### ：a<search>[path 1]: 我要查红楼梦贾宝玉 <\end path 1>b  ;  [path 2] 我查查林黛玉 <\end path 2>; .....
+                ######                     [0][6][1]                                [0][6][2]
+
+                ######: query：红楼梦的贾宝玉性格怎么样：
+                ######## GRPO： rollout 0， rollout 1， ....， rollout 3
+                ######### rollout 0: 思考0--search0--summary0--反思0--思考1--...--search6--回答
+                ########### search6: path[1] 第36回贾宝玉做了什么.. path[2] 第36回林黛玉做了什么.. 
+
                 # NOTE for jiaran
-                # current_casual_mask = expand_to_causal_mask_parellel(attention_mask, dtype=self.dtype, self.masked_parellel_spans_per_sample)
+                # current_casual_mask = expand_to_causal_mask_parellel(current_casual_mask, dtype=self.dtype, self.masked_parellel_spans_per_sample)
 
                 # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
                 logits = self.model(
