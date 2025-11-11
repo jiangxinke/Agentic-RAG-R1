@@ -133,7 +133,7 @@ class AgenticRAGModel(PreTrainedModel):
         self.tokenizer = tokenizer
         self.tool = Tools()
         self.masked_spans_per_sample = []       # 三元组的list
-        self.masked_parallel_spans_per_sample = []  # 并行的search start/end list
+        self.masked_parellel_spans_per_sample = []  # 并行的search start/end list
 
     def forward(
         self,
@@ -276,8 +276,9 @@ class AgenticRAGModel(PreTrainedModel):
                 ########### search6: path[1] 第36回贾宝玉做了什么.. path[2] 第36回林黛玉做了什么.. 
 
                 # NOTE for jiaran
-                # current_casual_mask = expand_to_causal_mask_parellel(current_casual_mask, dtype=self.dtype, self.masked_parellel_spans_per_sample)
-
+                if not use_SSRL:
+                    current_casual_mask = expand_to_causal_mask_parallel(current_casual_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
+                # 无任何变化的从2D=>4D normal
                 # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
                 logits = self.model(
                     input_ids=input_ids,
@@ -590,6 +591,7 @@ class AgenticRAGModel(PreTrainedModel):
 
         # NOTE jxk 2D mask
         self.masked_spans_per_sample: List[List[Tuple[int, int, int]]] = [[] for _ in range(batch_size)]
+        self.masked_parellel_spans_per_sample: List[List[List[Tuple[int, int]]]] = [[] for _ in range(batch_size)]
 
         beams_history = [[] for _ in range(batch_size)]
         for _ in range(max_generate_iterations):
@@ -747,11 +749,11 @@ class AgenticRAGModel(PreTrainedModel):
                         span_positions.append((key_start, key_end))
                         current_offset += line_len + 1  # 加换行符
 
-                    # step 4: 存入 masked_parallel_spans_per_sample
-                    if not hasattr(self, "masked_parallel_spans_per_sample"):
-                        self.masked_parallel_spans_per_sample = [[] for _ in range(batch_size)]
+                    # step 4: 存入 masked_parellel_spans_per_sample
+                    if not hasattr(self, "masked_parellel_spans_per_sample"):
+                        self.masked_parellel_spans_per_sample = [[] for _ in range(batch_size)]
 
-                    self.masked_parallel_spans_per_sample[b].append(span_positions)
+                    self.masked_parellel_spans_per_sample[b].append(span_positions)
 
                     print(f"[debug] masked spans for sample {b}:", span_positions)
 

@@ -134,7 +134,7 @@ def expand_to_causal_mask_backtrack(current_mask: torch.Tensor, masked_spans_per
     for b in range(B):
         for span in masked_spans_per_sample[b]:
             prev_start, prev_end, backtrack_end = span
-            # 左闭右闭转换到 Python 切片=>确保代码无误
+            # 左闭右闭转换到 Python 切片=>parellel
             causal_mask[b, 0, prev_start:prev_end+1, backtrack_end+1:] = min_dtype
             causal_mask[b, 0, backtrack_end+1:, prev_start:prev_end+1] = min_dtype
     return causal_mask

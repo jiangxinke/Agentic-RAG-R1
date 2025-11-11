@@ -298,7 +298,7 @@ def generate_rollout_data(
 
         old_log_probs = compute_log_probabilities(model, input_ids, attention_mask, k)
         # 这里的ref_logits拿不到attn_mask, 所以需要取一下
-        ref_model.masked_spans_per_sample, ref_model.masked_parellel_spans_per_sample = model.masked_spans_per_sample, model.masked_parallel_spans_per_sample
+        ref_model.masked_spans_per_sample, ref_model.masked_parellel_spans_per_sample = model.masked_spans_per_sample, model.masked_parellel_spans_per_sample
         ref_log_probs = compute_log_probabilities(ref_model, input_ids, attention_mask, k)
 
     formatted = [[{"content": tokenizer.decode(ids, skip_special_tokens=True)}] for ids in c_ids]
