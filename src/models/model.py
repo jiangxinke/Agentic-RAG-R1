@@ -66,7 +66,7 @@ class SearchTagStoppingCriteria(StoppingCriteria):
     def __init__(
         self,
         tokenizer: Any,
-        stop_action_token: List[str] = ["</search>", "</backtrack>", "</summary>"],
+        stop_action_token: List[str] = ["<search>", "</search>", "</backtrack>", "</summary>"],
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
@@ -661,6 +661,104 @@ class AgenticRAGModel(PreTrainedModel):
                     should_gen[b] = False
                     continue
 
+                # 2.0) for parellel search  # FIXME not support SSRL
+                if "<search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
+                    print("detect search (immediate beam trigger)")
+                    part = text
+                    s = part.index("<search>") + len("<search>")
+
+                    prefix_ids = current_ids[b : b + 1]
+                    prefix_mask = current_mask[b : b + 1]
+                    prefix_len = prefix_ids.size(1)
+
+                    num_beams = 3
+                    num_return_sequences = 3
+
+                    with torch.no_grad():
+                        beam_out = self.model.generate(
+                            prefix_ids.to(device),
+                            attention_mask=prefix_mask.to(device),
+                            max_new_tokens=max_new_tokens,
+                            num_beams=num_beams,
+                            num_return_sequences=num_return_sequences,
+                            early_stopping=True,
+                            do_sample=False,
+                        )
+
+                    search_lines, obs_lines = [], []
+                    span_positions = []  # 用来存放每个 path 的 (start, end)
+
+                    # step 1: decode and collect search/obs pairs
+                    for idx_beam in range(beam_out.size(0)):
+                        full_seq = beam_out[idx_beam]
+                        gen_part = full_seq[prefix_len:]  # 只取新生成部分
+                        key_text = self.tokenizer.decode(gen_part, skip_special_tokens=True).strip()
+
+                        path_name = f"path{idx_beam+1}"
+
+                        try:
+                            pname, pargs = self.parse_latest_plugin_call(key_text)
+                            obs = self.call_plugin(pname, pargs)
+                        except Exception as exc:
+                            obs = f"Error: {exc}"
+
+                        # 搜索和观测文本块
+                        search_lines.append(f"[{path_name}] {key_text} [/{path_name}]")
+                        obs_lines.append(f"[{path_name}] {obs} [/{path_name}]")
+
+                    # step 2: 拼接 search/obs 块
+                    final_search_block = "<search>\n" + "\n".join(search_lines) + "\n</search>"
+                    final_obs_block = "<observation>\n" + "\n".join(obs_lines) + "\n</observation>"
+
+                    merged_text = self.tokenizer.decode(seq[:prefix_len], skip_special_tokens=True)
+                    merged_text += "\n" + final_search_block + "\n" + final_obs_block
+
+                    # step 3: 计算 token 位置（仅针对 search key）
+                    # 为了计算绝对位置，重新对 merged_text 分词一次
+                    merged_ids = self.tokenizer.encode(merged_text, add_special_tokens=False)
+                    merged_str = self.tokenizer.decode(merged_ids, skip_special_tokens=False)
+
+                    # 现在我们重新对 <search> 块部分进行 token 对齐
+                    # 简单方法：对每个 [pathX] key [/pathX] 单独 encode，然后用偏移量计算
+                    offset = 0
+                    prefix_ids_len = len(self.tokenizer.encode(
+                        self.tokenizer.decode(seq[:prefix_len], skip_special_tokens=True),
+                        add_special_tokens=False
+                    ))
+
+                    current_offset = prefix_ids_len  # merged_text 中 search 部分的起点 token idx
+
+                    for idx_beam, line in enumerate(search_lines):
+                        # 对这一行单独编码（包括标签），计算长度
+                        line_ids = self.tokenizer.encode(line, add_special_tokens=False)
+                        line_len = len(line_ids)
+
+                        # 我们只想要 key 的内部区间
+                        # 定位 key_text 的 token 起止，相对 line_ids 的位置
+                        left_tag = f"[path{idx_beam+1}]"
+                        right_tag = f"[/{'path'+str(idx_beam+1)}]"
+                        left_ids = self.tokenizer.encode(left_tag, add_special_tokens=False)
+                        right_ids = self.tokenizer.encode(right_tag, add_special_tokens=False)
+
+                        key_ids = self.tokenizer.encode(key_text, add_special_tokens=False)
+                        key_start = current_offset + len(left_ids) + 1  # +1 for space
+                        key_end = key_start + len(key_ids)
+
+                        span_positions.append((key_start, key_end))
+                        current_offset += line_len + 1  # 加换行符
+
+                    # step 4: 存入 masked_parallel_spans_per_sample
+                    if not hasattr(self, "masked_parallel_spans_per_sample"):
+                        self.masked_parallel_spans_per_sample = [[] for _ in range(batch_size)]
+
+                    self.masked_parallel_spans_per_sample[b].append(span_positions)
+
+                    print(f"[debug] masked spans for sample {b}:", span_positions)
+
+                    # step 5: 将 merged_text 编码回 tensor 继续生成
+                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged_text), device=device))
+                    continue
+
                 # 2) Search and observation
                 if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
                     print("detect search")
@@ -889,5 +987,3 @@ class AgenticRAGModel(PreTrainedModel):
 
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         return final_output
-
-
