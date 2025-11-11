@@ -270,9 +270,9 @@ class AgenticRAGModel(PreTrainedModel):
                 ########### search6: path[1] 第36回贾宝玉做了什么.. path[2] 第36回林黛玉做了什么.. 
 
                 # NOTE for jiaran
-                # if not use_SSRL:
-                #     current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
-                #     current_casual_mask = current_casual_mask_parellel * current_casual_mask
+                if not use_SSRL:
+                    current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
+                    current_casual_mask = (current_casual_mask_parellel + current_casual_mask)/2
 
                 # 无任何变化的从2D=>4D normal
                 # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
@@ -614,6 +614,7 @@ class AgenticRAGModel(PreTrainedModel):
 
             current_mask = apply_masked_spans(current_mask, self.masked_spans_per_sample)
             # 插入对attentiin mask的修改：
+            print(current_ids.shape, current_mask.shape)
             gen_out = self.model.generate(
                 current_ids,
                 attention_mask=current_mask,   

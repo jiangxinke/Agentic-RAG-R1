@@ -172,7 +172,6 @@ def expand_to_causal_mask_parallel(current_mask: torch.Tensor, masked_parallel_s
                     # query in span_i 屏蔽 key in span_j
                     causal_mask[b, 0, start_i:end_i+1, start_j:end_j+1] = min_dtype
                     causal_mask[b, 0, start_j:end_j+1, start_i:end_i+1] = min_dtype
-
     return causal_mask  # (B,1,T,T)
 
 
