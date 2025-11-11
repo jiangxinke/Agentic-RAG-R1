@@ -270,9 +270,10 @@ class AgenticRAGModel(PreTrainedModel):
                 ########### search6: path[1] 第36回贾宝玉做了什么.. path[2] 第36回林黛玉做了什么.. 
 
                 # NOTE for jiaran
-                if not use_SSRL:
-                    current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
-                    current_casual_mask = current_casual_mask_parellel * current_casual_mask
+                # if not use_SSRL:
+                #     current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
+                #     current_casual_mask = current_casual_mask_parellel * current_casual_mask
+
                 # 无任何变化的从2D=>4D normal
                 # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
                 logits = self.model(
@@ -670,6 +671,10 @@ class AgenticRAGModel(PreTrainedModel):
 
                     num_beams = 3
                     num_return_sequences = 3
+
+                    prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
+                    print("当前beam search采样的前缀为：", prefix_text)
+                    print("\n\n\n")
 
                     # FIXME 这里有问题，这里的prefix_ids需要检查一下
                     beam_out = self.model.generate(

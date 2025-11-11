@@ -5,6 +5,7 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 export NCCL_P2P_DISABLE=0
 export NCCL_P2P_LEVEL=NVL
+export CUDA_LAUNCH_BLOCKING=1
 
 CUDA_VISIBLE_DEVICES=4,5,6,7 accelerate launch \
     --config_file ./src/config/accelerate_config/train_zero3.yaml \
