@@ -251,7 +251,7 @@ class AgenticRAGModel(PreTrainedModel):
                 # Step 1:
                 print(self.masked_spans_per_sample)
                 current_casual_mask = expand_to_causal_mask_backtrack(attention_mask, self.masked_spans_per_sample, dtype=self.dtype)
-                # Step 2: NOTE for jiaran
+                # Step 2:
                 ## 并行屏蔽 span，jiaran你构造这样的形式：
                 ## self.masked_parellel_spans_per_sample是一个batch list：
                 ## self.masked_parellel_spans_per_sample是一个batch[0]又是一个list，代表一个rollout的多次检索
@@ -269,7 +269,6 @@ class AgenticRAGModel(PreTrainedModel):
                 ######### rollout 0: 思考0--search0--summary0--反思0--思考1--...--search6--回答
                 ########### search6: path[1] 第36回贾宝玉做了什么.. path[2] 第36回林黛玉做了什么.. 
 
-                # NOTE for jiaran
                 if not use_SSRL:
                     current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
                     current_casual_mask = (current_casual_mask_parellel + current_casual_mask)/2
@@ -585,7 +584,7 @@ class AgenticRAGModel(PreTrainedModel):
         current_ids = input_ids.clone()
         current_mask = attention_mask.clone()
 
-        # NOTE jxk 2D mask
+        # jxk 2D mask
         self.masked_spans_per_sample: List[List[Tuple[int, int, int]]] = [[] for _ in range(batch_size)]
         self.masked_parellel_spans_per_sample: List[List[List[Tuple[int, int]]]] = [[] for _ in range(batch_size)]
 
@@ -660,7 +659,7 @@ class AgenticRAGModel(PreTrainedModel):
                     should_gen[b] = False
                     continue
 
-                # 2.0) for parellel search  # FIXME not support SSRL
+                # 2.0) for parellel search  # NOTE not support SSRL
                 if "<search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
                     print("detect search (immediate beam trigger)")
                     part = text
