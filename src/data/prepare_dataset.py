@@ -2,14 +2,16 @@ from datasets import load_dataset
 from src.utils.utils import load_config
 
 config = load_config("src/config/config.yaml")
-if config.training.use_ssrl:
+# Robustly read SSRL flag from config (support both use_SSRL and use_ssrl)
+use_ssrl = getattr(config.training, "use_SSRL", getattr(config.training, "use_ssrl", False))
+if use_ssrl:
     from src.data.prompt import SYSTEM_PROMPT_TOOLS_SSRL as SYSTEM_PROMPT
 else:
     from src.data.prompt import SYSTEM_PROMPT_TOOLS_BACKTRACK as SYSTEM_PROMPT
 
 from src.data.prompt import build_prompt, build_system_tools
 
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, DownloadMode
 
 
 def prepare_dataset(split="train", name="gsm8k", eval_size=10):
@@ -87,8 +89,41 @@ def prepare_dataset_medmcqa(split="train"):
 
 
 def prepare_dataset_medqa(split="train", eval_size=10):
-    # med_qa_zh_4options_bigbio_qa_train 这个 subset
-    data = load_dataset("fzkuji/MedQA", "med_qa_zh_4options_bigbio_qa")[split]
+    """Load and format MedQA (Chinese, 4 options) dataset.
+
+    Adds robust error handling and clearer guidance if loading fails.
+    """
+    import logging, os
+
+    try:
+        # Prefer passing split directly to avoid unnecessary builder calls
+        # Use a fresh local cache to avoid legacy dataset_info incompatibilities
+        cache_dir = os.path.join(".hf_cache", "medqa")
+        data = load_dataset(
+            "fzkuji/MedQA",
+            "med_qa_zh_4options_bigbio_qa",
+            split=split,
+            cache_dir=cache_dir,
+            download_mode=DownloadMode.FORCE_REDOWNLOAD,
+        )
+    except Exception as e:
+        logging.error(
+            "Failed to load dataset 'fzkuji/MedQA' with config 'med_qa_zh_4options_bigbio_qa' and split '%s': %s",
+            split,
+            e,
+        )
+        logging.info(
+            "HF_ENDPOINT=%s. If empty, consider setting 'HF_ENDPOINT=https://hf-mirror.com' for faster access in China.",
+            os.environ.get("HF_ENDPOINT", "<not set>"),
+        )
+        logging.warning("Falling back to 'medmcqa' dataset for training.")
+        # 回退到 medmcqa，保持返回 (train_dataset, eval_dataset) 的格式
+        fallback_data = prepare_dataset_medmcqa(split=split)
+        eval_data = fallback_data[:eval_size]
+        train_data = fallback_data[eval_size:]
+        train_dataset = Dataset.from_list(train_data)
+        eval_dataset = Dataset.from_list(eval_data)
+        return train_dataset, eval_dataset
 
     formatted_data = []
 
@@ -97,16 +132,16 @@ def prepare_dataset_medqa(split="train", eval_size=10):
         choices = example["choices"]
         answer = example["answer"][0]
 
-        # 将选项拼接成 A [0] B [1] ... 的格式
+        # 拼接选项文本 A/B/C/D
         options_text = ""
-        for j, choice in enumerate(choices):  # 使用j而不是i作为循环变量，避免覆盖外层循环的i
-            option_letter = chr(65 + j)  # 65 是 ASCII 中 'A' 的编码
+        for j, choice in enumerate(choices):
+            option_letter = chr(65 + j)  # 'A' == 65
             options_text += f"{option_letter}. {choice}\n"
 
         prompt_str = "\n".join(
             [
                 build_system_tools(SYSTEM_PROMPT).strip(),
-                f"""Question: {question}f
+                f"""Question: {question}
             Options:
             {options_text}""",
             ]
@@ -122,13 +157,10 @@ def prepare_dataset_medqa(split="train", eval_size=10):
         )
 
     eval_data = formatted_data[:eval_size]
-    train_data = formatted_data[eval_size:]  # fixme here
+    train_data = formatted_data[eval_size:]
 
     train_dataset = Dataset.from_list(train_data)
     eval_dataset = Dataset.from_list(eval_data)
-
-    # for i, item in enumerate(eval_dataset):
-    #     print(item["id"])
 
     return train_dataset, eval_dataset
 

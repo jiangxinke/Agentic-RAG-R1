@@ -44,7 +44,7 @@ training:
   reward_token_level: true
 
   decouple_layer: false   # whether to use decouple action and args
-  use_SSRL: true         # whether to use SSRL
+  use_SSRL: false         # whether to use SSRL
 
   generation:
     # TODO
