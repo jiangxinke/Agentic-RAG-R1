@@ -39,9 +39,9 @@ def correctness_reward(prompts: List[str], completions: List[List[Dict[str, Any]
     for prompt, response, expected in tqdm(zip(prompts, responses, answers), total=len(prompts), desc="Evaluating correctness"):
         formatted = LLM_EVAL_PROMPT.format(question=prompt, expected=expected, predicted=response)
         # FIXME 这里目前是mock的一个代码=>下面的注释需要恢复
-        # rewards.append(3)
-        llm_resp = get_model_response(formatted)
-        rewards.append(3.0 if "yes" in llm_resp.lower() else 0.0)
+        rewards.append(3)
+        # llm_resp = get_model_response(formatted)
+        # rewards.append(3.0 if "yes" in llm_resp.lower() else 0.0)
 
     return rewards
 
