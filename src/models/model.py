@@ -90,23 +90,17 @@ class SearchTagStoppingCriteria(StoppingCriteria):
         device = input_ids.device
         seq_len = input_ids.size(1)
 
-        # 3 token candidates
-        if seq_len >= 3:
-            last_tokens = input_ids[:, -3:]
-            for ids in self.target_ids:
-                if len(ids) >= 3:
-                    t = torch.tensor(ids[-3:], device=device)
-                    if (last_tokens == t).all(dim=1).any():
-                        return True
-
-        # 4 token candidates
-        if seq_len >= 4:
-            last_tokens = input_ids[:, -4:]
-            for ids in self.target_ids:
-                if len(ids) >= 4:
-                    t = torch.tensor(ids[-4:], device=device)
-                    if (last_tokens == t).all(dim=1).any():
-                        return True
+        seq_len_range = [3, 4]       # 适配不同的stop token size
+        for seq_len_range_itm in seq_len_range:
+            if seq_len >= seq_len_range_itm:
+                last_tokens = input_ids[:, -seq_len_range_itm:]
+                for ids in self.target_ids:
+                    if not ids or len(ids) < seq_len_range_itm:
+                        continue
+                    if len(ids) >= seq_len_range_itm:
+                        t = torch.tensor(ids[-seq_len_range_itm:], device=device)
+                        if (last_tokens == t).all(dim=1).any():
+                            return True
 
         return False
 
@@ -277,7 +271,8 @@ class AgenticRAGModel(PreTrainedModel):
 
                 # NOTE for jiaran
                 if not use_SSRL:
-                    current_casual_mask = expand_to_causal_mask_parallel(current_casual_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
+                    current_casual_mask_parellel = expand_to_causal_mask_parallel(attention_mask, self.masked_parellel_spans_per_sample, dtype=self.dtype)
+                    current_casual_mask = current_casual_mask_parellel * current_casual_mask
                 # 无任何变化的从2D=>4D normal
                 # current_casual_mask = expand_to_causal_mask(attention_mask, dtype=self.dtype)
                 logits = self.model(
@@ -676,16 +671,15 @@ class AgenticRAGModel(PreTrainedModel):
                     num_beams = 3
                     num_return_sequences = 3
 
-                    with torch.no_grad():
-                        beam_out = self.model.generate(
-                            prefix_ids.to(device),
-                            attention_mask=prefix_mask.to(device),
-                            max_new_tokens=max_new_tokens,
-                            num_beams=num_beams,
-                            num_return_sequences=num_return_sequences,
-                            early_stopping=True,
-                            do_sample=False,
-                        )
+                    # FIXME 这里有问题，这里的prefix_ids需要检查一下
+                    beam_out = self.model.generate(
+                        prefix_ids.to(device),
+                        attention_mask=prefix_mask.to(device),
+                        max_new_tokens=max_new_tokens,
+                        num_beams=num_beams,
+                        num_return_sequences=num_return_sequences,
+                        do_sample=False,
+                    )
 
                     search_lines, obs_lines = [], []
                     span_positions = []  # 用来存放每个 path 的 (start, end)
