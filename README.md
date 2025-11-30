@@ -126,9 +126,7 @@ Before you start, rename file ".env_format" to ".env" and fill the necessary os 
 
 `./script/training/train_zero2.sh`
 
-- **Zero‑3 Mode**
-
-`./script/training/train_zero3.sh`
+ 
 
 
 #### Inference
@@ -150,7 +148,7 @@ Launch the chat server:
 - **LoRA Tuning Support** 🔧: Fine-tune efficiently with Low-Rank Adaptation
 - **Model Quant Support** 💻: Support model quant to nf4 and ..
 - **Custom Agent Tools** 🛠️: Integrate your own tools and personal RAG datasets
-- **Distributed Training** 🌐: Support for Deepspeed Zero 2 Stage and Zero 3 Stage
+ - **Distributed Training** 🌐: Support for Deepspeed Zero 2 Stage
 - **Efficient Resource Usage** 💻: Support for models up to 32B parameters using only **2 A100 GPUs**
 - **Tool Calling Reward** 🎯: Enhanced reward model that includes:
   - Accuracy reward

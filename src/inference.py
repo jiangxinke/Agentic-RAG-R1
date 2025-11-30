@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.data.prepare_dataset import prepare_dataset
-from src.models.evaluater import evaluate
-from src.models.model import AgenticRAGModel
+from src.core.model import AgenticRAGModel
+from src.eval.metrics_driver import safe_export
 from src.utils.utils import (load_config, optimize_model_memory,
                              set_random_seed, setup_logging)
 
@@ -72,18 +72,17 @@ def main():
         eval_dataloader,
     )
     
-    logging.info("Starting evaluation...")
-    evaluate(
-        model=prepared_model,
-        tokenizer=tokenizer,
-        accelerator=accelerator,
-        eval_dataloader=prepared_dataloader,
-        device=device,
-        output_dir=output_dir,
-        evaluation_before_grpo=True,
-        evaluation_after_grpo=False,
-    )
-    logging.info("Evaluation completed. Results saved to %s", output_dir)
+    try:
+        exp_dir = Path(f"experiments/training/{config.experiment.name}")
+        latest = sorted(exp_dir.glob("*/"))[-1] if exp_dir.exists() else None
+        metrics_path = latest / "metrics.jsonl" if latest else None
+        if metrics_path and metrics_path.exists():
+            safe_export(str(metrics_path))
+            logging.info("Metrics exported to %s", latest)
+        else:
+            logging.info("No metrics.jsonl found under %s", exp_dir)
+    except Exception:
+        logging.warning("Failed to export metrics")
 
 
 

@@ -4,8 +4,6 @@ deepspeed_config:
   deepspeed_multinode_launcher: standard
   offload_optimizer_device: none
   offload_param_device: none
-  zero3_init_flag: false
-  zero3_save_16bit_model: false
   zero_stage: 2
 distributed_type: DEEPSPEED 
 # distributed_type: MULTI_GPU

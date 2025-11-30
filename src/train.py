@@ -10,7 +10,6 @@ import datetime
 import json
 import logging
 import os
-import pdb
 import time
 from pathlib import Path
 
@@ -24,11 +23,12 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from src.data.prepare_dataset import prepare_dataset
-from src.models.critic import AgenticRAGCritic
-from src.models.model import AgenticRAGModel
-from src.models.reward import overall_reward
-from src.models.reward_token_level import overall_reward_token_level
-from src.models.trainer import train_with_grpo, train_with_ppo, train_with_sft, train_with_dapo
+from src.core.critic import AgenticRAGCritic
+from src.core.model import AgenticRAGModel
+from src.common.reward.registry import get_reward
+from src.algorithms.grpo import train_with_grpo
+from src.algorithms.dapo import train_with_dapo
+from src.algorithms.ppo import train_with_ppo
 from src.utils.utils import (
     load_config,
     optimize_model_memory,
@@ -52,8 +52,8 @@ def main():
     now = datetime.datetime.now()
     time_str = now.strftime("%Y-%m-%d %H:%M:%S")
     today = now.strftime("%Y-%m-%d")
-    checkpoint_dir = Path(f"checkpoints/{config.experiment.name}/{today}")
     output_dir = Path(f"experiments/training/{config.experiment.name}/{time_str}")
+    checkpoint_dir = output_dir
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(output_dir, level=logging.INFO)
@@ -154,31 +154,33 @@ def main():
     # GRPO fine-tuning
     logging.info("Starting GRPO fine-tuning...")
 
-    if config.training.reward_token_level:
-        reward_func = overall_reward_token_level
-        logging.info("Using token-level reward")
-    else:
-        reward_func = overall_reward
-        logging.info("Using normal reward")
+    from src.common.reward.registry import get_reward_strategy
+    reward_strategy = get_reward_strategy("token" if config.training.reward_token_level else "overall")
+    logging.info("Using token-level reward" if config.training.reward_token_level else "Using normal reward")
 
+    from src.common.config import GenerationConfig
+    gen_cfg = GenerationConfig(
+        num_generations=config.training.generation.num_generations,
+        max_new_tokens=config.training.generation.max_new_tokens,
+        max_length_for_gather=config.training.generation.max_length_for_gather,
+        max_generate_iterations=config.training.generation.max_generate_iterations,
+        temperature=config.training.generation.temperature,
+        do_sample=config.training.generation.do_sample,
+        use_diverse_sampling=config.training.generation.use_diverse_sampling,
+        diversity_penalty=config.training.generation.diversity_penalty,
+    )
+    metrics_path = output_dir / "metrics.jsonl"
     training_config = {
-        "use_KV_Cache": config.training.use_KV_Cache,
         "num_iterations": config.training.num_iterations,
         "steps_per_iteration": config.training.steps_per_iteration,
-        "num_generations": config.training.generation.num_generations,
-        "max_new_tokens": config.training.generation.max_new_tokens,
-        "max_length_for_gather": config.training.generation.max_length_for_gather,
-        "max_generate_iterations": config.training.generation.max_generate_iterations,
-        "temperature": config.training.generation.temperature,
-        "do_sample": config.training.generation.do_sample,
         "beta": config.training.optimizer.beta,
         "learning_rate": config.training.learning_rate,
         "mu": config.training.optimizer.mu,
         "epsilon": config.training.optimizer.epsilon,
-        "reward_function": reward_func,
+        "reward_strategy": reward_strategy,
         "save_interval": config.training.save_interval,
-        "use_diverse_sampling": config.training.generation.use_diverse_sampling,
-        "diversity_penalty": config.training.generation.diversity_penalty,
+        "gen_cfg": gen_cfg,
+        "metrics_path": str(metrics_path),
     }
     optimizer_cfg = getattr(config.training, "optimizer", {})
 
@@ -307,24 +309,15 @@ def main():
             current_step=current_step,
             **training_config,
         )
-    elif config.training.train_method == "sft":
-        train_with_sft(
-            config=config,
-            device=device,
-            model=policy_model,
-            tokenizer=tokenizer,
-            accelerator=accelerator,
-            dataloader=train_dataloader,
-            checkpoint_dir=checkpoint_dir,
-            current_step=current_step,
-            num_epochs=getattr(config.training, "num_epochs", 1),
-            steps_per_epoch=getattr(config.training, "steps_per_epoch", 500),
-            learning_rate=config.training.learning_rate,
-            save_interval=config.training.save_interval,
-        )
     else:
         raise ValueError(f"Unknown train_method: {config.training.train_method}")
     logging.info("Training completed")
+
+    try:
+        from src.eval.metrics_driver import safe_export
+        safe_export(str(metrics_path))
+    except Exception:
+        pass
 
     accelerator.wait_for_everyone()
     accelerator.end_training()

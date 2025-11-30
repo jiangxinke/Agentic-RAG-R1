@@ -19,7 +19,7 @@ from utils.utils import (
     set_random_seed,
     setup_logging,
 )
-from src.models.model import AgenticRAGModel
+from src.core.model import AgenticRAGModel
 import logging
 from peft import LoraConfig, PeftModel
 from torch import nn
