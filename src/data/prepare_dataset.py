@@ -12,6 +12,8 @@ else:
 from src.data.prompt import build_prompt, build_system_tools
 
 from datasets import load_dataset, Dataset, DownloadMode
+import os
+import numpy as np
 
 
 def prepare_dataset(split="train", name="gsm8k", eval_size=10):
@@ -21,6 +23,10 @@ def prepare_dataset(split="train", name="gsm8k", eval_size=10):
         return prepare_dataset_medmcqa(split, eval_size)
     elif name == "medqa":
         return prepare_dataset_medqa(split, eval_size)
+    elif name == "asearcher":
+        return prepare_dataset_asearcher(split, eval_size)
+    elif name.startswith("nq_hotpotqa_train_multi_"):
+        return prepare_dataset_nq_hotpotqa(split, name, eval_size)
     else:
         raise ValueError(f"Unknown dataset name: {name}")
 
@@ -163,6 +169,103 @@ def prepare_dataset_medqa(split="train", eval_size=10):
     eval_dataset = Dataset.from_list(eval_data)
 
     return train_dataset, eval_dataset
+
+
+def prepare_dataset_asearcher(split="train", eval_size=10):
+    # Path
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "ASearcher")
+    train_file = os.path.join(data_dir, "train.parquet")
+    
+    # Load
+    # If split is 'train', we load train.parquet. 
+    # For evaluation, we can split the train set or load one of the test sets.
+    # Given the user said "Asearcher as a dataset... training set name is Asearcher", 
+    # and usually we validate on a held-out set. 
+    # I will simply split the train.parquet for now as is common in this repo's examples (medmcqa, gsm8k).
+    
+    dataset = load_dataset("parquet", data_files={"train": train_file})["train"]
+    
+    formatted_data = []
+    for idx, example in enumerate(dataset):
+        prompt_str = build_prompt([
+            {"role": "system", "content": build_system_tools(SYSTEM_PROMPT)},
+            {"role": "user", "content": example["question"]}
+        ])
+        formatted_data.append({
+            "prompt": prompt_str,
+            "answer": example["answer"],
+            "question": example["question"]
+        })
+        
+    # Split
+    eval_data = formatted_data[:eval_size]
+    train_data = formatted_data[eval_size:]
+    
+    return Dataset.from_list(train_data), Dataset.from_list(eval_data)
+
+
+def prepare_dataset_nq_hotpotqa(split="train", name="nq_hotpotqa_train_multi_2", eval_size=10):
+    # Construct path
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", name)
+    train_file = os.path.join(data_dir, "train.parquet")
+    test_file = os.path.join(data_dir, "test.parquet")
+    
+    # Load
+    data_files = {"train": train_file}
+    if os.path.exists(test_file):
+        data_files["test"] = test_file
+        
+    dataset = load_dataset("parquet", data_files=data_files)
+    
+    def format_example(example):
+        prompt_msgs = example["prompt"]
+        if isinstance(prompt_msgs, np.ndarray):
+            prompt_msgs = prompt_msgs.tolist()
+            
+        if isinstance(prompt_msgs, list) and len(prompt_msgs) > 0:
+            prompt_content = prompt_msgs[0]['content']
+        else:
+            prompt_content = str(prompt_msgs)
+
+        # Answer
+        reward_model = example["reward_model"]
+        ground_truth = reward_model.get('ground_truth', {})
+        targets = ground_truth.get('target', [])
+        
+        final_answers = []
+        # targets might be a numpy array of arrays if loaded via datasets/arrow
+        if isinstance(targets, np.ndarray):
+            targets = targets.tolist()
+            
+        for target_list in targets:
+            # target_list might be an array or list
+            if isinstance(target_list, np.ndarray):
+                target_list = target_list.tolist()
+                
+            if len(target_list) > 0:
+                final_answers.append(str(target_list[0]))
+            else:
+                final_answers.append("")
+        
+        answer_str = "; ".join(final_answers)
+        
+        return {
+            "prompt": prompt_content,
+            "answer": answer_str,
+            "question": "" 
+        }
+
+    train_data = [format_example(ex) for ex in dataset["train"]]
+    
+    if "test" in dataset:
+        eval_data = [format_example(ex) for ex in dataset["test"]]
+        if eval_size > 0:
+            eval_data = eval_data[:eval_size]
+    else:
+        eval_data = train_data[:eval_size]
+        train_data = train_data[eval_size:]
+        
+    return Dataset.from_list(train_data), Dataset.from_list(eval_data)
 
 
 if __name__ == "__main__":
