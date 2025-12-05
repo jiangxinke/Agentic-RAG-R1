@@ -249,7 +249,7 @@ class AgenticRAGModel(PreTrainedModel):
             # 如果需要打断，则获取4D attention mask
             else:       
                 # Step 1:
-                print(self.masked_spans_per_sample)
+                print(f"[model.py] make 4D mask from 2D mask: {self.masked_spans_per_sample}")
                 current_casual_mask = expand_to_causal_mask_backtrack(attention_mask, self.masked_spans_per_sample, dtype=self.dtype)
                 # Step 2:
                 ## 并行屏蔽 span，jiaran你构造这样的形式：
@@ -613,7 +613,7 @@ class AgenticRAGModel(PreTrainedModel):
 
             current_mask = apply_masked_spans(current_mask, self.masked_spans_per_sample)
             # 插入对attentiin mask的修改：
-            print(current_ids.shape, current_mask.shape)
+            print(f"[model.py] current_ids.shape={current_ids.shape}, current_mask.shape={current_mask.shape}")
             gen_out = self.model.generate(
                 current_ids,
                 attention_mask=current_mask,   
@@ -637,9 +637,12 @@ class AgenticRAGModel(PreTrainedModel):
 
             next_prompts = []
 
+            # NOTE 以下对所有的 rollout 进行处理（beam search 和 2D mask）
             for idx, seq in enumerate(sequences):
-                b = active[idx].item()
-                old_len = current_ids.size(1) - 1
+                if idx < len(active):
+                    continue
+                b = active[idx].item() # eun：只对 active 的 id 进行处理？这里应该判断不是 active 就 continue？
+                old_len = current_ids.size(1)
                 new_tokens = seq[old_len:]
                 beams_history[b].extend(new_tokens.tolist())
                 text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
@@ -661,26 +664,27 @@ class AgenticRAGModel(PreTrainedModel):
 
                 # 2.0) for parellel search  # NOTE not support SSRL
                 if "<search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
-                    print("detect search (immediate beam trigger)")
+                    print("[model.py] detect <search> (immediate beam trigger)")
                     part = text
                     s = part.index("<search>") + len("<search>")
-
-                    prefix_ids = current_ids[b : b + 1]
-                    prefix_mask = current_mask[b : b + 1]
-                    prefix_len = prefix_ids.size(1)
+                    
+                    prefix = [self.tokenizer.decode(seq, skip_special_tokens=False)]
+                    enc = self.tokenizer(prefix, return_tensors="pt", padding=True, padding_side="left")
+                    prefix_ids = enc.input_ids.to(device)
+                    prefix_mask = enc.attention_mask.to(device)
 
                     num_beams = 3
                     num_return_sequences = 3
-
-                    prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
-                    print("当前beam search采样的前缀为：", prefix_text)
-                    print("\n\n\n")
+                    
+                    prefix_len = prefix_ids.size(1)
+                    # prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
+                    print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix.strip())
 
                     # FIXME 这里有问题，这里的prefix_ids需要检查一下
                     beam_out = self.model.generate(
-                        prefix_ids.to(device),
+                        prefix_ids.to(device), # FIXED: 加上生成的内容
                         attention_mask=prefix_mask.to(device),
-                        max_new_tokens=max_new_tokens,
+                        max_new_tokens=max_new_tokens, # default 100
                         num_beams=num_beams,
                         num_return_sequences=num_return_sequences,
                         do_sample=False,
@@ -690,7 +694,7 @@ class AgenticRAGModel(PreTrainedModel):
                     span_positions = []  # 用来存放每个 path 的 (start, end)
 
                     # step 1: decode and collect search/obs pairs
-                    for idx_beam in range(beam_out.size(0)):
+                    for idx_beam in range(beam_out.size(0)): # (0,1,2)
                         full_seq = beam_out[idx_beam]
                         gen_part = full_seq[prefix_len:]  # 只取新生成部分
                         key_text = self.tokenizer.decode(gen_part, skip_special_tokens=True).strip()
@@ -727,7 +731,7 @@ class AgenticRAGModel(PreTrainedModel):
                         add_special_tokens=False
                     ))
 
-                    current_offset = prefix_ids_len  # merged_text 中 search 部分的起点 token idx
+                    current_offset = prefix_ids_len + 1 # merged_text 中 search 部分的起点 token idx（在这里加1，算入换行符
 
                     for idx_beam, line in enumerate(search_lines):
                         # 对这一行单独编码（包括标签），计算长度
@@ -740,13 +744,13 @@ class AgenticRAGModel(PreTrainedModel):
                         right_tag = f"[/{'path'+str(idx_beam+1)}]"
                         left_ids = self.tokenizer.encode(left_tag, add_special_tokens=False)
                         right_ids = self.tokenizer.encode(right_tag, add_special_tokens=False)
-
+                        # EUNINFO: 这里应该 encode 的是 line 而不是 key_text
                         key_ids = self.tokenizer.encode(key_text, add_special_tokens=False)
-                        key_start = current_offset + len(left_ids) + 1  # +1 for space
-                        key_end = key_start + len(key_ids)
+                        key_start = current_offset # + len(left_ids) # +1 for space （EUNINFO：这里不用加1
+                        key_end = key_start + line_len # 这里算入了 [/path1]，但是并没有算 [path]，原来加的是 len(key_ids)
 
-                        span_positions.append((key_start, key_end))
-                        current_offset += line_len + 1  # 加换行符
+                        span_positions.append((key_start, key_end)) # 加入的区间应该是左闭右开？
+                        current_offset += line_len  # 加换行符 （EUNINFO: 这里不用加1
 
                     # step 4: 存入 masked_parellel_spans_per_sample
                     if not hasattr(self, "masked_parellel_spans_per_sample"):
@@ -754,14 +758,15 @@ class AgenticRAGModel(PreTrainedModel):
 
                     self.masked_parellel_spans_per_sample[b].append(span_positions)
 
-                    print(f"[debug] masked spans for sample {b}:", span_positions)
+                    print(f"[model.py] masked spans for sample {b}:", span_positions)
 
                     # step 5: 将 merged_text 编码回 tensor 继续生成
                     next_prompts.append(torch.tensor(self.tokenizer.encode(merged_text), device=device))
                     continue
-
+                
+                # TODO: 以下部分是以前的非并发版本，加上非 parallel search 的判断。
                 # 2) Search and observation
-                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
+                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL and False: # 需要加 not parallel_search
                     print("detect search")
                     part = text
                     s = part.index("<search>") + len("<search>")
@@ -781,11 +786,11 @@ class AgenticRAGModel(PreTrainedModel):
                 # 3） backtrack or summary actions
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
                 if ("</backtrack>" in text) or ("</summary>" in text): 
-                    print("deteck backtrack or summary")
+                    print("[model.py] deteck </backtrack> or </summary>")
                     # 当前完整序列
                     full_seq = torch.cat([seq[:old_len], new_tokens], dim=0)
                     full_text = self.tokenizer.decode(full_seq, skip_special_tokens=False)
-                    print(full_text)    
+                    print(f"[model.py] [zzx debug] full_text = {full_text}")    
                     '''
                     <<reasoning>>
                     ...
@@ -796,7 +801,7 @@ class AgenticRAGModel(PreTrainedModel):
                     '''
                     spans = get_masked_spans_from_text(full_seq, self.tokenizer) 
                     self.masked_spans_per_sample[b].extend(spans)
-                    print(f"masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
+                    print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
                     continue
 
                 # 3) Continue or finish
@@ -828,163 +833,163 @@ class AgenticRAGModel(PreTrainedModel):
             return final_output
     
     # 不着急更新
-    def generate_with_think_interruption_KV_Cache(
-        self,
-        input_ids: torch.LongTensor,
-        attention_mask: Optional[torch.LongTensor],
-        max_new_tokens: int,
-        max_length_for_gather: int,
-        do_sample: bool,
-        temperature: float,
-        pad_token_id: int,
-        eos_token_id: int,
-        max_generate_iterations: int,
-        use_diverse_sampling: bool = False,
-        diversity_penalty: float = 1.0,
-        calculate_param_importance: bool = False,
-    ) -> torch.LongTensor:
-        """
-        Perform iterative generation with tool calls based on markers in text. Use KV Cache to accelerate it.
+    # def generate_with_think_interruption_KV_Cache(
+    #     self,
+    #     input_ids: torch.LongTensor,
+    #     attention_mask: Optional[torch.LongTensor],
+    #     max_new_tokens: int,
+    #     max_length_for_gather: int,
+    #     do_sample: bool,
+    #     temperature: float,
+    #     pad_token_id: int,
+    #     eos_token_id: int,
+    #     max_generate_iterations: int,
+    #     use_diverse_sampling: bool = False,
+    #     diversity_penalty: float = 1.0,
+    #     calculate_param_importance: bool = False,
+    # ) -> torch.LongTensor:
+    #     """
+    #     Perform iterative generation with tool calls based on markers in text. Use KV Cache to accelerate it.
 
-        The loop:
-          1. Generate tokens.
-          2. If '</answer>' appears, finalize that sample.
-          3. If '<search>...</search>' appears, call tool, insert '<observation>' block, and continue.
-          4. Otherwise, continue generating until EOS or max iterations.
+    #     The loop:
+    #       1. Generate tokens.
+    #       2. If '</answer>' appears, finalize that sample.
+    #       3. If '<search>...</search>' appears, call tool, insert '<observation>' block, and continue.
+    #       4. Otherwise, continue generating until EOS or max iterations.
 
-        Args:
-            input_ids (torch.LongTensor): Starting tokens.
-            attention_mask (Optional[torch.LongTensor]): Attention mask.
-            max_new_tokens (int): Tokens per generation iteration.
-            max_length_for_gather (int): Final gather length.
-            do_sample (bool): Sampling flag.
-            temperature (float): Sampling temperature.
-            pad_token_id (int): Padding token ID.
-            eos_token_id (int): End-of-sequence token ID.
-            max_generate_iterations (int): Max loop iterations.
-            use_diverse_sampling (bool): Use diverse sampling.
-            diversity_penalty (float): Diversity penalty.
-        Returns:
-            torch.LongTensor: Padded output IDs for all samples.
+    #     Args:
+    #         input_ids (torch.LongTensor): Starting tokens.
+    #         attention_mask (Optional[torch.LongTensor]): Attention mask.
+    #         max_new_tokens (int): Tokens per generation iteration.
+    #         max_length_for_gather (int): Final gather length.
+    #         do_sample (bool): Sampling flag.
+    #         temperature (float): Sampling temperature.
+    #         pad_token_id (int): Padding token ID.
+    #         eos_token_id (int): End-of-sequence token ID.
+    #         max_generate_iterations (int): Max loop iterations.
+    #         use_diverse_sampling (bool): Use diverse sampling.
+    #         diversity_penalty (float): Diversity penalty.
+    #     Returns:
+    #         torch.LongTensor: Padded output IDs for all samples.
 
-        Raises:
-            RuntimeError: On generation or tool-calling failures.
-        """
-        assert not calculate_param_importance, "Not Implemented"
+    #     Raises:
+    #         RuntimeError: On generation or tool-calling failures.
+    #     """
+    #     assert not calculate_param_importance, "Not Implemented"
 
-        device = input_ids.device
-        batch_size = input_ids.size(0)
-        if attention_mask is None:
-            attention_mask = torch.ones_like(input_ids)
+    #     device = input_ids.device
+    #     batch_size = input_ids.size(0)
+    #     if attention_mask is None:
+    #         attention_mask = torch.ones_like(input_ids)
 
-        should_gen = torch.ones(batch_size, dtype=torch.bool, device=device)
-        outputs: List[Optional[torch.LongTensor]] = [None] * batch_size
-        criteria = StoppingCriteriaList([SearchTagStoppingCriteria(self.tokenizer)])
+    #     should_gen = torch.ones(batch_size, dtype=torch.bool, device=device)
+    #     outputs: List[Optional[torch.LongTensor]] = [None] * batch_size
+    #     criteria = StoppingCriteriaList([SearchTagStoppingCriteria(self.tokenizer)])
 
-        current_ids = input_ids.clone()
-        current_mask = attention_mask.clone()
+    #     current_ids = input_ids.clone()
+    #     current_mask = attention_mask.clone()
 
-        past_key_values: Optional[List[Tuple[torch.Tensor]]] = None
+    #     past_key_values: Optional[List[Tuple[torch.Tensor]]] = None
 
-        beams_history = [[] for _ in range(batch_size)]
-        for _ in range(max_generate_iterations):
-            # Skip leading EOS columns
-            skip_len = 0
-            for pos in range(current_ids.size(1)):
-                if (current_ids[:, pos] == eos_token_id).all():
-                    skip_len += 1
-                else:
-                    break
-            if skip_len:
-                current_ids = current_ids[:, skip_len:]
-                current_mask = current_mask[:, skip_len:]
+    #     beams_history = [[] for _ in range(batch_size)]
+    #     for _ in range(max_generate_iterations):
+    #         # Skip leading EOS columns
+    #         skip_len = 0
+    #         for pos in range(current_ids.size(1)):
+    #             if (current_ids[:, pos] == eos_token_id).all():
+    #                 skip_len += 1
+    #             else:
+    #                 break
+    #         if skip_len:
+    #             current_ids = current_ids[:, skip_len:]
+    #             current_mask = current_mask[:, skip_len:]
 
-            if not should_gen.any():
-                break
+    #         if not should_gen.any():
+    #             break
 
-            active = torch.nonzero(should_gen).squeeze(1)
+    #         active = torch.nonzero(should_gen).squeeze(1)
 
-            # Drop past_key_values entries for finished samples
-            if past_key_values is not None:
-                past_key_values = tuple(tuple(tensor[active] for tensor in layer) for layer in past_key_values)
+    #         # Drop past_key_values entries for finished samples
+    #         if past_key_values is not None:
+    #             past_key_values = tuple(tuple(tensor[active] for tensor in layer) for layer in past_key_values)
 
-            logits_processor = None
-            if use_diverse_sampling:
-                logits_processor = LogitsProcessorList(
-                    [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
-                )
+    #         logits_processor = None
+    #         if use_diverse_sampling:
+    #             logits_processor = LogitsProcessorList(
+    #                 [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
+    #             )
 
-            gen_out_dict = self.model.generate(
-                input_ids=current_ids,
-                attention_mask=current_mask,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature,
-                pad_token_id=pad_token_id,
-                eos_token_id=eos_token_id,
-                stopping_criteria=criteria,
-                use_cache=True,
-                past_key_values=past_key_values,
-                return_dict_in_generate=True,
-                logits_processor=logits_processor,
-            )
+    #         gen_out_dict = self.model.generate(
+    #             input_ids=current_ids,
+    #             attention_mask=current_mask,
+    #             max_new_tokens=max_new_tokens,
+    #             do_sample=do_sample,
+    #             temperature=temperature,
+    #             pad_token_id=pad_token_id,
+    #             eos_token_id=eos_token_id,
+    #             stopping_criteria=criteria,
+    #             use_cache=True,
+    #             past_key_values=past_key_values,
+    #             return_dict_in_generate=True,
+    #             logits_processor=logits_processor,
+    #         )
 
-            past_key_values = gen_out_dict.past_key_values
-            gen_out = gen_out_dict.sequences
+    #         past_key_values = gen_out_dict.past_key_values
+    #         gen_out = gen_out_dict.sequences
 
-            next_prompts = []
+    #         next_prompts = []
 
-            for idx, seq in enumerate(gen_out):
-                b = active[idx].item()
-                old_len = current_ids.size(1) - 1
-                new_tokens = seq[old_len:]
-                beams_history[b].extend(new_tokens.tolist())
-                text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
+    #         for idx, seq in enumerate(gen_out):
+    #             b = active[idx].item()
+    #             old_len = current_ids.size(1) - 1
+    #             new_tokens = seq[old_len:]
+    #             beams_history[b].extend(new_tokens.tolist())
+    #             text = self.tokenizer.decode(new_tokens, skip_special_tokens=False)
 
-                # 1) Answer end
-                if "</answer>" in text:
-                    end = text.index("</answer>") + len("</answer>")
-                    prev = self.tokenizer.decode(seq[:old_len], skip_special_tokens=False)
-                    final = prev + text[:end]
-                    outputs[b] = torch.tensor(self.tokenizer.encode(final), device=device)
-                    should_gen[b] = False
-                    continue
+    #             # 1) Answer end
+    #             if "</answer>" in text:
+    #                 end = text.index("</answer>") + len("</answer>")
+    #                 prev = self.tokenizer.decode(seq[:old_len], skip_special_tokens=False)
+    #                 final = prev + text[:end]
+    #                 outputs[b] = torch.tensor(self.tokenizer.encode(final), device=device)
+    #                 should_gen[b] = False
+    #                 continue
 
-                # 2) Search and observation
-                if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
-                    part = text
-                    s = part.index("<search>") + len("<search>")
-                    e = part.index("</search>")
-                    query = part[s:e].strip()
-                    try:
-                        pname, pargs = self.parse_latest_plugin_call(query)
-                        obs = self.call_plugin(pname, pargs)
-                    except Exception as exc:
-                        obs = f"<observation>Error: {exc}"  # preserve flow
-                    sub = part[: e + len("</search>")]
-                    merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
-                    merged += sub + obs + "\n"
-                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+    #             # 2) Search and observation
+    #             if "<search>" in text and "</search>" in text and (_ < max_generate_iterations - 1):
+    #                 part = text
+    #                 s = part.index("<search>") + len("<search>")
+    #                 e = part.index("</search>")
+    #                 query = part[s:e].strip()
+    #                 try:
+    #                     pname, pargs = self.parse_latest_plugin_call(query)
+    #                     obs = self.call_plugin(pname, pargs)
+    #                 except Exception as exc:
+    #                     obs = f"<observation>Error: {exc}"  # preserve flow
+    #                 sub = part[: e + len("</search>")]
+    #                 merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
+    #                 merged += sub + obs + "\n"
+    #                 next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
 
-                    continue
+    #                 continue
 
-                # 3) Continue or finish
-                eos_found = eos_token_id in new_tokens.tolist()
-                if not eos_found and (_ < max_generate_iterations - 1):
-                    continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
-                    next_prompts.append(continue_ids)
-                else:
-                    outputs[b] = seq
-                    should_gen[b] = False
+    #             # 3) Continue or finish
+    #             eos_found = eos_token_id in new_tokens.tolist()
+    #             if not eos_found and (_ < max_generate_iterations - 1):
+    #                 continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
+    #                 next_prompts.append(continue_ids)
+    #             else:
+    #                 outputs[b] = seq
+    #                 should_gen[b] = False
 
-            # Prepare next round
-            if next_prompts:
-                texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
-                enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
-                current_ids = enc.input_ids.to(device)
-                current_mask = enc.attention_mask.to(device)
-            else:
-                past_key_values = None  # reset if no prompt continuation
+    #         # Prepare next round
+    #         if next_prompts:
+    #             texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
+    #             enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
+    #             current_ids = enc.input_ids.to(device)
+    #             current_mask = enc.attention_mask.to(device)
+    #         else:
+    #             past_key_values = None  # reset if no prompt continuation
 
-        final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
-        return final_output
+    #     final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
+    #     return final_output
