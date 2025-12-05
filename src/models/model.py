@@ -639,7 +639,7 @@ class AgenticRAGModel(PreTrainedModel):
 
             # NOTE 以下对所有的 rollout 进行处理（beam search 和 2D mask）
             for idx, seq in enumerate(sequences):
-                if idx < len(active):
+                if idx >= len(active):
                     continue
                 b = active[idx].item() # eun：只对 active 的 id 进行处理？这里应该判断不是 active 就 continue？
                 old_len = current_ids.size(1)
@@ -678,7 +678,7 @@ class AgenticRAGModel(PreTrainedModel):
                     
                     prefix_len = prefix_ids.size(1)
                     # prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
-                    print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix.strip())
+                    print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix[0].strip())
 
                     # FIXME 这里有问题，这里的prefix_ids需要检查一下
                     beam_out = self.model.generate(
@@ -686,6 +686,7 @@ class AgenticRAGModel(PreTrainedModel):
                         attention_mask=prefix_mask.to(device),
                         max_new_tokens=max_new_tokens, # default 100
                         num_beams=num_beams,
+                        # stopping_criteria=criteria,
                         num_return_sequences=num_return_sequences,
                         do_sample=False,
                     )
@@ -706,7 +707,9 @@ class AgenticRAGModel(PreTrainedModel):
                             obs = self.call_plugin(pname, pargs)
                         except Exception as exc:
                             obs = f"Error: {exc}"
-
+                        
+                        if '</search>' in key_text:
+                            key_text = key_text[:key_text.index("</search>")]
                         # 搜索和观测文本块
                         search_lines.append(f"[{path_name}] {key_text} [/{path_name}]")
                         obs_lines.append(f"[{path_name}] {obs} [/{path_name}]")
