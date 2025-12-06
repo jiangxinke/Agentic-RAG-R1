@@ -11,7 +11,7 @@ echo "Date: $DATE"
 echo "Steps: $STEPS"
 echo "Number of evaluations: $NUM_EVAL"
 
-for STEP in $STEPS; do
+for STEP in $STEPS; do  
     echo "Evaluating checkpoint step: $STEP"
     CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch \
         --config_file ./src/config/accelerate_config/eval_multigpu.yaml \

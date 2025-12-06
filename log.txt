@@ -1,0 +1,1106 @@
+[2025-12-06 09:44:10,251] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 09:44:14,674] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 09:44:14,811] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 09:44:14,822] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 09:44:14,877] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 09:44:19,304] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-12-06 09:44:19,473] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-12-06 09:44:19,500] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-12-06 09:44:19,500] [INFO] [comm.py:700:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+[2025-12-06 09:44:19,575] [INFO] [comm.py:669:init_distributed] cdb=None
+INFO     [2025-12-06 09:44:19,753] [INFO] [train.py:63]                                                                                                      
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 09:44:19/config.json                                             
+INFO     [2025-12-06 09:44:19,757] [INFO] [train.py:66]                                                                                                      
+         Set random seed to 42                                                                                                                               
+INFO     [2025-12-06 09:44:19,758] [INFO] [train.py:69]                                                                                                      
+         Using device: cuda                                                                                                                                  
+[1m[34mswanlab[0m[0m: \ Waiting for the swanlab cloud response.INFO     [2025-12-06 09:44:19,894] [INFO] [train.py:63]                                                                                                      
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 09:44:19/config.json                                             
+INFO     [2025-12-06 09:44:19,898] [INFO] [train.py:66]                                                                                                      
+         Set random seed to 42                                                                                                                               
+INFO     [2025-12-06 09:44:19,899] [INFO] [train.py:69]                                                                                                      
+         Using device: cuda                                                                                                                                  
+INFO     [2025-12-06 09:44:19,939] [INFO] [train.py:63]                                                                                                      
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 09:44:19/config.json                                             
+INFO     [2025-12-06 09:44:19,942] [INFO] [train.py:66]                                                                                                      
+         Set random seed to 42                                                                                                                               
+INFO     [2025-12-06 09:44:19,943] [INFO] [train.py:69]                                                                                                      
+         Using device: cuda                                                                                                                                  
+                                                                                                    [1m[34mswanlab[0m[0m: swanlab version 0.7.3 is available!  Upgrade: `pip install -U swanlab`
+[1m[34mswanlab[0m[0m: \ Getting project...                                                                                                    [1m[34mswanlab[0m[0m: \ Creating experiment...                                                                                                    [1m[34mswanlab[0m[0m: Tracking run with swanlab version 0.5.8
+[1m[34mswanlab[0m[0m: Run data will be saved locally in [35m[1m/data/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/swanlog/run-20251206_094421-2f347a4d[0m[0m
+[1m[34mswanlab[0m[0m: 👋 Hi [1m[39mdevilran[0m[0m, welcome to swanlab!
+[1m[34mswanlab[0m[0m: Syncing run [33mqwen2.5-3B-noSSRL-nodecouple-4GPU[0m to the cloud
+[1m[34mswanlab[0m[0m: 🏠 View project at [34m[4mhttps://swanlab.cn/@devilran/agentic-rag-r1[0m[0m
+[1m[34mswanlab[0m[0m: 🚀 View run at [34m[4mhttps://swanlab.cn/@devilran/agentic-rag-r1/runs/h38w6ebd6gb61sg0un5h5[0m[0m
+INFO     [2025-12-06 09:44:22,074] [INFO] [train.py:63]                                                                                                      
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 09:44:22/config.json                                             
+INFO     [2025-12-06 09:44:22,078] [INFO] [train.py:66]                                                                                                      
+         Set random seed to 42                                                                                                                               
+INFO     [2025-12-06 09:44:22,079] [INFO] [train.py:69]                                                                                                      
+         Using device: cuda                                                                                                                                  
+INFO     [2025-12-06 09:44:35,204] [INFO] [train.py:74]                                                                                                      
+         Train dataloader: 26400, Eval dataloader: 1000                                                                                                      
+INFO     [2025-12-06 09:44:35,206] [INFO] [train.py:77]                                                                                                      
+         Loading model...                                                                                                                                    
+ERROR    [2025-12-06 09:44:43,259] [ERROR] [prepare_dataset.py:116]                                                                                          
+         Failed to load dataset 'fzkuji/MedQA' with config 'med_qa_zh_4options_bigbio_qa' and split 'train':                                                 
+         (ReadTimeoutError("HTTPSConnectionPool(host='cas-bridge.xethub.hf.co', port=443): Read timed out. (read timeout=10)"), '(Request ID:                
+         18afd2e1-7f8b-4881-835a-0de0b4d4f993)')                                                                                                             
+INFO     [2025-12-06 09:44:43,262] [INFO] [prepare_dataset.py:121]                                                                                           
+         HF_ENDPOINT=https://hf-mirror.com. If empty, consider setting 'HF_ENDPOINT=https://hf-mirror.com' for faster access in China.                       
+WARNING  [2025-12-06 09:44:43,263] [WARNING] [prepare_dataset.py:125]                                                                                        
+         Falling back to 'medmcqa' dataset for training.                                                                                                     
+INFO     [2025-12-06 09:44:51,786] [INFO] [train.py:74]                                                                                                      
+         Train dataloader: 26400, Eval dataloader: 1000                                                                                                      
+INFO     [2025-12-06 09:44:51,788] [INFO] [train.py:77]                                                                                                      
+         Loading model...                                                                                                                                    
+INFO     [2025-12-06 09:44:54,854] [INFO] [train.py:74]                                                                                                      
+         Train dataloader: 26400, Eval dataloader: 1000                                                                                                      
+INFO     [2025-12-06 09:44:54,856] [INFO] [train.py:77]                                                                                                      
+         Loading model...                                                                                                                                    
+INFO     [2025-12-06 09:44:59,281] [INFO] [train.py:96]                                                                                                      
+         Base model loaded successfully                                                                                                                      
+INFO     [2025-12-06 09:44:59,281] [INFO] [train.py:96]                                                                                                      
+         Base model loaded successfully                                                                                                                      
+INFO     [2025-12-06 09:44:59,281] [INFO] [train.py:96]                                                                                                      
+         Base model loaded successfully                                                                                                                      
+INFO     [2025-12-06 09:44:59,686] [INFO] [train.py:102]                                                                                                     
+         Tokenizer loaded successfully                                                                                                                       
+INFO     [2025-12-06 09:44:59,695] [INFO] [train.py:102]                                                                                                     
+         Tokenizer loaded successfully                                                                                                                       
+INFO     [2025-12-06 09:44:59,700] [INFO] [train.py:102]                                                                                                     
+         Tokenizer loaded successfully                                                                                                                       
+INFO     [2025-12-06 09:45:00,042] [INFO] [train.py:124]                                                                                                     
+         Using lora:                                                                                                                                         
+          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                                            
+         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None, inference_mode=False, r=8,   
+         target_modules={'q_proj', 'v_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1, fan_in_fan_out=False, bias='none', use_rslora=False,    
+         modules_to_save=None, init_lora_weights=True, layers_to_transform=None, layers_pattern=None, rank_pattern={}, alpha_pattern={},                     
+         megatron_config=None, megatron_core='megatron.core', trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None,             
+         use_dora=False, layer_replication=None, runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                             
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+INFO     [2025-12-06 09:45:00,048] [INFO] [train.py:152]                                                                                                     
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:00,049] [INFO] [train.py:155]                                                                                                     
+         Starting GRPO fine-tuning...                                                                                                                        
+INFO     [2025-12-06 09:45:00,049] [INFO] [train.py:159]                                                                                                     
+         Using token-level reward                                                                                                                            
+INFO     [2025-12-06 09:45:00,050] [INFO] [train.py:221]                                                                                                     
+         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', constant=8,    
+         range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 100, 'max_length_for_gather': 100000, 'max_generate_iterations': 3,           
+         'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 'reward_function': <function                  
+         overall_reward_token_level at 0x778af7924220>, 'save_interval': 10, 'use_diverse_sampling': True, 'diversity_penalty': 1.0}                         
+INFO     [2025-12-06 09:45:00,060] [INFO] [train.py:229]                                                                                                     
+         AgenticRAGModel loaded successfully                                                                                                                 
+INFO     [2025-12-06 09:45:00,063] [INFO] [train.py:124]                                                                                                     
+         Using lora:                                                                                                                                         
+          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                                            
+         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None, inference_mode=False, r=8,   
+         target_modules={'q_proj', 'v_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1, fan_in_fan_out=False, bias='none', use_rslora=False,    
+         modules_to_save=None, init_lora_weights=True, layers_to_transform=None, layers_pattern=None, rank_pattern={}, alpha_pattern={},                     
+         megatron_config=None, megatron_core='megatron.core', trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None,             
+         use_dora=False, layer_replication=None, runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                             
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+INFO     [2025-12-06 09:45:00,070] [INFO] [train.py:152]                                                                                                     
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:00,071] [INFO] [train.py:155]                                                                                                     
+         Starting GRPO fine-tuning...                                                                                                                        
+INFO     [2025-12-06 09:45:00,072] [INFO] [train.py:159]                                                                                                     
+         Using token-level reward                                                                                                                            
+INFO     [2025-12-06 09:45:00,073] [INFO] [train.py:221]                                                                                                     
+         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', constant=8,    
+         range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 100, 'max_length_for_gather': 100000, 'max_generate_iterations': 3,           
+         'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 'reward_function': <function                  
+         overall_reward_token_level at 0x78b32ea2c220>, 'save_interval': 10, 'use_diverse_sampling': True, 'diversity_penalty': 1.0}                         
+INFO     [2025-12-06 09:45:00,084] [INFO] [train.py:124]                                                                                                     
+         Using lora:                                                                                                                                         
+          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                                            
+         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None, inference_mode=False, r=8,   
+         target_modules={'v_proj', 'q_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1, fan_in_fan_out=False, bias='none', use_rslora=False,    
+         modules_to_save=None, init_lora_weights=True, layers_to_transform=None, layers_pattern=None, rank_pattern={}, alpha_pattern={},                     
+         megatron_config=None, megatron_core='megatron.core', trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None,             
+         use_dora=False, layer_replication=None, runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                             
+INFO     [2025-12-06 09:45:00,086] [INFO] [train.py:229]                                                                                                     
+         AgenticRAGModel loaded successfully                                                                                                                 
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+INFO     [2025-12-06 09:45:00,091] [INFO] [train.py:152]                                                                                                     
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:00,092] [INFO] [train.py:155]                                                                                                     
+         Starting GRPO fine-tuning...                                                                                                                        
+INFO     [2025-12-06 09:45:00,093] [INFO] [train.py:159]                                                                                                     
+         Using token-level reward                                                                                                                            
+INFO     [2025-12-06 09:45:00,094] [INFO] [train.py:221]                                                                                                     
+         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', constant=8,    
+         range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 100, 'max_length_for_gather': 100000, 'max_generate_iterations': 3,           
+         'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 'reward_function': <function                  
+         overall_reward_token_level at 0x7be0efd88220>, 'save_interval': 10, 'use_diverse_sampling': True, 'diversity_penalty': 1.0}                         
+INFO     [2025-12-06 09:45:00,107] [INFO] [train.py:229]                                                                                                     
+         AgenticRAGModel loaded successfully                                                                                                                 
+[2025-12-06 09:45:00,117] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed info: version=0.16.7, git-hash=unknown, git-branch=unknown
+[2025-12-06 09:45:00,118] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
+[2025-12-06 09:45:00,118] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
+[2025-12-06 09:45:00,121] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
+INFO     [2025-12-06 09:45:13,664] [INFO] [train.py:74]                                                                                                      
+         Train dataloader: 181822, Eval dataloader: 1000                                                                                                     
+INFO     [2025-12-06 09:45:13,666] [INFO] [train.py:77]                                                                                                      
+         Loading model...                                                                                                                                    
+INFO     [2025-12-06 09:45:16,700] [INFO] [train.py:96]                                                                                                      
+         Base model loaded successfully                                                                                                                      
+INFO     [2025-12-06 09:45:16,962] [INFO] [train.py:102]                                                                                                     
+         Tokenizer loaded successfully                                                                                                                       
+INFO     [2025-12-06 09:45:17,158] [INFO] [train.py:124]                                                                                                     
+         Using lora:                                                                                                                                         
+          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                                            
+         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None, inference_mode=False, r=8,   
+         target_modules={'v_proj', 'q_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1, fan_in_fan_out=False, bias='none', use_rslora=False,    
+         modules_to_save=None, init_lora_weights=True, layers_to_transform=None, layers_pattern=None, rank_pattern={}, alpha_pattern={},                     
+         megatron_config=None, megatron_core='megatron.core', trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None,             
+         use_dora=False, layer_replication=None, runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                             
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+INFO     [2025-12-06 09:45:17,164] [INFO] [train.py:152]                                                                                                     
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:17,165] [INFO] [train.py:155]                                                                                                     
+         Starting GRPO fine-tuning...                                                                                                                        
+INFO     [2025-12-06 09:45:17,166] [INFO] [train.py:159]                                                                                                     
+         Using token-level reward                                                                                                                            
+INFO     [2025-12-06 09:45:17,166] [INFO] [train.py:221]                                                                                                     
+         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', constant=8,    
+         range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 100, 'max_length_for_gather': 100000, 'max_generate_iterations': 3,           
+         'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 'reward_function': <function                  
+         overall_reward_token_level at 0x70bba532c220>, 'save_interval': 10, 'use_diverse_sampling': True, 'diversity_penalty': 1.0}                         
+INFO     [2025-12-06 09:45:17,176] [INFO] [train.py:229]                                                                                                     
+         AgenticRAGModel loaded successfully                                                                                                                 
+[2025-12-06 09:45:17,188] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
+[2025-12-06 09:45:17,933] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2025-12-06 09:45:17,935] [INFO] [logging.py:107:log_dist] [Rank 0] Using client Optimizer as basic optimizer
+[2025-12-06 09:45:17,935] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
+[2025-12-06 09:45:17,965] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = Adam
+[2025-12-06 09:45:17,965] [INFO] [utils.py:59:is_zero_supported_optimizer] Checking ZeRO support for optimizer=Adam type=<class 'torch.optim.adam.Adam'>
+[2025-12-06 09:45:17,965] [INFO] [logging.py:107:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 optimizer
+[2025-12-06 09:45:17,966] [INFO] [stage_1_and_2.py:150:__init__] Reduce bucket size 500000000
+[2025-12-06 09:45:17,966] [INFO] [stage_1_and_2.py:151:__init__] Allgather bucket size 500000000
+[2025-12-06 09:45:17,966] [INFO] [stage_1_and_2.py:152:__init__] CPU Offload: False
+[2025-12-06 09:45:17,966] [INFO] [stage_1_and_2.py:153:__init__] Round robin gradient partitioning: False
+INFO     [2025-12-06 09:45:18,072] [INFO] [trainer.py:624]                                                                                                   
+         Starting DAPO iteration 1/1                                                                                                                         
+INFO     [2025-12-06 09:45:18,072] [INFO] [trainer.py:624]                                                                                                   
+         Starting DAPO iteration 1/1                                                                                                                         
+INFO     [2025-12-06 09:45:18,076] [INFO] [trainer.py:624]                                                                                                   
+         Starting DAPO iteration 1/1                                                                                                                         
+[2025-12-06 09:45:18,389] [INFO] [utils.py:781:see_memory_usage] Before initializing optimizer states
+[2025-12-06 09:45:18,390] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 09:45:18,390] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 213.86 GB, percent = 42.5%
+[2025-12-06 09:45:18,687] [INFO] [utils.py:781:see_memory_usage] After initializing optimizer states
+[2025-12-06 09:45:18,687] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 09:45:18,688] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 213.85 GB, percent = 42.5%
+[2025-12-06 09:45:18,688] [INFO] [stage_1_and_2.py:557:__init__] optimizer state initialized
+[2025-12-06 09:45:18,991] [INFO] [utils.py:781:see_memory_usage] After initializing ZeRO optimizer
+[2025-12-06 09:45:18,992] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 09:45:18,992] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 213.86 GB, percent = 42.5%
+[2025-12-06 09:45:18,994] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = DeepSpeedZeroOptimizer
+[2025-12-06 09:45:18,994] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed using configured LR scheduler = None
+[2025-12-06 09:45:18,994] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2025-12-06 09:45:18,994] [INFO] [logging.py:107:log_dist] [Rank 0] step=0, skipped=0, lr=[5e-06], mom=[(0.9, 0.999)]
+[2025-12-06 09:45:18,997] [INFO] [config.py:1003:print] DeepSpeedEngine configuration:
+[2025-12-06 09:45:18,997] [INFO] [config.py:1007:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2025-12-06 09:45:18,997] [INFO] [config.py:1007:print]   aio_config ................... {'block_size': 1048576, 'queue_depth': 8, 'intra_op_parallelism': 1, 'single_submit': False, 'overlap_events': True, 'use_gds': False}
+[2025-12-06 09:45:18,998] [INFO] [config.py:1007:print]   amp_enabled .................. False
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   amp_params ................... False
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   autotuning_config ............ {
+    "enabled": false, 
+    "start_step": null, 
+    "end_step": null, 
+    "metric_path": null, 
+    "arg_mappings": null, 
+    "metric": "throughput", 
+    "model_info": null, 
+    "results_dir": "autotuning_results", 
+    "exps_dir": "autotuning_exps", 
+    "overwrite": true, 
+    "fast": true, 
+    "start_profile_step": 3, 
+    "end_profile_step": 5, 
+    "tuner_type": "gridsearch", 
+    "tuner_early_stopping": 5, 
+    "tuner_num_trials": 50, 
+    "model_info_path": null, 
+    "mp_size": 1, 
+    "max_train_batch_size": null, 
+    "min_train_batch_size": 1, 
+    "max_train_micro_batch_size_per_gpu": 1.024000e+03, 
+    "min_train_micro_batch_size_per_gpu": 1, 
+    "num_tuning_micro_batch_sizes": 3
+}
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   bfloat16_enabled ............. True
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   bfloat16_immediate_grad_update  True
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   checkpoint_parallel_write_pipeline  False
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   checkpoint_tag_validation_enabled  True
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   checkpoint_tag_validation_fail  False
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   comms_config ................. <deepspeed.comm.config.DeepSpeedCommsConfig object at 0x778add3b8dd0>
+[2025-12-06 09:45:19,001] [INFO] [config.py:1007:print]   communication_data_type ...... None
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   compile_config ............... deepcompile=False free_activation=False offload_activation=False offload_opt_states=False double_buffer=True symmetric_memory=False debug_log=False offload_parameters=False sync_before_reduce=False sync_after_reduce=False sync_before_allgather=False sync_after_allgather=False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   compression_config ........... {'weight_quantization': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_groups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, 'rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'range_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'different_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   curriculum_enabled_legacy .... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   curriculum_params_legacy ..... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   data_efficiency_config ....... {'enabled': False, 'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'pin_memory': False, 'curriculum_learning': {'enabled': False}, 'dynamic_batching': {'enabled': False, 'lr_scaling_method': 'linear', 'min_batch_size': 1, 'max_batch_size': None, 'sequence_picking_order': 'dataloader', 'verbose': False}}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled': False}}}}
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   data_efficiency_enabled ...... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   dataloader_drop_last ......... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   disable_allgather ............ False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   dump_state ................... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   dynamic_loss_scale_args ...... None
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_enabled ........... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_gas_boundary_resolution  1
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_layer_num ......... 0
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_max_iter .......... 100
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_stability ......... 1e-06
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_tol ............... 0.01
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   eigenvalue_verbose ........... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   elasticity_enabled ........... False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "recompute_fwd_factor": 0.0, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   fp16_auto_cast ............... None
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   fp16_enabled ................. False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   fp16_master_weights_and_gradients  False
+[2025-12-06 09:45:19,002] [INFO] [config.py:1007:print]   global_rank .................. 0
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   grad_accum_dtype ............. None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   gradient_accumulation_steps .. 1
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   gradient_clipping ............ 1.0
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   gradient_predivide_factor .... 1.0
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   graph_harvesting ............. False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   hybrid_engine ................ enabled=False max_out_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size=8
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   initial_dynamic_scale ........ 1
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   load_universal_checkpoint .... False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   loss_scale ................... 1.0
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   memory_breakdown ............. False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   mics_hierarchial_params_gather  False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   mics_shard_size .............. -1
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   monitor_config ............... tensorboard=TensorBoardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') comet=CometConfig(enabled=False, samples_log_interval=100, project=None, workspace=None, api_key=None, experiment_name=None, experiment_key=None, online=None, mode=None) wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_monitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName')
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   nebula_config ................ {
+    "enabled": false, 
+    "persistent_storage_path": null, 
+    "persistent_time_interval": 100, 
+    "num_of_version_in_retention": 2, 
+    "enable_nebula_load": true, 
+    "load_path": null
+}
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   optimizer_legacy_fusion ...... False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   optimizer_name ............... None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   optimizer_params ............. None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'grad_partitioned': True}
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   pld_enabled .................. False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   pld_params ................... False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   prescale_gradients ........... False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   scheduler_name ............... None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   scheduler_params ............. None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   seq_parallel_communication_data_type  torch.float32
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   sparse_attention ............. None
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   sparse_gradients_enabled ..... False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   steps_per_print .............. inf
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   tensor_parallel_config ....... dtype=torch.float16 autotp_size=0 tp_overlap_comm=False tensor_parallel=TPConfig(tp_size=1, tp_grain_size=1, mpu=None, tp_group=None) injection_policy_tuple=None keep_module_on_host=False replace_with_kernel_inject=False
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   timers_config ................ enabled=True synchronized=True
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   train_batch_size ............. 4
+[2025-12-06 09:45:19,003] [INFO] [config.py:1007:print]   train_micro_batch_size_per_gpu  1
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   use_data_before_expert_parallel_  False
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   use_node_local_storage ....... False
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   wall_clock_breakdown ......... False
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   weight_quantization_config ... None
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   world_size ................... 4
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   zero_allow_untested_optimizer  True
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   zero_config .................. stage=2 contiguous_gradients=True reduce_scatter=True reduce_bucket_size=500000000 use_multi_rank_bucket_allreduce=True allgather_partitions=True allgather_bucket_size=500000000 overlap_comm=False load_from_fp32_weights=True elastic_checkpoint=False offload_param=DeepSpeedZeroOffloadParamConfig(device='none', nvme_path=None, buffer_count=5, buffer_size=100000000, max_in_cpu=1000000000, pin_memory=False) offload_optimizer=DeepSpeedZeroOffloadOptimizerConfig(device='none', nvme_path=None, buffer_count=4, pin_memory=False, pipeline_read=False, pipeline_write=False, fast_init=False, ratio=1.0) sub_group_size=1000000000 cpu_offload_param=None cpu_offload_use_pin_memory=None cpu_offload=None prefetch_bucket_size=50000000 param_persistence_threshold=100000 model_persistence_threshold=9223372036854775807 max_live_parameters=1000000000 max_reuse_distance=1000000000 gather_16bit_weights_on_model_save=False module_granularity_threshold=0 use_all_reduce_for_fetch_params=False stage3_gather_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_quantized_gradients=False zeropp_loco_param=None mics_shard_size=-1 mics_hierarchical_params_gather=False memory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True log_trace_cache_warnings=False
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   zero_enabled ................. True
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   zero_force_ds_cpu_optimizer .. True
+[2025-12-06 09:45:19,004] [INFO] [config.py:1007:print]   zero_optimization_stage ...... 2
+[2025-12-06 09:45:19,004] [INFO] [config.py:993:print_user_config]   json = {
+    "train_batch_size": 4, 
+    "train_micro_batch_size_per_gpu": 1, 
+    "gradient_accumulation_steps": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "offload_optimizer": {
+            "device": "none", 
+            "nvme_path": null
+        }, 
+        "offload_param": {
+            "device": "none", 
+            "nvme_path": null
+        }, 
+        "stage3_gather_16bit_weights_on_model_save": false
+    }, 
+    "gradient_clipping": 1.0, 
+    "steps_per_print": inf, 
+    "bf16": {
+        "enabled": true
+    }, 
+    "fp16": {
+        "enabled": false
+    }, 
+    "zero_allow_untested_optimizer": true
+}
+INFO     [2025-12-06 09:45:19,005] [INFO] [trainer.py:624]                                                                                                   
+         Starting DAPO iteration 1/1                                                                                                                         
+INFO     [2025-12-06 09:45:19,898] [INFO] [trainer.py:973]                                                                                                   
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:19,925] [INFO] [trainer.py:973]                                                                                                   
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:20,037] [INFO] [trainer.py:973]                                                                                                   
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:20,848] [INFO] [trainer.py:973]                                                                                                   
+         Not using Quant                                                                                                                                     
+INFO     [2025-12-06 09:45:21,049] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 1/300                                                                                                                 
+INFO     [2025-12-06 09:45:21,050] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 1/300                                                                                                                 
+INFO     [2025-12-06 09:45:21,050] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 1/300                                                                                                                 
+INFO     [2025-12-06 09:45:21,053] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 1/300                                                                                                                 
+[model.py] current_ids.shape=torch.Size([8, 462]), current_mask.shape=torch.Size([8, 462])
+[model.py] current_ids.shape=torch.Size([8, 509]), current_mask.shape=torch.Size([8, 509])
+[model.py] current_ids.shape=torch.Size([8, 456]), current_mask.shape=torch.Size([8, 456])
+[model.py] current_ids.shape=torch.Size([8, 525]), current_mask.shape=torch.Size([8, 525])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 女，55岁。间断上腹部不适2年。经检查诊断为“慢性胃炎并幽门螺杆菌感染”。医生建议其服用奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次。上述药物的服用疗程应为（　　）。
+            Options:
+            A. 3～5天
+B. 7～14天
+C. 20～30天
+D. ＞30天
+请问这是什么意思？<search>
+[model.py] current_ids.shape=torch.Size([7, 519]), current_mask.shape=torch.Size([7, 519])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: The criteria for 'at risk' infant include the following except –
+            Options:
+            A. Artificial feeding
+            B. Grade II malnutrition
+            C. Working mother
+            D. Birth order 4 and more
+            E. Premature birth
+To determine which of the options does not meet the criteria for an 'at risk' infant, let's first understand what constitutes an 'at risk' infant based on commonly recognized factors. We can search for reliable sources to identify these factors.
+<search>
+[model.py] current_ids.shape=torch.Size([7, 521]), current_mask.shape=torch.Size([7, 521])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+请给出你的分析步骤。 <reasoning>
+根据题目描述，患者中指离断伤后进行了再植手术，并且出现了患指苍白、皮温低于健侧3℃的症状，这表明可能存在血管问题。已经尝试了解除包扎、解痉药物治疗，但未见好转。因此，下一步应该考虑是否需要进行手术探查，检查吻合的血管情况。
+</reasoning>
+<search>
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:29,932] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:30,697] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:30,797] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:30,879] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] masked spans for sample 3: [(533, 587), (587, 641), (641, 695)]
+[model.py] current_ids.shape=torch.Size([8, 799]), current_mask.shape=torch.Size([8, 799])
+[model.py] current_ids.shape=torch.Size([8, 804]), current_mask.shape=torch.Size([8, 804])
+[model.py] deteck </backtrack> or </summary>
+[model.py] [zzx debug] full_text = 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 女，55岁。间断上腹部不适2年。经检查诊断为“慢性胃炎并幽门螺杆菌感染”。医生建议其服用奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次。上述药物的服用疗程应为（　　）。
+            Options:
+            A. 3～5天
+B. 7～14天
+C. 20～30天
+D. ＞30天
+请问这是什么意思？<search>
+
+<search>
+[path1] {"input": "奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次的慢性胃炎并幽门螺杆菌感染的治疗疗程"} 
+ [/path1]
+[path2] {"input": "奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次的慢性胃炎并幽门螺杆菌感染的治疗疗程"} 
+ [/path2]
+[path3] {"input": "奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次的慢性胃炎并幽门螺杆菌感染的治疗疗程"} 
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> 
+
+<backtrack>
+重新搜索。
+</backtrack>
+
+{'tag': {'answer': [(401, 408)], 'backtrack': [(800, 811)], 'summary': [(385, 392)], 'search': [(529, 700)], 'observation': [(700, 799)], 'reasoning': [(369, 378)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(804, 807)], 'summary': [(388, 389)], 'search': [(532, 697)], 'observation': [(703, 796)], 'reasoning': [(373, 374)]}}
+[model.py] <back> or <sum> masked_spans_per_sample[3]: [(700, 799, 811)]
+INFO     [2025-12-06 09:45:32,592] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:32,661] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:32,764] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] make 4D mask from 2D mask: [[], [], [], [(700, 799, 811)], [], [], [], []]
+[model.py] masked spans for sample 5: [(516, 533), (533, 550), (550, 567)]
+[model.py] current_ids.shape=torch.Size([8, 671]), current_mask.shape=torch.Size([8, 671])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： <|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|><|im_end|>用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: The criteria for 'at risk' infant include the following except –
+            Options:
+            A. Artificial feeding
+            B. Grade II malnutrition
+            C. Working mother
+            D. Birth order 4 and more
+            E. Low birth weight
+<reasoning>
+To determine which option is not a criterion for an "at risk" infant, we need to identify the specific characteristics that define this category. We can search for information about the criteria for "at risk" infants to find the correct answer.
+<search>
+INFO     [2025-12-06 09:45:33,398] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] make 4D mask from 2D mask: [[], [], [], [(700, 799, 811)], [], [], [], []]
+INFO     [2025-12-06 09:45:33,503] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:33,584] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] masked spans for sample 2: [(600, 663), (663, 726), (726, 789)]
+[model.py] current_ids.shape=torch.Size([8, 893]), current_mask.shape=torch.Size([8, 893])
+INFO     [2025-12-06 09:45:34,094] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [(700, 799, 811)], [], [], [], []]
+[model.py] current_ids.shape=torch.Size([7, 898]), current_mask.shape=torch.Size([7, 898])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:36,866] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:38,207] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:38,591] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:38,681] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:45:38,686] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:38,790] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] masked spans for sample 6: [(520, 536), (536, 552), (552, 568)]
+[model.py] current_ids.shape=torch.Size([8, 675]), current_mask.shape=torch.Size([8, 675])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:41,830] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:45:46,710] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:47,204] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:48,696] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:50,049] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:50,365] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:50,403] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:50,916] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:50,939] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:51,461] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:52,983] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:54,412] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:54,800] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:55,159] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:55,560] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:45:55,880] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:05,525] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:10,082] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:10,911] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:11,650] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:12,000] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:12,999] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:21,839] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:22,207] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:31,483] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:53,719] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:54,109] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:55,546] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:55,867] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:46:57,343] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:12,270] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []][model.py] make 4D mask from 2D mask: [[], [], [], [(700, 799, 811)], [], [], [], []]
+
+INFO     [2025-12-06 09:47:16,507] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:16,580] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:16,972] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:17,262] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:17,327] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:17,739] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:19,056] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:19,095] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:19,618] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:20,860] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:21,206] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:21,526] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:21,842] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:22,158] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:23,721] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:25,891] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:26,837] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:27,150] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:47:42,786] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:16,383] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:17,963] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:18,290] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:18,618] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:20,047] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:31,210] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:32,468] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:33,386] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:33,721] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:34,074] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:35,061] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:41,904] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:52,188] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:48:54,128] [INFO] [trainer.py:770]                                                                                                   
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.001666 | Avg Reward 0.03                                                                                       
+INFO     [2025-12-06 09:48:54,127] [INFO] [trainer.py:770]                                                                                                   
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.245617 | Avg Reward 0.77                                                                                       
+INFO     [2025-12-06 09:48:54,128] [INFO] [trainer.py:770]                                                                                                   
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.003028 | Avg Reward 0.02                                                                                       
+INFO     [2025-12-06 09:48:54,129] [INFO] [trainer.py:770]                                                                                                   
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.004829 | Avg Reward 0.02                                                                                       
+INFO     [2025-12-06 09:48:54,133] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 2/300                                                                                                                 
+INFO     [2025-12-06 09:48:54,133] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 2/300                                                                                                                 
+INFO     [2025-12-06 09:48:54,133] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 2/300                                                                                                                 
+INFO     [2025-12-06 09:48:54,133] [INFO] [trainer.py:657]                                                                                                   
+         Generating rollout data, step 2/300                                                                                                                 
+[model.py] current_ids.shape=torch.Size([8, 466]), current_mask.shape=torch.Size([8, 466])
+[model.py] current_ids.shape=torch.Size([8, 498]), current_mask.shape=torch.Size([8, 498])
+[model.py] current_ids.shape=torch.Size([8, 456]), current_mask.shape=torch.Size([8, 456])
+[model.py] current_ids.shape=torch.Size([8, 480]), current_mask.shape=torch.Size([8, 480])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 应用苯二氮类抗焦虑药物时，应该注意（　　）。
+            Options:
+            A. 对心脏的影响
+B. 药物依赖性
+C. 抗胆碱能副作用
+D. 锥体外系反应
+请开始作答。
+<reasoning>
+苯二氮类药物是一种常用的抗焦虑药，其常见副作用包括抗胆碱能副作用、锥体外系反应、药物依赖性和对心脏的影响。根据这些信息，我们可以确定选项A、B、C、D中，哪个是苯二氮类抗焦虑药物应该注意的问题。
+</reasoning>
+<search>
+[model.py] current_ids.shape=torch.Size([8, 598]), current_mask.shape=torch.Size([8, 598])
+[model.py] current_ids.shape=torch.Size([8, 572]), current_mask.shape=torch.Size([8, 572])
+[model.py] current_ids.shape=torch.Size([8, 556]), current_mask.shape=torch.Size([8, 556])
+[model.py] detect <search> (immediate beam trigger)
+[model.py] detect <search> 当前beam search采样的前缀为： 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 女，40岁。闭经、溢乳半年，磁共振发现垂体1.5cm×1.0cm占位病变，需做激素检查。下列无助于诊断的检查是（　　）。
+            Options:
+            A. 泌乳素
+B. 促肾上腺皮质激素
+C. 血管加压素
+D. 促甲状腺激素
+E. 黄体生成素
+
+Assistant: <reasoning>
+闭经和溢乳是垂体瘤的典型症状之一。垂体瘤会导致泌乳素分泌过多，因此泌乳素的水平可以帮助诊断垂体瘤。促肾上腺皮质激素、血管加压素和促甲状腺激素这些激素与垂体瘤的关系不大，因此无助于诊断垂体瘤。黄体生成素可能会受垂体瘤的影响，但并不是主要的诊断指标。
+</reasoning>
+<search>
+[model.py] deteck </backtrack> or </summary>
+[model.py] [zzx debug] full_text = 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 2．判断弥漫性腹膜炎病因时最有意义的是（　　）。
+            Options:
+            A. 腹式呼吸基本消失
+B. 腹部压痛最显著的部位
+C. 腹肌强直呈板样
+D. 腹胀、肠鸣音消失
+<reasoning>
+弥漫性腹膜炎的病因中，腹膜受到感染后会发生炎症反应，导致腹肌出现一系列的病理生理变化。其中，腹肌强直呈板样是腹膜炎的重要体征之一，提示炎症波及整个腹膜。而其他选项中的表现都是腹膜炎可能伴随的症状或体征，但不是最具有特异性的诊断依据。
+</reasoning>
+<backtrack>
+重新考虑，腹部压痛最显著的部位可能提示炎症的位置，但这并不是弥漫性腹膜炎的特异性表现。
+</backtrack>
+
+{'tag': {'answer': [(401, 408)], 'backtrack': [(568, 603)], 'summary': [(385, 392)], 'search': [(378, 385)], 'observation': [(229, 239)], 'reasoning': [(480, 568)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(572, 599)], 'summary': [(388, 389)], 'search': [(381, 382)], 'observation': [(232, 236)], 'reasoning': [(484, 564)]}}
+[model.py] <back> or <sum> masked_spans_per_sample[6]: [(480, 567, 603)]
+[model.py] current_ids.shape=torch.Size([7, 603]), current_mask.shape=torch.Size([7, 603])
+INFO     [2025-12-06 09:49:02,561] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:49:02,652] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:49:02,728] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] masked spans for sample 5: [(546, 568), (568, 590), (590, 612)]
+[model.py] current_ids.shape=torch.Size([8, 716]), current_mask.shape=torch.Size([8, 716])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [(480, 567, 603)], []]
+[model.py] current_ids.shape=torch.Size([8, 717]), current_mask.shape=torch.Size([8, 717])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [(480, 567, 603)], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:04,242] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [(480, 567, 603)], []]
+INFO     [2025-12-06 09:49:04,478] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:49:04,557] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+INFO     [2025-12-06 09:49:04,635] [INFO] [web_search.py:68]                                                                                                 
+         Searching ...                                                                                                                                       
+[model.py] masked spans for sample 0: [(607, 631), (631, 656), (656, 681)]
+[model.py] current_ids.shape=torch.Size([8, 785]), current_mask.shape=torch.Size([8, 785])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:05,380] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] current_ids.shape=torch.Size([8, 656]), current_mask.shape=torch.Size([8, 656])
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:06,321] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:07,339] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:07,358] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:07,708] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:08,417] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:10,440] [INFO] [trainer.py:728]                                                                                                   
+         Rollout ready; optimizing DAPO objective                                                                                                            
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 09:49:11,491] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:12,676] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:13,064] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:13,447] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:13,831] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:14,291] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:16,127] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:17,553] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:17,630] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:20,812] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:21,191] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:21,572] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:24,228] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:24,608] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:25,850] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:26,175] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:27,552] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:28,993] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:29,636] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:29,954] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:30,286] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:30,393] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:40,260] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:41,702] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:41,887] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:43,228] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:49:43,572] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:07,252] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [(480, 567, 603)], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []][model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+
+INFO     [2025-12-06 09:50:10,135] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:10,460] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:10,841] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:11,377] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:11,736] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:12,214] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:12,540] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:13,590] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:13,924] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:13,960] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:14,366] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:15,465] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:20,452] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:20,785] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:21,869] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:27,128] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
+INFO     [2025-12-06 09:50:28,283] [INFO] [_client.py:1025]                                                                                                  
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                                
