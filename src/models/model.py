@@ -841,8 +841,10 @@ class AgenticRAGModel(PreTrainedModel):
                     should_gen[b] = False
 
             # Prepare next round
+            print("[DEBUG jxk]", len(next_prompts))
             if next_prompts:        # 【gjr】FIXME 这个地方的next_prompts可能是ids+attn_mask
-                texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
+                texts = [self.tokenizer.decode(t, skip_special_tokens=True) for t in next_prompts]
+                print("[DEBUG jxk]", "$"*100, [text[900:] for text in texts], "$"*100)
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
@@ -855,8 +857,9 @@ class AgenticRAGModel(PreTrainedModel):
         # DEBUG
         for i in range(len(outputs)):       # NOTE for gjr: outputs => final_output
             print(f"[model.py] batch {i}")
-            final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)        
-            print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
+            if outputs[i] is not None:
+                final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)        
+                print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
 
         if calculate_param_importance:
             seq = final_output[0].tolist()

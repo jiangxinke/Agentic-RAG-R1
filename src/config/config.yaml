@@ -57,7 +57,7 @@ training:
     # num_generations: 8
     max_new_tokens: 1024
     max_length_for_gather: 100000
-    max_generate_iterations: 10
+    max_generate_iterations: 30
     temperature: 0.7
     do_sample: true
 
