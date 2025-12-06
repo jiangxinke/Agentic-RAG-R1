@@ -745,9 +745,10 @@ class AgenticRAGModel(PreTrainedModel):
                     self.masked_parellel_spans_per_sample[b].append(span_positions)
 
                     print(f"[model.py] masked spans for sample {b}:", span_positions)
+                    print("[Beam Search]","%"*100, merged_text, "%"*100)
 
                     # step 5: 将 merged_text 编码回 tensor 继续生成
-                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged_text), device=device))
+                    next_prompts.append(torch.tensor(self.tokenizer.encode(merged_text), device=device))   # NOTE for gjr，这里不能直接append
                     continue
                 
                 # TODO: 以下部分是以前的非并发版本，加上非 parallel search 的判断。
@@ -796,9 +797,11 @@ class AgenticRAGModel(PreTrainedModel):
                         sub = part[: e + len("</backtrack>")]
                         merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
                         merged += sub + "\n"
-                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))   # NOTE for gjr，这里不能直接append
                         self.masked_spans_per_sample[b].extend(spans)
                         print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
+                        print("[Backtrack]","%"*100, merged, "%"*100)
+
                     if "<summary>" in text and "</summary>" not in text:
                         part = text
                         s = part.index("<summary>") + len("<summary>")
@@ -807,9 +810,11 @@ class AgenticRAGModel(PreTrainedModel):
                         sub = part[: e + len("</summary>")]
                         merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
                         merged += sub + "\n"
-                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))     # NOTE for gjr，这里不能直接append
                         self.masked_spans_per_sample[b].extend(spans)
                         print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
+                        print("[Summary]","%"*100, merged, "%"*100)
+
                     continue
 
                 # 3) Continue or finish

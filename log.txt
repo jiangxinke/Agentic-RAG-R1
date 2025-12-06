@@ -1,62 +1,71 @@
-[2025-12-06 11:13:58,747] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-12-06 11:14:03,166] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-12-06 11:14:03,231] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-12-06 11:14:03,356] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-12-06 11:14:03,356] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-12-06 11:14:08,124] [INFO] [comm.py:669:init_distributed] cdb=None
-[2025-12-06 11:14:08,125] [INFO] [comm.py:700:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
-
-[1m[34mswanlab[0m[0m: \ Waiting for the swanlab cloud response.[2025-12-06 11:14:08,375] [INFO] [comm.py:669:init_distributed] cdb=None
-[2025-12-06 11:14:08,528] [INFO] [comm.py:669:init_distributed] cdb=None
-INFO     [2025-12-06 11:14:08,719] [INFO] [train.py:63]                                                                                       
-         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:14:08/config.json                              
-INFO     [2025-12-06 11:14:08,722] [INFO] [train.py:66]                                                                                       
+[2025-12-06 11:41:11,723] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 11:41:15,603] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 11:41:15,612] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-12-06 11:41:19,931] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-12-06 11:41:19,943] [INFO] [comm.py:669:init_distributed] cdb=None
+[2025-12-06 11:41:19,943] [INFO] [comm.py:700:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+[1m[34mswanlab[0m[0m: \ Waiting for the swanlab cloud response.INFO     [2025-12-06 11:41:20,259] [INFO] [train.py:63]                                                                                       
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:41:20/config.json                              
+INFO     [2025-12-06 11:41:20,263] [INFO] [train.py:66]                                                                                       
          Set random seed to 42                                                                                                                
-INFO     [2025-12-06 11:14:08,723] [INFO] [train.py:69]                                                                                       
+INFO     [2025-12-06 11:41:20,264] [INFO] [train.py:69]                                                                                       
          Using device: cuda                                                                                                                   
-
-                                                                                                    
-[2025-12-06 11:14:08,826] [INFO] [comm.py:669:init_distributed] cdb=None
-INFO     [2025-12-06 11:14:08,824] [INFO] [train.py:63]                                                                                       
-         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:14:08/config.json                              
-INFO     [2025-12-06 11:14:08,828] [INFO] [train.py:66]                                                                                       
-         Set random seed to 42                                                                                                                
-INFO     [2025-12-06 11:14:08,829] [INFO] [train.py:69]                                                                                       
-         Using device: cuda                                                                                                                   
-INFO     [2025-12-06 11:14:09,120] [INFO] [train.py:63]                                                                                       
-         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:14:09/config.json                              
-INFO     [2025-12-06 11:14:09,125] [INFO] [train.py:66]                                                                                       
-         Set random seed to 42                                                                                                                
-INFO     [2025-12-06 11:14:09,127] [INFO] [train.py:69]                                                                                       
-         Using device: cuda                                                                                                                   
-[1m[34mswanlab[0m[0m: swanlab version 0.7.3 is available!  Upgrade: `pip install -U swanlab`
-
-[1m[34mswanlab[0m[0m: \ Getting project...
-                                                                                                    
-
-[1m[34mswanlab[0m[0m: \ Creating experiment...
-                                                                                                    
-[1m[34mswanlab[0m[0m: Tracking run with swanlab version 0.5.8
-[1m[34mswanlab[0m[0m: Run data will be saved locally in [35m[1m/data/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/swanlog/run-20251206_111410-702963ce[0m[0m
+                                                                                                    [1m[34mswanlab[0m[0m: swanlab version 0.7.3 is available!  Upgrade: `pip install -U swanlab`
+[1m[34mswanlab[0m[0m: \ Getting project...                                                                                                    [1m[34mswanlab[0m[0m: \ Creating experiment...                                                                                                    [1m[34mswanlab[0m[0m: Tracking run with swanlab version 0.5.8
+[1m[34mswanlab[0m[0m: Run data will be saved locally in [35m[1m/data/xiaobei/jxk/agentic-rag-r1/Agentic-RAG-R1/swanlog/run-20251206_114121-79221501[0m[0m
 [1m[34mswanlab[0m[0m: 👋 Hi [1m[39mdevilran[0m[0m, welcome to swanlab!
 [1m[34mswanlab[0m[0m: Syncing run [33mqwen2.5-3B-noSSRL-nodecouple-4GPU[0m to the cloud
 [1m[34mswanlab[0m[0m: 🏠 View project at [34m[4mhttps://swanlab.cn/@devilran/agentic-rag-r1[0m[0m
-[1m[34mswanlab[0m[0m: 🚀 View run at [34m[4mhttps://swanlab.cn/@devilran/agentic-rag-r1/runs/lti9963s5fv4edbuzdgqn[0m[0m
-INFO     [2025-12-06 11:14:11,211] [INFO] [train.py:63]                                                                                       
-         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:14:11/config.json                              
-INFO     [2025-12-06 11:14:11,216] [INFO] [train.py:66]                                                                                       
+[1m[34mswanlab[0m[0m: 🚀 View run at [34m[4mhttps://swanlab.cn/@devilran/agentic-rag-r1/runs/xyfbt1zcftx0dqjda76hm[0m[0m
+INFO     [2025-12-06 11:41:22,283] [INFO] [train.py:63]                                                                                       
+         Saving config to experiments/training/qwen2.5-3B-noSSRL-nodecouple-4GPU/2025-12-06 11:41:22/config.json                              
+INFO     [2025-12-06 11:41:22,288] [INFO] [train.py:66]                                                                                       
          Set random seed to 42                                                                                                                
-INFO     [2025-12-06 11:14:11,217] [INFO] [train.py:69]                                                                                       
+INFO     [2025-12-06 11:41:22,289] [INFO] [train.py:69]                                                                                       
          Using device: cuda                                                                                                                   
-INFO     [2025-12-06 11:14:44,024] [INFO] [train.py:74]                                                                                       
+INFO     [2025-12-06 11:41:49,093] [INFO] [train.py:74]                                                                                       
          Train dataloader: 26400, Eval dataloader: 1000                                                                                       
-INFO     [2025-12-06 11:14:44,027] [INFO] [train.py:77]                                                                                       
+INFO     [2025-12-06 11:41:49,095] [INFO] [train.py:77]                                                                                       
          Loading model...                                                                                                                     
-INFO     [2025-12-06 11:14:48,090] [INFO] [train.py:96]                                                                                       
+INFO     [2025-12-06 11:41:52,913] [INFO] [train.py:96]                                                                                       
          Base model loaded successfully                                                                                                       
-INFO     [2025-12-06 11:14:48,318] [INFO] [train.py:102]                                                                                      
+INFO     [2025-12-06 11:41:53,147] [INFO] [train.py:102]                                                                                      
          Tokenizer loaded successfully                                                                                                        
-INFO     [2025-12-06 11:14:48,559] [INFO] [train.py:124]                                                                                      
+INFO     [2025-12-06 11:41:53,300] [INFO] [train.py:124]                                                                                      
+         Using lora:                                                                                                                          
+          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                             
+         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None,               
+         inference_mode=False, r=8, target_modules={'v_proj', 'q_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1,               
+         fan_in_fan_out=False, bias='none', use_rslora=False, modules_to_save=None, init_lora_weights=True, layers_to_transform=None,         
+         layers_pattern=None, rank_pattern={}, alpha_pattern={}, megatron_config=None, megatron_core='megatron.core',                         
+         trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None, use_dora=False, layer_replication=None,           
+         runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                                                      
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
+INFO     [2025-12-06 11:41:53,306] [INFO] [train.py:152]                                                                                      
+         Not using Quant                                                                                                                      
+INFO     [2025-12-06 11:41:53,307] [INFO] [train.py:155]                                                                                      
+         Starting GRPO fine-tuning...                                                                                                         
+INFO     [2025-12-06 11:41:53,307] [INFO] [train.py:159]                                                                                      
+         Using token-level reward                                                                                                             
+INFO     [2025-12-06 11:41:53,308] [INFO] [train.py:221]                                                                                      
+         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', 
+         constant=8, range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 1024, 'max_length_for_gather': 100000,             
+         'max_generate_iterations': 10, 'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 
+         'reward_function': <function overall_reward_token_level at 0x74d32574c2c0>, 'save_interval': 10, 'use_diverse_sampling': True,       
+         'diversity_penalty': 1.0}                                                                                                            
+INFO     [2025-12-06 11:41:53,318] [INFO] [train.py:229]                                                                                      
+         AgenticRAGModel loaded successfully                                                                                                  
+[2025-12-06 11:41:53,328] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 2
+INFO     [2025-12-06 11:41:58,944] [INFO] [train.py:74]                                                                                       
+         Train dataloader: 26400, Eval dataloader: 1000                                                                                       
+INFO     [2025-12-06 11:41:58,945] [INFO] [train.py:77]                                                                                       
+         Loading model...                                                                                                                     
+INFO     [2025-12-06 11:42:02,366] [INFO] [train.py:96]                                                                                       
+         Base model loaded successfully                                                                                                       
+INFO     [2025-12-06 11:42:02,591] [INFO] [train.py:102]                                                                                      
+         Tokenizer loaded successfully                                                                                                        
+INFO     [2025-12-06 11:42:02,777] [INFO] [train.py:124]                                                                                      
          Using lora:                                                                                                                          
           LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                             
          base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None,               
@@ -67,156 +76,50 @@ INFO     [2025-12-06 11:14:48,559] [INFO] [train.py:124]
          runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                                                      
 trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
 trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-INFO     [2025-12-06 11:14:48,565] [INFO] [train.py:152]                                                                                      
+INFO     [2025-12-06 11:42:02,782] [INFO] [train.py:152]                                                                                      
          Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:14:48,566] [INFO] [train.py:155]                                                                                      
+INFO     [2025-12-06 11:42:02,783] [INFO] [train.py:155]                                                                                      
          Starting GRPO fine-tuning...                                                                                                         
-INFO     [2025-12-06 11:14:48,567] [INFO] [train.py:159]                                                                                      
+INFO     [2025-12-06 11:42:02,784] [INFO] [train.py:159]                                                                                      
          Using token-level reward                                                                                                             
-INFO     [2025-12-06 11:14:48,567] [INFO] [train.py:221]                                                                                      
+INFO     [2025-12-06 11:42:02,785] [INFO] [train.py:221]                                                                                      
          Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', 
          constant=8, range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 1024, 'max_length_for_gather': 100000,             
          'max_generate_iterations': 10, 'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 
-         'reward_function': <function overall_reward_token_level at 0x78a01ddcc180>, 'save_interval': 10, 'use_diverse_sampling': True,       
+         'reward_function': <function overall_reward_token_level at 0x7ca5ba52c2c0>, 'save_interval': 10, 'use_diverse_sampling': True,       
          'diversity_penalty': 1.0}                                                                                                            
-INFO     [2025-12-06 11:14:48,577] [INFO] [train.py:229]                                                                                      
+INFO     [2025-12-06 11:42:02,795] [INFO] [train.py:229]                                                                                      
          AgenticRAGModel loaded successfully                                                                                                  
-[2025-12-06 11:14:48,588] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
-INFO     [2025-12-06 11:15:23,905] [INFO] [train.py:74]                                                                                       
-         Train dataloader: 26400, Eval dataloader: 1000                                                                                       
-INFO     [2025-12-06 11:15:23,908] [INFO] [train.py:77]                                                                                       
-         Loading model...                                                                                                                     
-INFO     [2025-12-06 11:15:27,501] [INFO] [train.py:96]                                                                                       
-         Base model loaded successfully                                                                                                       
-INFO     [2025-12-06 11:15:27,774] [INFO] [train.py:102]                                                                                      
-         Tokenizer loaded successfully                                                                                                        
-INFO     [2025-12-06 11:15:27,948] [INFO] [train.py:124]                                                                                      
-         Using lora:                                                                                                                          
-          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                             
-         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None,               
-         inference_mode=False, r=8, target_modules={'q_proj', 'v_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1,               
-         fan_in_fan_out=False, bias='none', use_rslora=False, modules_to_save=None, init_lora_weights=True, layers_to_transform=None,         
-         layers_pattern=None, rank_pattern={}, alpha_pattern={}, megatron_config=None, megatron_core='megatron.core',                         
-         trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None, use_dora=False, layer_replication=None,           
-         runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                                                      
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-INFO     [2025-12-06 11:15:27,954] [INFO] [train.py:152]                                                                                      
-         Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:15:27,955] [INFO] [train.py:155]                                                                                      
-         Starting GRPO fine-tuning...                                                                                                         
-INFO     [2025-12-06 11:15:27,956] [INFO] [train.py:159]                                                                                      
-         Using token-level reward                                                                                                             
-INFO     [2025-12-06 11:15:27,957] [INFO] [train.py:221]                                                                                      
-         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', 
-         constant=8, range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 1024, 'max_length_for_gather': 100000,             
-         'max_generate_iterations': 10, 'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 
-         'reward_function': <function overall_reward_token_level at 0x716438808180>, 'save_interval': 10, 'use_diverse_sampling': True,       
-         'diversity_penalty': 1.0}                                                                                                            
-INFO     [2025-12-06 11:15:27,967] [INFO] [train.py:229]                                                                                      
-         AgenticRAGModel loaded successfully                                                                                                  
-[2025-12-06 11:15:27,979] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed info: version=0.16.7, git-hash=unknown, git-branch=unknown
-[2025-12-06 11:15:27,979] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
-INFO     [2025-12-06 11:15:29,721] [INFO] [train.py:74]                                                                                       
-         Train dataloader: 26400, Eval dataloader: 1000                                                                                       
-INFO     [2025-12-06 11:15:29,725] [INFO] [train.py:77]                                                                                       
-         Loading model...                                                                                                                     
-INFO     [2025-12-06 11:15:33,003] [INFO] [train.py:96]                                                                                       
-         Base model loaded successfully                                                                                                       
-INFO     [2025-12-06 11:15:33,238] [INFO] [train.py:102]                                                                                      
-         Tokenizer loaded successfully                                                                                                        
-INFO     [2025-12-06 11:15:33,397] [INFO] [train.py:124]                                                                                      
-         Using lora:                                                                                                                          
-          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                             
-         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None,               
-         inference_mode=False, r=8, target_modules={'q_proj', 'v_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1,               
-         fan_in_fan_out=False, bias='none', use_rslora=False, modules_to_save=None, init_lora_weights=True, layers_to_transform=None,         
-         layers_pattern=None, rank_pattern={}, alpha_pattern={}, megatron_config=None, megatron_core='megatron.core',                         
-         trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None, use_dora=False, layer_replication=None,           
-         runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                                                      
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-INFO     [2025-12-06 11:15:33,403] [INFO] [train.py:152]                                                                                      
-         Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:15:33,404] [INFO] [train.py:155]                                                                                      
-         Starting GRPO fine-tuning...                                                                                                         
-INFO     [2025-12-06 11:15:33,404] [INFO] [train.py:159]                                                                                      
-         Using token-level reward                                                                                                             
-INFO     [2025-12-06 11:15:33,405] [INFO] [train.py:221]                                                                                      
-         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', 
-         constant=8, range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 1024, 'max_length_for_gather': 100000,             
-         'max_generate_iterations': 10, 'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 
-         'reward_function': <function overall_reward_token_level at 0x79c689df0180>, 'save_interval': 10, 'use_diverse_sampling': True,       
-         'diversity_penalty': 1.0}                                                                                                            
-INFO     [2025-12-06 11:15:33,415] [INFO] [train.py:229]                                                                                      
-         AgenticRAGModel loaded successfully                                                                                                  
-[2025-12-06 11:15:33,426] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
-INFO     [2025-12-06 11:15:53,118] [INFO] [train.py:74]                                                                                       
-         Train dataloader: 26400, Eval dataloader: 1000                                                                                       
-INFO     [2025-12-06 11:15:53,121] [INFO] [train.py:77]                                                                                       
-         Loading model...                                                                                                                     
-INFO     [2025-12-06 11:15:56,351] [INFO] [train.py:96]                                                                                       
-         Base model loaded successfully                                                                                                       
-INFO     [2025-12-06 11:15:56,587] [INFO] [train.py:102]                                                                                      
-         Tokenizer loaded successfully                                                                                                        
-INFO     [2025-12-06 11:15:56,779] [INFO] [train.py:124]                                                                                      
-         Using lora:                                                                                                                          
-          LoraConfig(task_type='CAUSAL_LM', peft_type=<PeftType.LORA: 'LORA'>, auto_mapping=None,                                             
-         base_model_name_or_path='/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct', revision=None,               
-         inference_mode=False, r=8, target_modules={'q_proj', 'v_proj'}, exclude_modules=None, lora_alpha=32, lora_dropout=0.1,               
-         fan_in_fan_out=False, bias='none', use_rslora=False, modules_to_save=None, init_lora_weights=True, layers_to_transform=None,         
-         layers_pattern=None, rank_pattern={}, alpha_pattern={}, megatron_config=None, megatron_core='megatron.core',                         
-         trainable_token_indices=None, loftq_config={}, eva_config=None, corda_config=None, use_dora=False, layer_replication=None,           
-         runtime_config=LoraRuntimeConfig(ephemeral_gpu_offload=False), lora_bias=False)                                                      
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-trainable params: 1,843,200 || all params: 3,087,781,888 || trainable%: 0.0597
-INFO     [2025-12-06 11:15:56,785] [INFO] [train.py:152]                                                                                      
-         Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:15:56,786] [INFO] [train.py:155]                                                                                      
-         Starting GRPO fine-tuning...                                                                                                         
-INFO     [2025-12-06 11:15:56,786] [INFO] [train.py:159]                                                                                      
-         Using token-level reward                                                                                                             
-INFO     [2025-12-06 11:15:56,787] [INFO] [train.py:221]                                                                                      
-         Training config: {'use_KV_Cache': False, 'num_iterations': 1, 'steps_per_iteration': 300, 'num_generations': DotMap(mode='constant', 
-         constant=8, range=[4, 8], function=[DotMap(lambda x='x * 2')]), 'max_new_tokens': 1024, 'max_length_for_gather': 100000,             
-         'max_generate_iterations': 10, 'temperature': 0.7, 'do_sample': True, 'beta': 0.04, 'learning_rate': 5e-06, 'mu': 2, 'epsilon': 0.1, 
-         'reward_function': <function overall_reward_token_level at 0x71dac7ae8180>, 'save_interval': 10, 'use_diverse_sampling': True,       
-         'diversity_penalty': 1.0}                                                                                                            
-INFO     [2025-12-06 11:15:56,797] [INFO] [train.py:229]                                                                                      
-         AgenticRAGModel loaded successfully                                                                                                  
-[2025-12-06 11:15:56,808] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 4
-[2025-12-06 11:15:57,722] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
-[2025-12-06 11:15:57,724] [INFO] [logging.py:107:log_dist] [Rank 0] Using client Optimizer as basic optimizer
-[2025-12-06 11:15:57,724] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
-[2025-12-06 11:15:57,754] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = Adam
-[2025-12-06 11:15:57,754] [INFO] [utils.py:59:is_zero_supported_optimizer] Checking ZeRO support for optimizer=Adam type=<class 'torch.optim.adam.Adam'>
-[2025-12-06 11:15:57,754] [INFO] [logging.py:107:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 optimizer
-[2025-12-06 11:15:57,754] [INFO] [stage_1_and_2.py:150:__init__] Reduce bucket size 500000000
-[2025-12-06 11:15:57,754] [INFO] [stage_1_and_2.py:151:__init__] Allgather bucket size 500000000
-[2025-12-06 11:15:57,754] [INFO] [stage_1_and_2.py:152:__init__] CPU Offload: False
-[2025-12-06 11:15:57,754] [INFO] [stage_1_and_2.py:153:__init__] Round robin gradient partitioning: False
-INFO     [2025-12-06 11:15:57,761] [INFO] [trainer.py:624]                                                                                    
+[2025-12-06 11:42:02,805] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed info: version=0.16.7, git-hash=unknown, git-branch=unknown
+[2025-12-06 11:42:02,805] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 2
+[2025-12-06 11:42:03,370] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2025-12-06 11:42:03,372] [INFO] [logging.py:107:log_dist] [Rank 0] Using client Optimizer as basic optimizer
+[2025-12-06 11:42:03,372] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
+[2025-12-06 11:42:03,401] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = Adam
+[2025-12-06 11:42:03,402] [INFO] [utils.py:59:is_zero_supported_optimizer] Checking ZeRO support for optimizer=Adam type=<class 'torch.optim.adam.Adam'>
+[2025-12-06 11:42:03,402] [INFO] [logging.py:107:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 optimizer
+[2025-12-06 11:42:03,402] [INFO] [stage_1_and_2.py:150:__init__] Reduce bucket size 500000000
+[2025-12-06 11:42:03,402] [INFO] [stage_1_and_2.py:151:__init__] Allgather bucket size 500000000
+[2025-12-06 11:42:03,402] [INFO] [stage_1_and_2.py:152:__init__] CPU Offload: False
+[2025-12-06 11:42:03,402] [INFO] [stage_1_and_2.py:153:__init__] Round robin gradient partitioning: False
+INFO     [2025-12-06 11:42:03,409] [INFO] [trainer.py:624]                                                                                    
          Starting DAPO iteration 1/1                                                                                                          
-INFO     [2025-12-06 11:15:57,775] [INFO] [trainer.py:624]                                                                                    
-         Starting DAPO iteration 1/1                                                                                                          
-INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]                                                                                    
-         Starting DAPO iteration 1/1                                                                                                          
-[2025-12-06 11:15:58,195] [INFO] [utils.py:781:see_memory_usage] Before initializing optimizer states
-[2025-12-06 11:15:58,196] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
-[2025-12-06 11:15:58,196] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 253.4 GB, percent = 50.3%
-[2025-12-06 11:15:58,516] [INFO] [utils.py:781:see_memory_usage] After initializing optimizer states
-[2025-12-06 11:15:58,517] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
-[2025-12-06 11:15:58,517] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 253.41 GB, percent = 50.3%
-[2025-12-06 11:15:58,517] [INFO] [stage_1_and_2.py:557:__init__] optimizer state initialized
-[2025-12-06 11:15:58,813] [INFO] [utils.py:781:see_memory_usage] After initializing ZeRO optimizer
-[2025-12-06 11:15:58,813] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
-[2025-12-06 11:15:58,814] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 253.43 GB, percent = 50.3%
-[2025-12-06 11:15:58,815] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = DeepSpeedZeroOptimizer
-[2025-12-06 11:15:58,815] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed using configured LR scheduler = None
-[2025-12-06 11:15:58,815] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
-[2025-12-06 11:15:58,816] [INFO] [logging.py:107:log_dist] [Rank 0] step=0, skipped=0, lr=[5e-06], mom=[(0.9, 0.999)]
-[2025-12-06 11:15:58,818] [INFO] [config.py:1003:print] DeepSpeedEngine configuration:
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   activation_checkpointing_config  {
+[2025-12-06 11:42:03,691] [INFO] [utils.py:781:see_memory_usage] Before initializing optimizer states
+[2025-12-06 11:42:03,692] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 11:42:03,692] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 254.24 GB, percent = 50.5%
+[2025-12-06 11:42:03,923] [INFO] [utils.py:781:see_memory_usage] After initializing optimizer states
+[2025-12-06 11:42:03,923] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.73 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 11:42:03,924] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 254.22 GB, percent = 50.5%
+[2025-12-06 11:42:03,924] [INFO] [stage_1_and_2.py:557:__init__] optimizer state initialized
+[2025-12-06 11:42:04,147] [INFO] [utils.py:781:see_memory_usage] After initializing ZeRO optimizer
+[2025-12-06 11:42:04,148] [INFO] [utils.py:782:see_memory_usage] MA 11.72 GB         Max_MA 11.72 GB         CA 12.0 GB         Max_CA 12 GB 
+[2025-12-06 11:42:04,148] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 254.22 GB, percent = 50.5%
+[2025-12-06 11:42:04,150] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = DeepSpeedZeroOptimizer
+[2025-12-06 11:42:04,150] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed using configured LR scheduler = None
+[2025-12-06 11:42:04,150] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2025-12-06 11:42:04,150] [INFO] [logging.py:107:log_dist] [Rank 0] step=0, skipped=0, lr=[5e-06], mom=[(0.9, 0.999)]
+[2025-12-06 11:42:04,153] [INFO] [config.py:1003:print] DeepSpeedEngine configuration:
+[2025-12-06 11:42:04,153] [INFO] [config.py:1007:print]   activation_checkpointing_config  {
     "partition_activations": false, 
     "contiguous_memory_optimization": false, 
     "cpu_checkpointing": false, 
@@ -224,10 +127,10 @@ INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]
     "synchronize_checkpoint_boundary": false, 
     "profile": false
 }
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   aio_config ................... {'block_size': 1048576, 'queue_depth': 8, 'intra_op_parallelism': 1, 'single_submit': False, 'overlap_events': True, 'use_gds': False}
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   amp_enabled .................. False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   amp_params ................... False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   autotuning_config ............ {
+[2025-12-06 11:42:04,153] [INFO] [config.py:1007:print]   aio_config ................... {'block_size': 1048576, 'queue_depth': 8, 'intra_op_parallelism': 1, 'single_submit': False, 'overlap_events': True, 'use_gds': False}
+[2025-12-06 11:42:04,153] [INFO] [config.py:1007:print]   amp_enabled .................. False
+[2025-12-06 11:42:04,153] [INFO] [config.py:1007:print]   amp_params ................... False
+[2025-12-06 11:42:04,153] [INFO] [config.py:1007:print]   autotuning_config ............ {
     "enabled": false, 
     "start_step": null, 
     "end_step": null, 
@@ -252,33 +155,33 @@ INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]
     "min_train_micro_batch_size_per_gpu": 1, 
     "num_tuning_micro_batch_sizes": 3
 }
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   bfloat16_enabled ............. True
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   bfloat16_immediate_grad_update  True
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   checkpoint_parallel_write_pipeline  False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   checkpoint_tag_validation_enabled  True
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   checkpoint_tag_validation_fail  False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   comms_config ................. <deepspeed.comm.config.DeepSpeedCommsConfig object at 0x7164311d2bd0>
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   communication_data_type ...... None
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   compile_config ............... deepcompile=False free_activation=False offload_activation=False offload_opt_states=False double_buffer=True symmetric_memory=False debug_log=False offload_parameters=False sync_before_reduce=False sync_after_reduce=False sync_before_allgather=False sync_after_allgather=False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   compression_config ........... {'weight_quantization': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_groups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, 'rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'range_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'different_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   curriculum_enabled_legacy .... False
-[2025-12-06 11:15:58,819] [INFO] [config.py:1007:print]   curriculum_params_legacy ..... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   data_efficiency_config ....... {'enabled': False, 'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'pin_memory': False, 'curriculum_learning': {'enabled': False}, 'dynamic_batching': {'enabled': False, 'lr_scaling_method': 'linear', 'min_batch_size': 1, 'max_batch_size': None, 'sequence_picking_order': 'dataloader', 'verbose': False}}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled': False}}}}
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   data_efficiency_enabled ...... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   dataloader_drop_last ......... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   disable_allgather ............ False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   dump_state ................... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   dynamic_loss_scale_args ...... None
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_enabled ........... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_gas_boundary_resolution  1
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_layer_name ........ bert.encoder.layer
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_layer_num ......... 0
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_max_iter .......... 100
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_stability ......... 1e-06
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_tol ............... 0.01
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   eigenvalue_verbose ........... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   elasticity_enabled ........... False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   flops_profiler_config ........ {
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   bfloat16_enabled ............. True
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   bfloat16_immediate_grad_update  True
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   checkpoint_parallel_write_pipeline  False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   checkpoint_tag_validation_enabled  True
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   checkpoint_tag_validation_fail  False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   comms_config ................. <deepspeed.comm.config.DeepSpeedCommsConfig object at 0x7ca5a0260ad0>
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   communication_data_type ...... None
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   compile_config ............... deepcompile=False free_activation=False offload_activation=False offload_opt_states=False double_buffer=True symmetric_memory=False debug_log=False offload_parameters=False sync_before_reduce=False sync_after_reduce=False sync_before_allgather=False sync_after_allgather=False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   compression_config ........... {'weight_quantization': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_groups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, 'rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'range_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'different_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   curriculum_enabled_legacy .... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   curriculum_params_legacy ..... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   data_efficiency_config ....... {'enabled': False, 'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'pin_memory': False, 'curriculum_learning': {'enabled': False}, 'dynamic_batching': {'enabled': False, 'lr_scaling_method': 'linear', 'min_batch_size': 1, 'max_batch_size': None, 'sequence_picking_order': 'dataloader', 'verbose': False}}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled': False}}}}
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   data_efficiency_enabled ...... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   dataloader_drop_last ......... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   disable_allgather ............ False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   dump_state ................... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   dynamic_loss_scale_args ...... None
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_enabled ........... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_gas_boundary_resolution  1
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_layer_num ......... 0
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_max_iter .......... 100
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_stability ......... 1e-06
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_tol ............... 0.01
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   eigenvalue_verbose ........... False
+[2025-12-06 11:42:04,154] [INFO] [config.py:1007:print]   elasticity_enabled ........... False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   flops_profiler_config ........ {
     "enabled": false, 
     "recompute_fwd_factor": 0.0, 
     "profile_step": 1, 
@@ -287,24 +190,24 @@ INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]
     "detailed": true, 
     "output_file": null
 }
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   fp16_auto_cast ............... None
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   fp16_enabled ................. False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   fp16_master_weights_and_gradients  False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   global_rank .................. 0
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   grad_accum_dtype ............. None
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   gradient_accumulation_steps .. 1
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   gradient_clipping ............ 1.0
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   gradient_predivide_factor .... 1.0
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   graph_harvesting ............. False
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   hybrid_engine ................ enabled=False max_out_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size=8
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   initial_dynamic_scale ........ 1
-[2025-12-06 11:15:58,820] [INFO] [config.py:1007:print]   load_universal_checkpoint .... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   loss_scale ................... 1.0
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   memory_breakdown ............. False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   mics_hierarchial_params_gather  False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   mics_shard_size .............. -1
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   monitor_config ............... tensorboard=TensorBoardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') comet=CometConfig(enabled=False, samples_log_interval=100, project=None, workspace=None, api_key=None, experiment_name=None, experiment_key=None, online=None, mode=None) wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_monitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName')
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   nebula_config ................ {
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   fp16_auto_cast ............... None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   fp16_enabled ................. False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   fp16_master_weights_and_gradients  False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   global_rank .................. 0
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   grad_accum_dtype ............. None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   gradient_accumulation_steps .. 1
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   gradient_clipping ............ 1.0
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   gradient_predivide_factor .... 1.0
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   graph_harvesting ............. False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   hybrid_engine ................ enabled=False max_out_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size=8
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   initial_dynamic_scale ........ 1
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   load_universal_checkpoint .... False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   loss_scale ................... 1.0
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   memory_breakdown ............. False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   mics_hierarchial_params_gather  False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   mics_shard_size .............. -1
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   monitor_config ............... tensorboard=TensorBoardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') comet=CometConfig(enabled=False, samples_log_interval=100, project=None, workspace=None, api_key=None, experiment_name=None, experiment_key=None, online=None, mode=None) wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_monitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName')
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   nebula_config ................ {
     "enabled": false, 
     "persistent_storage_path": null, 
     "persistent_time_interval": 100, 
@@ -312,35 +215,35 @@ INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]
     "enable_nebula_load": true, 
     "load_path": null
 }
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   optimizer_legacy_fusion ...... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   optimizer_name ............... None
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   optimizer_params ............. None
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'grad_partitioned': True}
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   pld_enabled .................. False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   pld_params ................... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   prescale_gradients ........... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   scheduler_name ............... None
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   scheduler_params ............. None
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   seq_parallel_communication_data_type  torch.float32
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   sparse_attention ............. None
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   sparse_gradients_enabled ..... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   steps_per_print .............. inf
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   tensor_parallel_config ....... dtype=torch.float16 autotp_size=0 tp_overlap_comm=False tensor_parallel=TPConfig(tp_size=1, tp_grain_size=1, mpu=None, tp_group=None) injection_policy_tuple=None keep_module_on_host=False replace_with_kernel_inject=False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   timers_config ................ enabled=True synchronized=True
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   train_batch_size ............. 4
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   train_micro_batch_size_per_gpu  1
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   use_data_before_expert_parallel_  False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   use_node_local_storage ....... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   wall_clock_breakdown ......... False
-[2025-12-06 11:15:58,821] [INFO] [config.py:1007:print]   weight_quantization_config ... None
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   world_size ................... 4
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   zero_allow_untested_optimizer  True
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   zero_config .................. stage=2 contiguous_gradients=True reduce_scatter=True reduce_bucket_size=500000000 use_multi_rank_bucket_allreduce=True allgather_partitions=True allgather_bucket_size=500000000 overlap_comm=False load_from_fp32_weights=True elastic_checkpoint=False offload_param=DeepSpeedZeroOffloadParamConfig(device='none', nvme_path=None, buffer_count=5, buffer_size=100000000, max_in_cpu=1000000000, pin_memory=False) offload_optimizer=DeepSpeedZeroOffloadOptimizerConfig(device='none', nvme_path=None, buffer_count=4, pin_memory=False, pipeline_read=False, pipeline_write=False, fast_init=False, ratio=1.0) sub_group_size=1000000000 cpu_offload_param=None cpu_offload_use_pin_memory=None cpu_offload=None prefetch_bucket_size=50000000 param_persistence_threshold=100000 model_persistence_threshold=9223372036854775807 max_live_parameters=1000000000 max_reuse_distance=1000000000 gather_16bit_weights_on_model_save=False module_granularity_threshold=0 use_all_reduce_for_fetch_params=False stage3_gather_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_quantized_gradients=False zeropp_loco_param=None mics_shard_size=-1 mics_hierarchical_params_gather=False memory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True log_trace_cache_warnings=False
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   zero_enabled ................. True
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   zero_force_ds_cpu_optimizer .. True
-[2025-12-06 11:15:58,822] [INFO] [config.py:1007:print]   zero_optimization_stage ...... 2
-[2025-12-06 11:15:58,822] [INFO] [config.py:993:print_user_config]   json = {
-    "train_batch_size": 4, 
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   optimizer_legacy_fusion ...... False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   optimizer_name ............... None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   optimizer_params ............. None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'grad_partitioned': True}
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   pld_enabled .................. False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   pld_params ................... False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   prescale_gradients ........... False
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   scheduler_name ............... None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   scheduler_params ............. None
+[2025-12-06 11:42:04,155] [INFO] [config.py:1007:print]   seq_parallel_communication_data_type  torch.float32
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   sparse_attention ............. None
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   sparse_gradients_enabled ..... False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   steps_per_print .............. inf
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   tensor_parallel_config ....... dtype=torch.float16 autotp_size=0 tp_overlap_comm=False tensor_parallel=TPConfig(tp_size=1, tp_grain_size=1, mpu=None, tp_group=None) injection_policy_tuple=None keep_module_on_host=False replace_with_kernel_inject=False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   timers_config ................ enabled=True synchronized=True
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   train_batch_size ............. 2
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   train_micro_batch_size_per_gpu  1
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   use_data_before_expert_parallel_  False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   use_node_local_storage ....... False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   wall_clock_breakdown ......... False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   weight_quantization_config ... None
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   world_size ................... 2
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   zero_allow_untested_optimizer  True
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   zero_config .................. stage=2 contiguous_gradients=True reduce_scatter=True reduce_bucket_size=500000000 use_multi_rank_bucket_allreduce=True allgather_partitions=True allgather_bucket_size=500000000 overlap_comm=False load_from_fp32_weights=True elastic_checkpoint=False offload_param=DeepSpeedZeroOffloadParamConfig(device='none', nvme_path=None, buffer_count=5, buffer_size=100000000, max_in_cpu=1000000000, pin_memory=False) offload_optimizer=DeepSpeedZeroOffloadOptimizerConfig(device='none', nvme_path=None, buffer_count=4, pin_memory=False, pipeline_read=False, pipeline_write=False, fast_init=False, ratio=1.0) sub_group_size=1000000000 cpu_offload_param=None cpu_offload_use_pin_memory=None cpu_offload=None prefetch_bucket_size=50000000 param_persistence_threshold=100000 model_persistence_threshold=9223372036854775807 max_live_parameters=1000000000 max_reuse_distance=1000000000 gather_16bit_weights_on_model_save=False module_granularity_threshold=0 use_all_reduce_for_fetch_params=False stage3_gather_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_quantized_gradients=False zeropp_loco_param=None mics_shard_size=-1 mics_hierarchical_params_gather=False memory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True log_trace_cache_warnings=False
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   zero_enabled ................. True
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   zero_force_ds_cpu_optimizer .. True
+[2025-12-06 11:42:04,156] [INFO] [config.py:1007:print]   zero_optimization_stage ...... 2
+[2025-12-06 11:42:04,156] [INFO] [config.py:993:print_user_config]   json = {
+    "train_batch_size": 2, 
     "train_micro_batch_size_per_gpu": 1, 
     "gradient_accumulation_steps": 1, 
     "zero_optimization": {
@@ -365,11 +268,1759 @@ INFO     [2025-12-06 11:15:57,848] [INFO] [trainer.py:624]
     }, 
     "zero_allow_untested_optimizer": true
 }
-INFO     [2025-12-06 11:15:58,823] [INFO] [trainer.py:624]                                                                                    
+INFO     [2025-12-06 11:42:04,158] [INFO] [trainer.py:624]                                                                                    
          Starting DAPO iteration 1/1                                                                                                          
-INFO     [2025-12-06 11:15:59,570] [INFO] [trainer.py:973]                                                                                    
+INFO     [2025-12-06 11:42:05,266] [INFO] [trainer.py:973]                                                                                    
          Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:15:59,683] [INFO] [trainer.py:973]                                                                                    
+INFO     [2025-12-06 11:42:06,106] [INFO] [trainer.py:973]                                                                                    
          Not using Quant                                                                                                                      
-INFO     [2025-12-06 11:16:00,790] [INFO] [trainer.py:973]                                                                                    
-         Not using Quant                                                                                                                      
+INFO     [2025-12-06 11:42:06,179] [INFO] [trainer.py:657]                                                                                    
+         Generating rollout data, step 1/300                                                                                                  
+INFO     [2025-12-06 11:42:06,182] [INFO] [trainer.py:657]                                                                                    
+         Generating rollout data, step 1/300                                                                                                  
+[model.py] current_ids.shape=torch.Size([8, 509]), current_mask.shape=torch.Size([8, 509])
+[model.py] current_ids.shape=torch.Size([8, 483]), current_mask.shape=torch.Size([8, 483])
+[model.py] current_ids.shape=torch.Size([8, 528]), current_mask.shape=torch.Size([8, 528])
+INFO     [2025-12-06 11:42:14,568] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:42:14,654] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:42:14,742] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 3: [(534, 556), (556, 578), (578, 600)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请开始作答。
+<reasoning>
+腺病毒是一种常见的病毒，其生物学特性包括无包膜、双链DNA（dsDNA）。我们需要根据这些信息来判断选项中哪个是正确的描述。
+</reasoning>
+<search>
+
+<search>
+[path1] [Web_RAG]: 腺病毒 生物学性状
+ [/path1]
+[path2] [Web_RAG]: 腺病毒 生物学性状
+ [/path2]
+[path3] [Web_RAG]: 腺病毒 生物学性状
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([8, 704]), current_mask.shape=torch.Size([8, 704])
+[model.py] current_ids.shape=torch.Size([8, 709]), current_mask.shape=torch.Size([8, 709])
+[model.py] current_ids.shape=torch.Size([8, 715]), current_mask.shape=torch.Size([8, 715])
+[model.py] current_ids.shape=torch.Size([7, 724]), current_mask.shape=torch.Size([7, 724])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(705, 732)], 'summary': [(385, 392)], 'search': [(530, 605)], 'observation': [(605, 704)], 'reasoning': [(488, 530)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(709, 728)], 'summary': [(388, 389)], 'search': [(533, 602)], 'observation': [(608, 701)], 'reasoning': [(492, 526)]}}
+[model.py] current_ids.shape=torch.Size([6, 561]), current_mask.shape=torch.Size([6, 561])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(530, 540)], 'backtrack': [(540, 570)], 'summary': [(385, 392)], 'search': [(378, 385)], 'observation': [(229, 239)], 'reasoning': [(489, 530)]}, 'arg': {'answer': [(533, 538)], 'backtrack': [(544, 566)], 'summary': [(388, 389)], 'search': [(381, 382)], 'observation': [(232, 236)], 'reasoning': [(493, 526)]}}
+[model.py] current_ids.shape=torch.Size([5, 570]), current_mask.shape=torch.Size([5, 570])
+[model.py] current_ids.shape=torch.Size([5, 571]), current_mask.shape=torch.Size([5, 571])
+[model.py] current_ids.shape=torch.Size([5, 573]), current_mask.shape=torch.Size([5, 573])
+[model.py] batch 0
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请给出你的推理过程： 首先根据题目中的信息，腺病毒是一种病毒，因此它应该具备病毒的一般特性，即没有细胞结构，只能在宿主细胞内繁殖。<backtrack>根据题目描述，腺病毒具有无包膜的特点，那么我们可以排除选项C，因为-ssRNA是有包膜的病毒。那么剩下的只有A和B两个选项。腺病毒的遗传物质应该是双链DNA，而非单链负链RNA，因此选项C和D均不 ******************** 
+
+[model.py] batch 1
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请根据以上信息，帮助我选择正确的选项。 <reasoning>
+首先，腺病毒是一种常见的病毒，其生物学特性与其它类型的病毒有所不同。腺病毒具有双层衣壳结构，外面有一层脂质膜，所以腺病毒是有包膜的病毒。腺病毒的核酸类型是双股线状DNA，即dsDNA，因此腺病毒属于dsDNA病毒。
+</reasoning>
+<search>
+[Web_RAG]: 腺病毒 生物学性状
+</search>
+ ******************** 
+
+[model.py] batch 2
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请给出你的推理过程并选择一个正确选项。
+<reasoning>
+首先，腺病毒是一种常见的病毒类型，其生物学特性对于理解其感染机制至关重要。腺病毒属于一种双链DNA病毒，因此选项A可能是正确的。但是，腺病毒通常没有包膜，这与选项B和C不符，因为dsRNA病毒通常是单层膜病毒，而-ssRNA病毒则通常具有包膜。最后，腺病毒的遗传物质是双链DNA，而不是单股负链RNA， ******************** 
+
+[model.py] batch 3
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请给出详细分析。 <reasoning> 腺病毒是一种常见的病毒类型，根据题目描述，我们需要找出正确的生物学性状描述。腺病毒属于双链DNA病毒（dsDNA），并且它们通常具有无包膜的结构。因此，我们可以从这些信息开始分析每个选项。
+
+A. 双股DNA(dsDNA)无包膜病毒：
+   - 符合腺病毒的特性。
+
+B. dsRNA无包膜病毒：
+   - dsRNA是单链RNA，不符合腺 ******************** 
+
+[model.py] batch 4
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请开始作答。
+<reasoning>
+腺病毒是一种常见的病毒，它属于正链单股RNA病毒。根据这一信息，我们可以排除选项A、B和D。因此，正确的选项应该是C。
+</reasoning>
+<answer>正确答案是C. -ssRNA无包膜病毒。</answer> ******************** 
+
+[model.py] batch 5
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+请给出你的推理过程。
+<reasoning>
+腺病毒是一种常见的病毒，通常具有无包膜的特点。根据题目选项，我们可以判断腺病毒的遗传物质类型。选项A提到的是双股DNA，而腺病毒的遗传物质是单股负链RNA，即-ssRNA。因此，腺病毒属于-ssRNA病毒，而不是dsDNA病毒。所以选项A不正确。
+</reasoning>
+<search>
+{
+  "input": "腺病毒的生物学性状"
+}
+</search ******************** 
+
+[model.py] batch 6
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+ ******************** 
+
+[model.py] batch 7
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+            Options:
+            A. 双股DNA(dsDNA)无包膜病毒
+B. dsRNA无包膜病毒
+C. 单股负链RNA(-ssRNA)无包膜病毒
+D. -ssRNA有包膜病毒
+ ******************** 
+
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:42:20,349] [INFO] [trainer.py:728]                                                                                    
+         Rollout ready; optimizing DAPO objective                                                                                             
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:42:23,111] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:23,367] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:23,567] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:42:23,667] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:42:23,732] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 2: [(600, 663), (663, 726), (726, 789)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+请给出你的分析步骤。 <reasoning>
+根据题目描述，患者中指离断伤后进行了再植手术，并且出现了患指苍白、皮温低于健侧3℃的症状，这表明可能存在血管问题。已经尝试了解除包扎、解痉药物治疗，但未见好转。因此，下一步应该考虑是否需要进行手术探查，检查吻合的血管情况。
+</reasoning>
+<search>
+
+<search>
+[path1] {
+  "input": "患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）"
+}
+ [/path1]
+[path2] {
+  "input": "患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）"
+}
+ [/path2]
+[path3] {
+  "input": "患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）"
+}
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([8, 893]), current_mask.shape=torch.Size([8, 893])
+INFO     [2025-12-06 11:42:24,226] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+[model.py] current_ids.shape=torch.Size([7, 898]), current_mask.shape=torch.Size([7, 898])
+INFO     [2025-12-06 11:42:24,988] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:25,703] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:26,520] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:27,204] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:42:27,941] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:20,086] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:43:20,194] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:43:20,288] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 3: [(609, 649), (649, 689), (689, 729)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+请解答这个问题。 <reasoning>
+根据描述，患者进行了中指离断术并进行了再植手术，术后10小时出现患指苍白和皮温低于健侧3℃的现象，经过了解除包扎、解痉药物治疗后没有好转。这种情况可能是由于血管阻塞导致的血液循环不良。因此，最有可能的原因是吻合的血管出现了问题，可能需要立即手术探查吻合的血管情况。
+</reasoning>
+<search>
+
+<search>
+[path1] 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）
+ [/path1]
+[path2] 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）
+ [/path2]
+[path3] 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([7, 902]), current_mask.shape=torch.Size([7, 902])
+[model.py] current_ids.shape=torch.Size([7, 907]), current_mask.shape=torch.Size([7, 907])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(894, 912)], 'summary': [(385, 392)], 'search': [(596, 794)], 'observation': [(794, 893)], 'reasoning': [(515, 596)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(898, 908)], 'summary': [(388, 389)], 'search': [(599, 791)], 'observation': [(797, 890)], 'reasoning': [(519, 592)]}}
+[model.py] current_ids.shape=torch.Size([6, 843]), current_mask.shape=torch.Size([6, 843])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(834, 855)], 'summary': [(385, 392)], 'search': [(605, 734)], 'observation': [(734, 833)], 'reasoning': [(513, 605)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(838, 851)], 'summary': [(388, 389)], 'search': [(608, 731)], 'observation': [(737, 830)], 'reasoning': [(517, 601)]}}
+[model.py] current_ids.shape=torch.Size([5, 630]), current_mask.shape=torch.Size([5, 630])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(392, 401)], 'summary': [(604, 651)], 'search': [(378, 385)], 'observation': [(229, 239)], 'reasoning': [(509, 604)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(396, 397)], 'summary': [(607, 648)], 'search': [(381, 382)], 'observation': [(232, 236)], 'reasoning': [(513, 600)]}}
+[model.py] current_ids.shape=torch.Size([3, 651]), current_mask.shape=torch.Size([3, 651])
+[model.py] current_ids.shape=torch.Size([3, 651]), current_mask.shape=torch.Size([3, 651])
+[model.py] batch 0
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+<reasoning>
+该患者中指离断后再植，术后出现患指苍白、皮温低于健侧3℃，这提示可能存在血管问题。经过解痉药物和解除包扎处理后没有改善，说明血管可能已经发生血栓。因此，应考虑立即手术探查吻合的血管情况，以判断是否存在血管堵塞。 
+</reasoning>
+<answer>立即手术探查吻合的血管情况</answer> ******************** 
+
+[model.py] batch 1
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+请根据以上问题，给出你的推理过程和最终答案。
+<reasoning>
+对于中指离断再植术后出现的患指苍白、皮温低于健侧的情况，可能的原因包括血管损伤、血液循环不良等。首先排除“继续观察”和“应用抗凝溶栓药物”，因为这两种方法不能直接解决血管损伤的问题。再考虑“臂丛神经阻滞麻醉”，这主要用于控制疼痛，而不是处理血管问题。因此，最合理的处理方式是“立即手术探查吻合的血管情况”，以明确血管吻合是否成功以及是否存在其他问题。
+</reasoning>
+<answer>
+D. 立即手术探查吻合的血管情况
+</answer> ******************** 
+
+[model.py] batch 2
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+<reasoning>
+对于中指离断伤再植术后出现患指苍白、皮温低于健侧的情况，首先考虑的是血液循环问题。患者经了解除包扎、解痉药物处理后未见好转，这提示可能存在血管问题。臂丛神经阻滞麻醉主要用于神经损伤或神经痛的治疗，并不能直接改善血液循环。抗凝溶栓药物主要用于血栓形成后的治疗，而不是用于预防或改善血液循环。因此，最合适的处理方式是进行手术探查以检查吻合的血管情况，排除血管堵塞或血栓等问题。
+
+根据以上分析，最合理的选项是D.
+</reasoning>
+<answer> D. 立即手术探查吻合的血管情况 </answer> ******************** 
+
+[model.py] batch 3
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+思考过程：
+患者中指离断后再植术后出现患指苍白.皮温低于健侧3℃的症状，这可能是血管不通畅导致的。已经尝试了解除包扎、解痉药物治疗，但没有改善，因此需要进一步检查血管的情况。臂丛神经阻滞麻醉主要用于臂丛神经损伤的治疗，并不能直接解决血管不通畅的问题。应用抗凝溶栓药物一般用于血栓相关问题，与患者目前的状况不符。因此，最可能的处理方案是进行手术探查吻合的血管情况，以确定是否存在血管堵塞等问题。
+<answer> D </answer> ******************** 
+
+[model.py] batch 4
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+<reasoning>
+对于中指离断再植术后出现患指苍白、皮温降低的情况，可能的原因是吻合的血管存在问题。选项A“继续观察”并不能解决问题；选项B“臂丛神经阻滞麻醉”与该问题无关；选项C“应用抗凝溶栓药物”虽然可以改善血液循环，但不能直接解决问题；选项D“立即手术探查吻合的血管情况”是最直接有效的解决办法，可以及时发现并处理吻合血管的问题，防止进一步的组织缺血坏死。
+
+因此，最合理的选项是D，立即手术探查吻合的血管情况。
+</reasoning>
+<answer>立即手术探查吻合的血管情况。</answer> ******************** 
+
+[model.py] batch 5
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+请根据以上问题，给出你的推理过程和最终答案。
+<reasoning>
+对于中指离断再植术后出现的患指苍白、皮温低于健侧的情况，可能的原因包括血管损伤、血液循环不良等。首先排除“继续观察”和“应用抗凝溶栓药物”，因为这两种方法不能直接解决血管损伤的问题。再考虑“臂丛神经阻滞麻醉”，这主要用于控制疼痛，而不是处理血管问题。因此，最合理的处理方式是“立即手术探查吻合的血管情况”，以明确血管吻合是否成功以及是否存在其他问题。
+</reasoning>
+<answer>
+D. 立即手术探查吻合的血管情况
+</answer> ******************** 
+
+[model.py] batch 6
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+<reasoning>
+对于中指离断伤再植术后出现患指苍白、皮温低于健侧的情况，首先考虑的是血液循环问题。患者经了解除包扎、解痉药物处理后未见好转，这提示可能存在血管问题。臂丛神经阻滞麻醉主要用于神经损伤或神经痛的治疗，并不能直接改善血液循环。抗凝溶栓药物主要用于血栓形成后的治疗，而不是用于预防或改善血液循环。因此，最合适的处理方式是进行手术探查以检查吻合的血管情况，排除血管堵塞或血栓等问题。
+
+根据以上分析，最合理的选项是D.
+</reasoning>
+<answer> D. 立即手术探查吻合的血管情况 </answer> ******************** 
+
+[model.py] batch 7
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 某患者中指离断伤，再植术后10h。发现患指苍白.皮温低于健侧3℃.经解除包扎，解痉药物等处理，不见好转。此时应采取（　　）。
+            Options:
+            A. 继续观察
+B. 臂丛神经阻滞麻醉
+C. 应用抗凝溶栓药物
+D. 立即手术探查吻合的血管情况
+<reasoning>
+对于中指离断再植术后出现患指苍白、皮温降低的情况，可能的原因是吻合的血管存在问题。选项A“继续观察”并不能解决问题；选项B“臂丛神经阻滞麻醉”与该问题无关；选项C“应用抗凝溶栓药物”虽然可以改善血液循环，但不能直接解决问题；选项D“立即手术探查吻合的血管情况”是最直接有效的解决办法，可以及时发现并处理吻合血管的问题，防止进一步的组织缺血坏死。
+
+因此，最合理的选项是D，立即手术探查吻合的血管情况。
+</reasoning>
+<answer>立即手术探查吻合的血管情况。</answer> ******************** 
+
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:43:35,968] [INFO] [trainer.py:728]                                                                                    
+         Rollout ready; optimizing DAPO objective                                                                                             
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:43:37,036] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:37,293] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:37,545] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:37,803] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:43,103] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:43,350] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:43,589] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:43,829] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:43:51,797] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:52,092] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:52,391] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:55,114] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:55,411] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:43:55,731] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:01,751] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:04,154] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:05,047] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:05,348] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:09,725] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:14,673] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:15,390] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:15,629] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:32,694] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:45,940] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:44:47,348] [INFO] [trainer.py:770]                                                                                    
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.012417 | Avg Reward 3.02                                                                        
+INFO     [2025-12-06 11:44:47,348] [INFO] [trainer.py:770]                                                                                    
+         [DAPO] Iter 1/1 Step 1/300 | Loss -0.001679 | Avg Reward 0.02                                                                        
+INFO     [2025-12-06 11:44:47,352] [INFO] [trainer.py:657]                                                                                    
+         Generating rollout data, step 2/300                                                                                                  
+INFO     [2025-12-06 11:44:47,352] [INFO] [trainer.py:657]                                                                                    
+         Generating rollout data, step 2/300                                                                                                  
+[model.py] current_ids.shape=torch.Size([8, 462]), current_mask.shape=torch.Size([8, 462])
+[model.py] current_ids.shape=torch.Size([8, 525]), current_mask.shape=torch.Size([8, 525])
+INFO     [2025-12-06 11:44:58,034] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:44:58,127] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:44:58,224] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 4: [(508, 528), (528, 548), (548, 568)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+E. 肥胖
+
+请根据选项分析并给出最终的答案。 <reasoning>
+首先我们需要了解子痫前期的高危因素有哪些。我们可以通过搜索获取相关信息。
+</reasoning>
+<search>
+
+<search>
+[path1] [Web_RAG]: 子痫前期高危因素
+ [/path1]
+[path2] [Web_RAG]: 子痫前期高危因素
+ [/path2]
+[path3] [Web_RAG]: 子痫前期高危因素
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([8, 672]), current_mask.shape=torch.Size([8, 672])
+[model.py] current_ids.shape=torch.Size([8, 677]), current_mask.shape=torch.Size([8, 677])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(673, 693)], 'summary': [(385, 392)], 'search': [(504, 573)], 'observation': [(573, 672)], 'reasoning': [(478, 504)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(677, 689)], 'summary': [(388, 389)], 'search': [(507, 570)], 'observation': [(576, 669)], 'reasoning': [(482, 500)]}}
+[model.py] current_ids.shape=torch.Size([7, 528]), current_mask.shape=torch.Size([7, 528])
+INFO     [2025-12-06 11:45:04,279] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:45:04,363] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:45:04,454] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 5: [(614, 659), (659, 704), (704, 749)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 女，55岁。间断上腹部不适2年。经检查诊断为“慢性胃炎并幽门螺杆菌感染”。医生建议其服用奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次。上述药物的服用疗程应为（　　）。
+            Options:
+            A. 3～5天
+B. 7～14天
+C. 20～30天
+D. ＞30天
+请开始作答。
+<reasoning>
+首先，我们需要了解慢性胃炎合并幽门螺杆菌感染的治疗方案。根据题干信息，患者被诊断为慢性胃炎并幽门螺杆菌感染，并且医生开出了奥美拉唑、阿莫西林和克拉霉素这三种药物。接下来，我们查找这三种药物的合理疗程，以确定正确的答案。
+</reasoning>
+<search>
+
+<search>
+[path1] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 奥美拉唑 阿莫西林 克拉霉素 服药疗程
+ [/path1]
+[path2] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 奥美拉唑 阿莫西林 克拉霉素 服药疗程
+ [/path2]
+[path3] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 奥美拉唑 阿莫西林 克拉霉素 服药疗程
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([8, 853]), current_mask.shape=torch.Size([8, 853])
+[model.py] current_ids.shape=torch.Size([8, 858]), current_mask.shape=torch.Size([8, 858])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(854, 881)], 'summary': [(385, 392)], 'search': [(610, 754)], 'observation': [(754, 853)], 'reasoning': [(530, 610)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(858, 877)], 'summary': [(388, 389)], 'search': [(613, 751)], 'observation': [(757, 850)], 'reasoning': [(534, 606)]}}
+[model.py] current_ids.shape=torch.Size([7, 641]), current_mask.shape=torch.Size([7, 641])
+INFO     [2025-12-06 11:45:48,839] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:45:48,917] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:45:48,997] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 5: [(554, 575), (575, 596), (596, 617)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+E. 胎膜早破
+F. 孕妇年龄小于18岁
+G. 孕妇年龄大于40岁
+H. 子宫肌瘤
+请根据以上选项，判断哪个选项不符合子痫前期的高危因素。 为了判断哪个选项不符合子痫前期的高危因素，我们首先需要了解子痫前期的高危因素有哪些。让我们开始寻找相关信息。
+<search>
+
+<search>
+[path1] [Web_RAG]: 子痫前期 高危因素
+ [/path1]
+[path2] [Web_RAG]: 子痫前期 高危因素
+ [/path2]
+[path3] [Web_RAG]: 子痫前期 高危因素
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([7, 721]), current_mask.shape=torch.Size([7, 721])
+[model.py] current_ids.shape=torch.Size([6, 741]), current_mask.shape=torch.Size([6, 741])
+[model.py] current_ids.shape=torch.Size([6, 744]), current_mask.shape=torch.Size([6, 744])
+[model.py] current_ids.shape=torch.Size([6, 748]), current_mask.shape=torch.Size([6, 748])
+[model.py] current_ids.shape=torch.Size([6, 752]), current_mask.shape=torch.Size([6, 752])
+[model.py] current_ids.shape=torch.Size([6, 756]), current_mask.shape=torch.Size([6, 756])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(740, 760)], 'summary': [(385, 392)], 'search': [(550, 622)], 'observation': [(622, 721)], 'reasoning': [(369, 378)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(744, 756)], 'summary': [(388, 389)], 'search': [(553, 619)], 'observation': [(625, 718)], 'reasoning': [(373, 374)]}}
+[model.py] batch 0
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+请开始作答。
+<reasoning> 子痫前期是一种妊娠期特有的疾病，其发生与多种因素有关。根据题目中的选项，我们可以分析每个选项是否为子痫前期的高危因素。首先，双胎妊娠确实增加了子痫前期的风险，因为多胎妊娠往往伴随着更高的高血压和血容量增加的风险。其次，糖尿病患者也更容易出现子痫前期，因为高血糖状态可能影响血管健康。羊水过多也可能是一个风险因素，因为它可能是胎儿发育异常的一个标志。至于前置胎盘，它通常与早产相关，而不是子痫前期。因此，子痫前期的 ******************** 
+
+[model.py] batch 1
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+E. 既往有子痫前期史
+F. 孕妇年龄大于40岁
+G. 孕妇体重超标
+H. 子痫前期家族史
+答案: <reasoning>
+子痫前期是一种妊娠期特有的疾病，其发生与多种因素有关。根据临床研究和相关文献，我们可以通过分析选项来确定哪个因素不属于子痫前期的高危因素。
+首先，双胎妊娠、羊水过多、孕妇年龄大于40岁、子痫前期家族史都属于子痫前期的高危因素。这些因素与子痫前期的发生有一定的关联性，因为它们 ******************** 
+
+[model.py] batch 2
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+E. 胎儿发育异常
+
+请开始作答。
+<reasoning>
+我们首先要明确什么是子痫前期，子痫前期是一种妊娠期特有的疾病，其高危因素通常与孕妇的身体状况、妊娠情况等有关。接下来我们分析各个选项：
+
+A. 双胎妊娠：双胎妊娠确实属于子痫前期的高危因素之一，因为子宫需要承受更大的压力，可能会导致血压升高。
+
+B. 糖尿病：糖尿病患者由于血糖控制不佳，容易引发高血压等问题，因此也属于子痫前期的高危因素。
+
+C. 羊水过多：羊水量 ******************** 
+
+[model.py] batch 3
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+<reasoning> 子痫前期是一种妊娠期特有的疾病，它的高危因素可能包括年龄、种族、既往病史等。从选项来看，双胎妊娠、糖尿病、羊水过多都是已知的子痫前期的高危因素。而前置胎盘虽然可能导致其他妊娠并发症，但并不是子痫前期的高危因素。因此，正确答案可能是 D. 前置胎盘。 </reasoning>
+<answer> D. 前置胎盘 </answer> ******************** 
+
+[model.py] batch 4
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+<reasoning>
+首先，我们需要明确什么是子痫前期。子痫前期是一种妊娠期特有的高血压疾病，通常发生在妊娠20周以后，症状包括高血压、蛋白尿等。接下来，我们需要了解子痫前期的高危因素有哪些。子痫前期的高危因素主要包括孕妇年龄较大、多胎妊娠、糖尿病、肥胖、既往有子痫前期病史等。
+我们逐一分析选项：
+A. 双胎妊娠：双胎妊娠确实被认为是子痫前期的一个重要高危因素。
+B. �糖尿 �病：糖尿病也是子痫前期的一个重要高危因素。
+C. � ******************** 
+
+[model.py] batch 5
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+ ******************** 
+
+[model.py] batch 6
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+E. 胎儿畸形
+F. 早产
+G. 孕妇年龄大于35岁
+H. 孕妇体重超重
+
+请开始作答。
+<reasoning>
+首先我们需要明确子痫前期的定义及其高危因素。子痫前期是一种妊娠期特有的疾病，通常在怀孕20周后出现，表现为高血压、蛋白尿等。其高危因素主要包括多胎妊娠、糖尿病、羊水过多、前置胎盘、孕妇年龄小于35岁（而非大于）、孕妇体重过轻等。
+
+从选项来看：
+A. 双胎妊娠：是子痫 ******************** 
+
+[model.py] batch 7
+ 
+Final Output: 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 发生子痫前期的高危因素不包括（　　）。
+            Options:
+            A. 双胎妊娠
+B. 糖尿病
+C. 羊水过多
+D. 前置胎盘
+ ******************** 
+
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:45:53,528] [INFO] [trainer.py:728]                                                                                    
+         Rollout ready; optimizing DAPO objective                                                                                             
+[model.py] make 4D mask from 2D mask: [[], [], [], [], [], [], [], []]
+INFO     [2025-12-06 11:45:54,293] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:45:54,937] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:45:56,049] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:46:00,230] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:46:00,956] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:46:01,186] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:46:01,422] [INFO] [_client.py:1025]                                                                                   
+         HTTP Request: POST http://123.57.228.132:8285/api/chat/completions "HTTP/1.1 200 OK"                                                 
+INFO     [2025-12-06 11:46:07,261] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:46:07,363] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+INFO     [2025-12-06 11:46:07,457] [INFO] [web_search.py:68]                                                                                  
+         Searching ...                                                                                                                        
+[model.py] masked spans for sample 2: [(670, 700), (700, 730), (730, 760)]
+[Beam Search] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 用户提出一个问题，助手来解决。助手首先在脑海中思考推理过程，然后向用户提供最终答案。
+推理过程和最终答案的输出格式分别使用 <think> </think> 和 <answer> </answer> 标签包裹，
+1. 也就是 "<think> 在这里写推理过程 </think>
+2. <answer> 在这里写最终答案 </answer>"。
+3. 在思考过程中，如果你认为上文的思考需要订正或修改，你可以使用 <backtrack> </backtrack> 标签包裹你的反思结果；
+4. 在思考过程中，如果你认为你需要对上文做一些总结，你可以使用 <summary> </summary> 标签包裹你的思考结果；
+5. 在思考过程中，**如果有必要，助手可以进行搜索** 以查找不确定的知识，格式为
+"<search> 搜索查询,（需先提出你想要使用的工具，然后列出检索的关键字，如 "[Web_RAG]: keyword_1 keyword_2 ..."）</search>"。
+**一次搜索查询仅能包含一个三元组**。然后搜索系统会用
+"<observation> ...搜索结果... </observation>" 的格式向助手提供检索到的信息。
+
+注意，所有动作均可执行多次。
+
+你有以下工具可以使用:
+Web_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+请按照以下格式作答：
+
+<reasoning>
+...
+</reasoning>
+<search>
+...
+</search>
+<summary>
+...
+</summary>
+<backtrack>
+...
+</backtrack>
+<answer>
+...
+</answer>
+Question: 女，55岁。间断上腹部不适2年。经检查诊断为“慢性胃炎并幽门螺杆菌感染”。医生建议其服用奥美拉唑20mg、阿莫西林1.0mg、克拉霉素0.5mg，均每日2次。上述药物的服用疗程应为（　　）。
+            Options:
+            A. 3～5天
+B. 7～14天
+C. 20～30天
+D. ＞30天
+请问您认为正确答案是什么？请详细解释您的理由。
+<reasoning>
+首先，我们需要了解慢性胃炎合并幽门螺杆菌感染的治疗方案。根据提供的信息，患者已经被诊断为慢性胃炎并幽门螺杆菌感染，并且被给予奥美拉唑、阿莫西林和克拉霉素作为治疗药物。接下来，我们需要查看这些药物的具体治疗周期，通常情况下，幽门螺杆菌感染的治疗周期为10-14天。这是因为幽门螺杆菌是一种非常顽固的细菌，需要较长的时间来彻底清除。因此，我们可以得出结论，该患者的治疗周期应为7-14天。
+</reasoning>
+<search>
+
+<search>
+[path1] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 治疗周期
+ [/path1]
+[path2] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 治疗周期
+ [/path2]
+[path3] [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 治疗周期
+ [/path3]
+</search>
+<observation>
+[path1] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path1]
+[path2] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path2]
+[path3] Error: 403 Client Error:  for url: https://api.bochaai.com/v1/web-search [/path3]
+</observation> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[model.py] current_ids.shape=torch.Size([6, 864]), current_mask.shape=torch.Size([6, 864])
+[model.py] current_ids.shape=torch.Size([6, 869]), current_mask.shape=torch.Size([6, 869])
+[model.py] deteck </backtrack> or </summary>
+{'tag': {'answer': [(401, 408)], 'backtrack': [(865, 891)], 'summary': [(385, 392)], 'search': [(666, 765)], 'observation': [(765, 864)], 'reasoning': [(538, 666)]}, 'arg': {'answer': [(404, 405)], 'backtrack': [(869, 887)], 'summary': [(388, 389)], 'search': [(669, 762)], 'observation': [(768, 861)], 'reasoning': [(542, 662)]}}
+[model.py] current_ids.shape=torch.Size([5, 696]), current_mask.shape=torch.Size([5, 696])
