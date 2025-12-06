@@ -16,6 +16,7 @@ model:
   # name: "Qwen/Qwen2.5-7B-Instruct"
   # name: "Qwen/Qwen2.5-14B-Instruct"
   # name: "Qwen/Qwen2.5-32B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
   name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
@@ -54,9 +55,9 @@ training:
       range: [4, 8]
       function: [lambda x: x * 2]
     # num_generations: 8
-    max_new_tokens: 100
+    max_new_tokens: 1024
     max_length_for_gather: 100000
-    max_generate_iterations: 3
+    max_generate_iterations: 10
     temperature: 0.7
     do_sample: true
 

@@ -634,18 +634,20 @@ class AgenticRAGModel(PreTrainedModel):
                     parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_metric)
                     parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_metric)
 
+                # NOTE: jxk, 这里的output只和seq有关系
+
                 # 1) Answer end
                 if "</answer>" in text:
                     end = text.index("</answer>") + len("</answer>")
                     prev = self.tokenizer.decode(seq[:old_len], skip_special_tokens=False)
-                    final = prev + text[:end]
+                    final = prev + text[:end]       # FIXME
                     outputs[b] = torch.tensor(self.tokenizer.encode(final), device=device)
                     should_gen[b] = False
                     continue
 
                 # 2.0) for parellel search  # NOTE not support SSRL
                 if "<search>" in text and (_ < max_generate_iterations - 1) and not use_SSRL:
-                    print("[model.py] detect <search> (immediate beam trigger)")
+                    # print("[model.py] detect <search> (immediate beam trigger)")
                     part = text
                     s = part.index("<search>") + len("<search>")
                     
@@ -659,7 +661,7 @@ class AgenticRAGModel(PreTrainedModel):
                     
                     prefix_len = prefix_ids.size(1)
                     # prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
-                    print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix[0].strip())
+                    # print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix[0].strip())
 
                     # FIXME 这里有问题，这里的prefix_ids需要检查一下
                     beam_out = self.model.generate(
@@ -774,7 +776,7 @@ class AgenticRAGModel(PreTrainedModel):
                     # 当前完整序列
                     full_seq = torch.cat([seq[:old_len], new_tokens], dim=0)
                     full_text = self.tokenizer.decode(full_seq, skip_special_tokens=False)
-                    print(f"[model.py] [zzx debug] full_text = {full_text}")    
+                    # print(f"[model.py] [zzx debug] full_text = {full_text}")    
                     '''
                     <<reasoning>>
                     ...
@@ -783,9 +785,31 @@ class AgenticRAGModel(PreTrainedModel):
                     [Web_RAG]: 慢性胃炎 幽门螺杆菌感染 �服药 �疗程
                     </search>
                     '''
+                    # NOTE：这里只是输入全部的文本，但是拿最后的action（避免绝对值定位）
                     spans = get_masked_spans_from_text(full_seq, self.tokenizer) 
-                    self.masked_spans_per_sample[b].extend(spans)
-                    print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
+                    # [DEBUG] 这个地方没有把backtrack和summary给append进去
+                    if "<backtrack>" in text and "</backtrack>" not in text:
+                        part = text
+                        s = part.index("<backtrack>") + len("<backtrack>")
+                        e = part.index("</backtrack>")
+                        backtrack_text = part[s:e].strip()
+                        sub = part[: e + len("</backtrack>")]
+                        merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
+                        merged += sub + "\n"
+                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+                        self.masked_spans_per_sample[b].extend(spans)
+                        print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
+                    if "<summary>" in text and "</summary>" not in text:
+                        part = text
+                        s = part.index("<summary>") + len("<summary>")
+                        e = part.index("</summary>")
+                        summary_text = part[s:e].strip()
+                        sub = part[: e + len("</summary>")]
+                        merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
+                        merged += sub + "\n"
+                        next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))
+                        self.masked_spans_per_sample[b].extend(spans)
+                        print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
                     continue
 
                 # 3) Continue or finish
@@ -794,7 +818,7 @@ class AgenticRAGModel(PreTrainedModel):
                     continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
                     next_prompts.append(continue_ids)
                 else:
-                    outputs[b] = seq
+                    outputs[b] = seq        # FIXME
                     should_gen[b] = False
 
             # Prepare next round
@@ -804,9 +828,16 @@ class AgenticRAGModel(PreTrainedModel):
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
                 # print(current_mask.shape)
-
-        final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
         
+        # DEBUG：这里的input_ids是最初的输入，而outputs是生成的输出
+        final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
+
+        # DEBUG
+        for i in range(len(final_output)):
+            print(f"[model.py] batch {i}")
+            final_response = self.tokenizer.decode(final_output[i], skip_special_tokens=True)
+            print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
+
         if calculate_param_importance:
             seq = final_output[0].tolist()
             input_len = input_ids.shape[1]
@@ -815,3 +846,4 @@ class AgenticRAGModel(PreTrainedModel):
             return response_text, neuron_metric
         else:
             return final_output
+
