@@ -548,6 +548,22 @@ class AgenticRAGModel(PreTrainedModel):
         Raises:
             RuntimeError: On generation or tool-calling failures.
         """
+
+        """
+        
+        if prompt list, generate active list => 是否需要继续generate
+            => 生成
+            => 打断（stop creteria)
+            => 判断
+                1. answer => active=False
+                2. search => beam search => observation => 拼接 => 封装next prompt => continue generate
+                3. backtrack/summary => reset attention mask => 封装next prompt => continue generate
+                4. eos => active=False
+            next prompt给封装成prompt list和generate active list
+        padding sequence
+        return sequence
+
+        """
         # pdb.set_trace()
 
         # FIXME diversity_penalty dynamic
@@ -633,8 +649,6 @@ class AgenticRAGModel(PreTrainedModel):
                     token_spans = parse_tokens.locate_action_token_spans(new_tokens, self.tokenizer)
                     parse_tokens.accumulate_neuron_importance(token_spans["tag"], "tag", output_hidden_states, neuron_metric)
                     parse_tokens.accumulate_neuron_importance(token_spans["arg"], "arg", output_hidden_states, neuron_metric)
-
-                # NOTE: jxk, 这里的output只和seq有关系
 
                 # 1) Answer end
                 if "</answer>" in text:
@@ -817,7 +831,7 @@ class AgenticRAGModel(PreTrainedModel):
 
                     continue
 
-                # 3) Continue or finish
+                # 4) Continue or finish
                 eos_found = eos_token_id in new_tokens.tolist()
                 if not eos_found and (_ < max_generate_iterations - 1):
                     continue_ids = torch.cat([seq[:old_len], new_tokens], dim=0)
@@ -827,20 +841,21 @@ class AgenticRAGModel(PreTrainedModel):
                     should_gen[b] = False
 
             # Prepare next round
-            if next_prompts:
+            if next_prompts:        # 【gjr】FIXME 这个地方的next_prompts可能是ids+attn_mask
                 texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
                 # print(current_mask.shape)
         
-        # DEBUG：这里的input_ids是最初的输入，而outputs是生成的输出
+        # NOTE 【jxk】DEBUG：这里的input_ids是最初的输入，而outputs是生成的输出
+        ## FIXME 这里应该没有input_ids
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
 
         # DEBUG
-        for i in range(len(final_output)):
+        for i in range(len(outputs)):
             print(f"[model.py] batch {i}")
-            final_response = self.tokenizer.decode(final_output[i], skip_special_tokens=True)
+            final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)
             print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
 
         if calculate_param_importance:
