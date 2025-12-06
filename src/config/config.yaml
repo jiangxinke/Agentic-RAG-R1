@@ -5,29 +5,22 @@ project:
   description: "under-construction"
 
 experiment:
-  # name: "qwen2.5-14B-medqa-2GPU"  # 实验名称，对应 experiments/ 下的目录
-  name: "qwen2.5-3B-noSSRL-nodecouple-4GPU"  # 实验名称，对应 experiments/ 下的目录
+  name: "debug"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
-  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-0.5B-Instruct"
-  # critic_name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct" #用于PPO，需要修改，不能和policy model一样
-  # name: "Qwen/Qwen2.5-1.5B-Instruct"
-  # name: "Qwen/Qwen2.5-7B-Instruct"
-  # name: "Qwen/Qwen2.5-14B-Instruct"
-  # name: "Qwen/Qwen2.5-32B-Instruct"
   # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
-  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct"
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2.5-3B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
 
 dataset:
-  name: "medqa"
-  # name: "medmcqa"
+  name: "medqa" # gsm8k, medmcqa, medqa, asearcher, nq_hotpotqa_train_multi_{a number}
   num_eval: 1000
 
 training:
-  train_method: dapo # [grpo, ppo, sft, dapo]
+  train_method: grpo # [grpo, ppo, sft, dapo]
   continue_training: false
   current_step: 0
   num_epochs: 3       # SFT 这两个参数用于SFT
@@ -51,11 +44,11 @@ training:
     # TODO
     num_generations:
       mode: "constant"
-      constant: 8
+      constant: 4
       range: [4, 8]
       function: [lambda x: x * 2]
     # num_generations: 8
-    max_new_tokens: 1024
+    max_new_tokens: 200
     max_length_for_gather: 100000
     max_generate_iterations: 30
     temperature: 0.7

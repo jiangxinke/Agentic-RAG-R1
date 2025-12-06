@@ -78,32 +78,32 @@ class Tools:
             #         }
             #     ],
             # },
-            # {
-            #     "name_for_human": "医学维基百科知识检索模块",
-            #     "name_for_model": "Wiki_RAG",
-            #     "description_for_model": "使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。",
-            #     "parameters": [
-            #         {
-            #             "name": "input",
-            #             "description": "规范名称的医学实体",
-            #             "required": True,
-            #             "schema": {"type": "string"},
-            #         }
-            #     ],
-            # },
             {
-                "name_for_human": "医学知识检索模块",
-                "name_for_model": "Web_RAG",
-                "description_for_model": "这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。",
+                "name_for_human": "医学维基百科知识检索模块",
+                "name_for_model": "Wiki_RAG",
+                "description_for_model": "使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。",
                 "parameters": [
                     {
                         "name": "input",
-                        "description": "用户询问的字符串形式的问句",
+                        "description": "规范名称的医学实体",
                         "required": True,
                         "schema": {"type": "string"},
                     }
                 ],
             },
+            # {
+            #     "name_for_human": "医学知识检索模块",
+            #     "name_for_model": "Web_RAG",
+            #     "description_for_model": "这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。",
+            #     "parameters": [
+            #         {
+            #             "name": "input",
+            #             "description": "用户询问的字符串形式的问句",
+            #             "required": True,
+            #             "schema": {"type": "string"},
+            #         }
+            #     ],
+            # },
             # {
             #     'name_for_human': '检索的知识总结模块',
             #     'name_for_model': 'KnowledgeOrganize',
@@ -163,10 +163,10 @@ class Tools:
         wiki_searcher = create_wiki_searcher("zh")
         # assert wiki_searcher is not None
         RAG_result = wiki_searcher.search(input)
-        print(RAG_result)
+        # print(RAG_result)
         # RAG_result = "暂时无法使用工具，请不要使用"
         RAG_result = RAG_result if RAG_result else "无法检索到医学知识，请规范用户输入"
-        logging.info(f"Wiki_RAG result: {str(RAG_result)[:200]}")
+        logging.info(f"Wiki_RAG result first 200 chars:\n{str(RAG_result)[:200]}")
         return str(RAG_result)[:200]
 
     def Web_RAG(self, input: str) -> str:

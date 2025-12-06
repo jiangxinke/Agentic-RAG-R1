@@ -20,36 +20,6 @@ from src.utils.Tools import Tools
 from src.models.mask_utils import *
 
 
-class HammingDiversityLogitsProcessor(LogitsProcessor):
-    def __init__(self, beams_history, lambda_penalty=1.0, top_k=32):
-        super().__init__()
-        self.beams_history = beams_history
-        self.lambda_penalty = lambda_penalty
-        self.top_k = top_k
-
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-        batch_size, vocab_size = scores.shape
-        for beam_idx in range(batch_size):
-            history = input_ids[beam_idx].tolist()
-            if self.top_k is None or self.top_k == 0 or self.top_k >= vocab_size:
-                token_indices = range(vocab_size)
-            else:
-                _, topk_indices = torch.topk(scores[beam_idx], self.top_k)
-                token_indices = topk_indices.tolist()
-            for token_id in token_indices:
-                penalty = 0.0
-                candidate_seq = history + [token_id]
-                for other_idx, other_history in enumerate(self.beams_history):
-                    if other_idx == beam_idx:
-                        continue
-                    min_len = min(len(candidate_seq), len(other_history))
-                    for i in range(min_len):
-                        if candidate_seq[i] == other_history[i]:
-                            penalty += (i + 1) / min_len
-                scores[beam_idx, token_id] -= self.lambda_penalty * penalty
-        return scores
-
-
 class SearchTagStoppingCriteria(StoppingCriteria):
     """ 
     StoppingCriteria that halts generation when specific end-of-search tags appear. 
@@ -346,14 +316,17 @@ class AgenticRAGModel(PreTrainedModel):
 
         Returns:
             Tuple[str, str]: Cleaned plugin name and argument payload.
-        """
+        """ 
+        #  [path4] [Wiki_RAG]: 腺病毒 结构\n [/path4]\n[path5] [Wiki_RAG]: 腺病毒 核酸类型\n [/path5]\n 
         pattern = r'\[(.*?)\]:\s*(?:"(.*?)"|(.*))'
         match = re.match(pattern, text)
         if match:
             name = match.group(1)
             args = match.group(2) or match.group(3) or ""
         else:
-            name, args = "Web_RAG", text
+            name, args = "Wiki_RAG", text
+        # FIXME (gjr): 这里默认所有的plugin call都是Wiki_RAG，后续可以根据实际情况修改
+        name="Wiki_RAG"
         name = re.sub(r"[^a-zA-Z_]", "", name)
         return name, args.strip()
 
@@ -589,6 +562,7 @@ class AgenticRAGModel(PreTrainedModel):
         for _ in range(max_generate_iterations):
             # Skip leading EOS columns
             skip_len = 0
+            print("debug: iter = ", _)
             for pos in range(current_ids.size(1)):
                 if (current_ids[:, pos] == eos_token_id).all():
                     skip_len += 1
@@ -597,16 +571,12 @@ class AgenticRAGModel(PreTrainedModel):
             if skip_len:
                 current_ids = current_ids[:, skip_len:]
                 current_mask = current_mask[:, skip_len:]
+            
 
             if not should_gen.any():
                 break
 
             active = torch.nonzero(should_gen).squeeze(1)
-            logits_processor = None
-            if use_diverse_sampling:
-                logits_processor = LogitsProcessorList(
-                    [HammingDiversityLogitsProcessor(beams_history, lambda_penalty=diversity_penalty)]
-                )
 
             current_mask = apply_masked_spans(current_mask, self.masked_spans_per_sample)
             # 插入对attentiin mask的修改：
@@ -620,7 +590,6 @@ class AgenticRAGModel(PreTrainedModel):
                 pad_token_id=pad_token_id,
                 eos_token_id=eos_token_id,
                 stopping_criteria=criteria,
-                logits_processor=logits_processor,
                 return_dict_in_generate=calculate_param_importance,
                 output_hidden_states=calculate_param_importance,
             )
@@ -686,6 +655,12 @@ class AgenticRAGModel(PreTrainedModel):
                         # stopping_criteria=criteria,
                         num_return_sequences=num_return_sequences,
                         do_sample=False,
+                        temperature=0.9,  # 控制随机性：0.5-1.0 既保证流畅又有差异，越高越随机（建议0.6-0.9）
+                        # top_k=50,  # 只从概率前50的token中采样（避免无意义token）
+                        top_p=0.9,  # 核采样：累积概率0.9以内的token（平衡多样性和合理性）
+                        # diversity_penalty=0.9,  # beam间多样性惩罚（关键：惩罚和其他beam重复的token）
+                        repetition_penalty=1.2,  # 惩罚重复token（避免单beam内重复，间接提升整体多样性）
+                        # no_repeat_ngram_size=3,  # 禁止3-gram重复（进一步减少雷同）
                     )
 
                     search_lines, obs_lines = [], []
@@ -698,10 +673,11 @@ class AgenticRAGModel(PreTrainedModel):
                         key_text = self.tokenizer.decode(gen_part, skip_special_tokens=True).strip()
 
                         path_name = f"path{idx_beam+1}"
-
+                        # breakpoint()
                         try:
                             pname, pargs = self.parse_latest_plugin_call(key_text)
                             obs = self.call_plugin(pname, pargs)
+                            # breakpoint()
                         except Exception as exc:
                             obs = f"Error: {exc}"
                         
@@ -712,7 +688,7 @@ class AgenticRAGModel(PreTrainedModel):
                         obs_lines.append(f"[{path_name}] {obs} [/{path_name}]")
 
                     # step 2: 拼接 search/obs 块
-                    final_search_block = "<search>\n" + "\n".join(search_lines) + "\n</search>"
+                    final_search_block = "\n".join(search_lines) + "\n</search>"
                     final_obs_block = "<observation>\n" + "\n".join(obs_lines) + "\n</observation>"
 
                     merged_text = self.tokenizer.decode(seq[:prefix_len], skip_special_tokens=True)
@@ -787,6 +763,7 @@ class AgenticRAGModel(PreTrainedModel):
                 # 3） backtrack or summary actions
                 ## 遇到这两个动作的时候，将该动作前的上一个动作，和该动作之后的所有动作的attention设置为False
                 if ("</backtrack>" in text) or ("</summary>" in text): 
+                    # breakpoint()
                     print("[model.py] deteck </backtrack> or </summary>")
                     # 当前完整序列
                     full_seq = torch.cat([seq[:old_len], new_tokens], dim=0)
@@ -802,28 +779,32 @@ class AgenticRAGModel(PreTrainedModel):
                     '''
                     # NOTE：这里只是输入全部的文本，但是拿最后的action（避免绝对值定位）
                     spans = get_masked_spans_from_text(full_seq, self.tokenizer) 
+                    # !! IMPORTANT(gjr): mock spans for debug
+                    # spans = [1, 2, 3]
                     # [DEBUG] 这个地方没有把backtrack和summary给append进去
-                    if "<backtrack>" in text and "</backtrack>" not in text:
+                    if  "</backtrack>" in text:
                         part = text
-                        s = part.index("<backtrack>") + len("<backtrack>")
-                        e = part.index("</backtrack>")
-                        backtrack_text = part[s:e].strip()
-                        sub = part[: e + len("</backtrack>")]
+                        # s = part.index("<backtrack>") + len("<backtrack>")
+                        # e = part.index("</backtrack>")
+                        # backtrack_text = part[s:e].strip()
+                        # sub = part[: e + len("</backtrack>")]
                         merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
-                        merged += sub + "\n"
+                        # merged += sub + "\n"
+                        merged += text + "\n"
                         next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))   # NOTE for gjr，这里不能直接append
                         self.masked_spans_per_sample[b].extend(spans)
                         print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
                         print("[Backtrack]","%"*100, merged, "%"*100)
 
-                    if "<summary>" in text and "</summary>" not in text:
+                    if "</summary>" in text:
                         part = text
-                        s = part.index("<summary>") + len("<summary>")
-                        e = part.index("</summary>")
-                        summary_text = part[s:e].strip()
-                        sub = part[: e + len("</summary>")]
+                        # s = part.index("<summary>") + len("<summary>")
+                        # e = part.index("</summary>")
+                        # summary_text = part[s:e].strip()
+                        # sub = part[: e + len("</summary>")]
                         merged = self.tokenizer.decode(seq[:old_len], skip_special_tokens=True)
-                        merged += sub + "\n"
+                        # merged += sub + "\n"
+                        merged += text + "\n"
                         next_prompts.append(torch.tensor(self.tokenizer.encode(merged), device=device))     # NOTE for gjr，这里不能直接append
                         self.masked_spans_per_sample[b].extend(spans)
                         print(f"[model.py] <back> or <sum> masked_spans_per_sample[{b}]: {self.masked_spans_per_sample[b]}")
@@ -843,8 +824,8 @@ class AgenticRAGModel(PreTrainedModel):
             # Prepare next round
             print("[DEBUG jxk]", len(next_prompts))
             if next_prompts:        # 【gjr】FIXME 这个地方的next_prompts可能是ids+attn_mask
-                texts = [self.tokenizer.decode(t, skip_special_tokens=True) for t in next_prompts]
-                print("[DEBUG jxk]", "$"*100, [text[900:] for text in texts], "$"*100)
+                texts = [self.tokenizer.decode(t, skip_special_tokens=False) for t in next_prompts]
+                # breakpoint()
                 enc = self.tokenizer(texts, return_tensors="pt", padding=True, padding_side="left")
                 current_ids = enc.input_ids.to(device)
                 current_mask = enc.attention_mask.to(device)
@@ -855,11 +836,10 @@ class AgenticRAGModel(PreTrainedModel):
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
 
         # DEBUG
-        for i in range(len(outputs)):       # NOTE for gjr: outputs => final_output
-            print(f"[model.py] batch {i}")
-            if outputs[i] is not None:
-                final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)        
-                print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
+        # for i in range(len(outputs)):       # NOTE for gjr: outputs => final_output
+        #     print(f"[model.py] batch {i}")
+        #     final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)        
+        #     print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
 
         if calculate_param_importance:
             seq = final_output[0].tolist()
@@ -870,3 +850,89 @@ class AgenticRAGModel(PreTrainedModel):
         else:
             return final_output
 
+if __name__ == "__main__":
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from rich.traceback import install
+    from dotenv import load_dotenv
+
+    install()
+    load_dotenv()
+
+    # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+    # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
+    model_path = "/data/xiaobei/Common_LLM_Base/Qwen3-14B"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        torch_dtype=(torch.float16),
+        trust_remote_code=True,
+    ).to(device)
+
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    base_model.config.pad_token_id = tokenizer.eos_token_id
+    base_model.config.eos_token_id = tokenizer.eos_token_id
+
+    rag = AgenticRAGModel(base_model, tokenizer)
+
+    prompt = """用户提出一个问题，助手来解决。助手需要通过思考、搜索、反思等步骤来解决问题，最后向用户提供最终答案。
+
+你可以使用以下标签来组织你的回答：
+1. <reasoning> ... </reasoning>: 用于记录推理过程。
+2. <search> ... </search>: 用于搜索不确定的知识。格式为 "<search> [Wiki_RAG]: keyword_1 keyword_2 ... </search>"。系统会返回 "<observation> ... </observation>"。
+3. <backtrack> ... </backtrack>: 如果你认为上文的思考需要订正或修改，使用此标签。
+4. <summary> ... </summary>: 如果你需要对上文做一些总结，使用此标签。
+5. <answer> ... </answer>: 用于提供最终答案。
+
+**重要规则**：
+- 除了 <answer> 标签外，其他标签（<reasoning>, <search>, <backtrack>, <summary>）可以根据需要多次使用，并且顺序不限。
+- <answer> 标签必须出现在回答的最后，且只出现一次。
+
+你有以下工具可以使用:
+Wiki_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 
+参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+
+Question: Chronic urethral obstruction due to benign prismatic hyperplasia can lead to the following change in kidney parenchyma?（　　）。
+Options:
+A. Hyperplasia
+B. Hyperophy
+C. AtrophyNA
+D. Dyplasia
+"""
+    prompts = [prompt, prompt]
+# Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+# Options:
+# A. 双股DNA(dsDNA)无包膜病毒
+# B. dsRNA无包膜病毒
+# C. 单股负链RNA(-ssRNA)无包膜病毒
+# D. -ssRNA有包膜病毒
+
+    enc = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
+    input_ids = enc.input_ids.to(device)
+    attention_mask = enc.attention_mask.to(device)
+
+    out = rag.forward(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        max_new_tokens=256,
+        max_length_for_gather=10000,
+        do_sample=True,
+        temperature=0.7,
+        obtain_logits=False,
+        max_generate_iterations=20,
+        use_KV_Cache=False,
+        use_diverse_sampling=False,
+        diversity_penalty=1.0,
+        calculate_param_importance=False,
+        use_SSRL=False,
+        enable_2D_attention_mask=True,
+    )
+
+    print("="*20, "after generate_with_think_interruption", "="*20)
+    for i in range(out.size(0)):
+        text = tokenizer.decode(out[i], skip_special_tokens=True)
+        print(text)
