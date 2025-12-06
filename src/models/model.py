@@ -849,13 +849,13 @@ class AgenticRAGModel(PreTrainedModel):
                 # print(current_mask.shape)
         
         # NOTE 【jxk】DEBUG：这里的input_ids是最初的输入，而outputs是生成的输出
-        ## FIXME 这里应该没有input_ids
+        ## FIXME 这里应该没有input_ids 【gjr】
         final_output = self.prompt_left_generation_right_padding(input_ids, outputs, device, max_length_for_gather)
 
         # DEBUG
-        for i in range(len(outputs)):
+        for i in range(len(outputs)):       # NOTE for gjr: outputs => final_output
             print(f"[model.py] batch {i}")
-            final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)
+            final_response = self.tokenizer.decode(outputs[i], skip_special_tokens=True)        
             print(""*20, "\nFinal Output:", final_response, "*"*20, "\n")
 
         if calculate_param_importance:
