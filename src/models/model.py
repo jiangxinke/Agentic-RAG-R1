@@ -653,7 +653,7 @@ class AgenticRAGModel(PreTrainedModel):
                         do_sample=True,         # 必须采样
                         temperature=1.5,        # 高随机性！（关键）
                         top_p=0.95,             # 扩大采样空间
-                        top_k=0,                # 取消 top-k 限制，可随机到更稀有的 token
+                        # top_k=0.6,                # 取消 top-k 限制，可随机到更稀有的 token
                         repetition_penalty=1.25,# 强惩罚重复
                         no_repeat_ngram_size=6, # 强去重（提升差异度）
                         num_return_sequences=num_beams,

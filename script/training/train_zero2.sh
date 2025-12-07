@@ -2,7 +2,7 @@
 
 set -ex
 
-GPUs="0,1,2,3"
+GPUs="0,1,2,3,4,5,6,7"
 
 # export HF_ENDPOINT=https://hf-mirror.com
 export CUDA_VISIBLE_DEVICES=$GPUs
