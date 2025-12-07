@@ -15,3 +15,7 @@ checkpoints/
 experiments/
 archive/
 # output_eval/
+
+.hf_cache
+.vscode
+.trae
