@@ -640,27 +640,24 @@ class AgenticRAGModel(PreTrainedModel):
                     prefix_mask = enc.attention_mask.to(device)
 
                     num_beams = 3
-                    num_return_sequences = 3
                     
                     prefix_len = prefix_ids.size(1)
                     # prefix_text = self.tokenizer.decode(prefix_ids[0], skip_special_tokens=False).strip()
                     # print("[model.py] detect <search> 当前beam search采样的前缀为：", prefix[0].strip())
 
                     # FIXME 这里有问题，这里的prefix_ids需要检查一下
-                    beam_out = self.model.generate(
+                    beam_out = self.model.generate( 
                         prefix_ids.to(device), # FIXED: 加上生成的内容
                         attention_mask=prefix_mask.to(device),
-                        max_new_tokens=max_new_tokens, # default 100
-                        num_beams=num_beams,
-                        # stopping_criteria=criteria,
-                        num_return_sequences=num_return_sequences,
-                        do_sample=True,
-                        temperature=1.0,  # 控制随机性：0.5-1.0 既保证流畅又有差异，越高越随机（建议0.6-0.9）
-                        # top_k=50,  # 只从概率前50的token中采样（避免无意义token）
-                        top_p=0.9,  # 核采样：累积概率0.9以内的token（平衡多样性和合理性）
-                        # diversity_penalty=0.9,  # beam间多样性惩罚（关键：惩罚和其他beam重复的token）
-                        repetition_penalty=1.1,  # 惩罚重复token（避免单beam内重复，间接提升整体多样性）
-                        no_repeat_ngram_size=3,  # 禁止3-gram重复（进一步减少雷同）
+                        max_new_tokens=100,
+                        do_sample=True,         # 必须采样
+                        temperature=1.5,        # 高随机性！（关键）
+                        top_p=0.95,             # 扩大采样空间
+                        top_k=0,                # 取消 top-k 限制，可随机到更稀有的 token
+                        repetition_penalty=1.25,# 强惩罚重复
+                        no_repeat_ngram_size=6, # 强去重（提升差异度）
+                        num_return_sequences=num_beams,
+                        typical_p=0.8,          # 高频 token 不再主导
                     )
 
                     search_lines, obs_lines = [], []
@@ -852,89 +849,89 @@ class AgenticRAGModel(PreTrainedModel):
         else:
             return final_output
 
-if __name__ == "__main__":
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from rich.traceback import install
-    from dotenv import load_dotenv
+# if __name__ == "__main__":
+#     import torch
+#     from transformers import AutoModelForCausalLM, AutoTokenizer
+#     from rich.traceback import install
+#     from dotenv import load_dotenv
 
-    install()
-    load_dotenv()
+#     install()
+#     load_dotenv()
 
-    # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
-    # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
-    model_path = "/data/xiaobei/Common_LLM_Base/Qwen3-14B"
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+#     # model_path = "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
+#     model_path = "/data/xiaobei/Common_LLM_Base/Qwen3-14B"
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    base_model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        torch_dtype=(torch.float16),
-        trust_remote_code=True,
-    ).to(device)
+#     base_model = AutoModelForCausalLM.from_pretrained(
+#         model_path,
+#         torch_dtype=(torch.float16),
+#         trust_remote_code=True,
+#     ).to(device)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    tokenizer.padding_side = "left"
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    base_model.config.pad_token_id = tokenizer.eos_token_id
-    base_model.config.eos_token_id = tokenizer.eos_token_id
+#     tokenizer = AutoTokenizer.from_pretrained(model_path)
+#     tokenizer.padding_side = "left"
+#     if tokenizer.pad_token is None:
+#         tokenizer.pad_token = tokenizer.eos_token
+#     base_model.config.pad_token_id = tokenizer.eos_token_id
+#     base_model.config.eos_token_id = tokenizer.eos_token_id
 
-    rag = AgenticRAGModel(base_model, tokenizer)
+#     rag = AgenticRAGModel(base_model, tokenizer)
 
-    prompt = """用户提出一个问题，助手来解决。助手需要通过思考、搜索、反思等步骤来解决问题，最后向用户提供最终答案。
+#     prompt = """用户提出一个问题，助手来解决。助手需要通过思考、搜索、反思等步骤来解决问题，最后向用户提供最终答案。
 
-你可以使用以下标签来组织你的回答：
-1. <reasoning> ... </reasoning>: 用于记录推理过程。
-2. <search> ... </search>: 用于搜索不确定的知识。格式为 "<search> [Wiki_RAG]: keyword_1 keyword_2 ... </search>"。系统会返回 "<observation> ... </observation>"。
-3. <backtrack> ... </backtrack>: 如果你认为上文的思考需要订正或修改，使用此标签。
-4. <summary> ... </summary>: 如果你需要对上文做一些总结，使用此标签。
-5. <answer> ... </answer>: 用于提供最终答案。
+# 你可以使用以下标签来组织你的回答：
+# 1. <reasoning> ... </reasoning>: 用于记录推理过程。
+# 2. <search> ... </search>: 用于搜索不确定的知识。格式为 "<search> [Wiki_RAG]: keyword_1 keyword_2 ... </search>"。系统会返回 "<observation> ... </observation>"。
+# 3. <backtrack> ... </backtrack>: 如果你认为上文的思考需要订正或修改，使用此标签。
+# 4. <summary> ... </summary>: 如果你需要对上文做一些总结，使用此标签。
+# 5. <answer> ... </answer>: 用于提供最终答案。
 
-**重要规则**：
-- 除了 <answer> 标签外，其他标签（<reasoning>, <search>, <backtrack>, <summary>）可以根据需要多次使用，并且顺序不限。
-- <answer> 标签必须出现在回答的最后，且只出现一次。
+# **重要规则**：
+# - 除了 <answer> 标签外，其他标签（<reasoning>, <search>, <backtrack>, <summary>）可以根据需要多次使用，并且顺序不限。
+# - <answer> 标签必须出现在回答的最后，且只出现一次。
 
-你有以下工具可以使用:
-Wiki_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 
-参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
+# 你有以下工具可以使用:
+# Wiki_RAG: 使用 医学知识检索模块 这个API交互. 那么这个 医学知识检索模块 API 怎么使用呢? 这是通过搜索引擎检索医学知识，请结合检索的到的部分知识来辅助你回答。 
+# 参数: [{'name': 'input', 'description': '用户询问的字符串形式的问句', 'required': True, 'schema': {'type': 'string'}}] 格式需要是JSON对象.
 
-Question: Chronic urethral obstruction due to benign prismatic hyperplasia can lead to the following change in kidney parenchyma?（　　）。
-Options:
-A. Hyperplasia
-B. Hyperophy
-C. AtrophyNA
-D. Dyplasia
-"""
-    prompts = [prompt, prompt]
-# Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+# Question: Chronic urethral obstruction due to benign prismatic hyperplasia can lead to the following change in kidney parenchyma?（　　）。
 # Options:
-# A. 双股DNA(dsDNA)无包膜病毒
-# B. dsRNA无包膜病毒
-# C. 单股负链RNA(-ssRNA)无包膜病毒
-# D. -ssRNA有包膜病毒
+# A. Hyperplasia
+# B. Hyperophy
+# C. AtrophyNA
+# D. Dyplasia
+# """
+#     prompts = [prompt, prompt]
+# # Question: 下列对腺病毒生物学性状的描述中，正确的是（　　）。
+# # Options:
+# # A. 双股DNA(dsDNA)无包膜病毒
+# # B. dsRNA无包膜病毒
+# # C. 单股负链RNA(-ssRNA)无包膜病毒
+# # D. -ssRNA有包膜病毒
 
-    enc = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
-    input_ids = enc.input_ids.to(device)
-    attention_mask = enc.attention_mask.to(device)
+#     enc = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
+#     input_ids = enc.input_ids.to(device)
+#     attention_mask = enc.attention_mask.to(device)
 
-    out = rag.forward(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        max_new_tokens=256,
-        max_length_for_gather=10000,
-        do_sample=True,
-        temperature=0.7,
-        obtain_logits=False,
-        max_generate_iterations=20,
-        use_KV_Cache=False,
-        use_diverse_sampling=False,
-        diversity_penalty=1.0,
-        calculate_param_importance=False,
-        use_SSRL=False,
-        enable_2D_attention_mask=True,
-    )
+#     out = rag.forward(
+#         input_ids=input_ids,
+#         attention_mask=attention_mask,
+#         max_new_tokens=256,
+#         max_length_for_gather=10000,
+#         do_sample=True,
+#         temperature=0.7,
+#         obtain_logits=False,
+#         max_generate_iterations=20,
+#         use_KV_Cache=False,
+#         use_diverse_sampling=False,
+#         diversity_penalty=1.0,
+#         calculate_param_importance=False,
+#         use_SSRL=False,
+#         enable_2D_attention_mask=True,
+#     )
 
-    print("="*20, "after generate_with_think_interruption", "="*20)
-    for i in range(out.size(0)):
-        text = tokenizer.decode(out[i], skip_special_tokens=True)
-        print(text)
+#     print("="*20, "after generate_with_think_interruption", "="*20)
+#     for i in range(out.size(0)):
+#         text = tokenizer.decode(out[i], skip_special_tokens=True)
+#         print(text)

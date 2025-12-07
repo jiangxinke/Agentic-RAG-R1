@@ -5,22 +5,22 @@ project:
   description: "under-construction"
 
 experiment:
-  name: "debug"  # 实验名称，对应 experiments/ 下的目录
+  name: "debug-asearcher-3B-dapo-no_decouple-Tools-"  # 实验名称，对应 experiments/ 下的目录
   random_seed: 42
 
 model:
   # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-7B-Instruct"
-  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
-  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2.5-3B-Instruct"
+  # name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-1.5B-Instruct"
+  name: "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2.5-3B-Instruct"
   torch_dtype: "bfloat16"
   device_map: null
 
 dataset:
-  name: "medqa" # gsm8k, medmcqa, medqa, asearcher, nq_hotpotqa_train_multi_{a number}
+  name: "asearcher" # gsm8k, medmcqa, medqa, asearcher, nq_hotpotqa_train_multi_{a number}
   num_eval: 1000
 
 training:
-  train_method: grpo # [grpo, ppo, sft, dapo]
+  train_method: dapo # [grpo, ppo, sft, dapo]
   continue_training: false
   current_step: 0
   num_epochs: 3       # SFT 这两个参数用于SFT
@@ -33,7 +33,7 @@ training:
   learning_rate: 0.000005
   num_iterations: 1 # GRPO epoch
   steps_per_iteration: 300 # GRPO in one epoch
-  save_interval: 10 # GRPO steps
+  save_interval: 20 # GRPO steps
 
   reward_token_level: true
 
@@ -48,9 +48,9 @@ training:
       range: [4, 8]
       function: [lambda x: x * 2]
     # num_generations: 8
-    max_new_tokens: 200
-    max_length_for_gather: 100000
-    max_generate_iterations: 30
+    max_new_tokens: 500
+    max_length_for_gather: 6000
+    max_generate_iterations: 20
     temperature: 0.7
     do_sample: true
 
