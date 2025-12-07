@@ -654,13 +654,13 @@ class AgenticRAGModel(PreTrainedModel):
                         num_beams=num_beams,
                         # stopping_criteria=criteria,
                         num_return_sequences=num_return_sequences,
-                        do_sample=False,
-                        temperature=0.9,  # 控制随机性：0.5-1.0 既保证流畅又有差异，越高越随机（建议0.6-0.9）
+                        do_sample=True,
+                        temperature=1.0,  # 控制随机性：0.5-1.0 既保证流畅又有差异，越高越随机（建议0.6-0.9）
                         # top_k=50,  # 只从概率前50的token中采样（避免无意义token）
                         top_p=0.9,  # 核采样：累积概率0.9以内的token（平衡多样性和合理性）
                         # diversity_penalty=0.9,  # beam间多样性惩罚（关键：惩罚和其他beam重复的token）
-                        repetition_penalty=1.2,  # 惩罚重复token（避免单beam内重复，间接提升整体多样性）
-                        # no_repeat_ngram_size=3,  # 禁止3-gram重复（进一步减少雷同）
+                        repetition_penalty=1.1,  # 惩罚重复token（避免单beam内重复，间接提升整体多样性）
+                        no_repeat_ngram_size=3,  # 禁止3-gram重复（进一步减少雷同）
                     )
 
                     search_lines, obs_lines = [], []
@@ -671,6 +671,8 @@ class AgenticRAGModel(PreTrainedModel):
                         full_seq = beam_out[idx_beam]
                         gen_part = full_seq[prefix_len:]  # 只取新生成部分
                         key_text = self.tokenizer.decode(gen_part, skip_special_tokens=True).strip()
+                        key_text = re.sub(r"\[path[^\]]*\]", "", key_text)
+                        key_text = re.sub(r"\[/path[^\]]*\]", "", key_text) # 删除可能出现的 [pathx]
 
                         path_name = f"path{idx_beam+1}"
                         # breakpoint()
@@ -692,7 +694,7 @@ class AgenticRAGModel(PreTrainedModel):
                     final_obs_block = "<observation>\n" + "\n".join(obs_lines) + "\n</observation>"
 
                     merged_text = self.tokenizer.decode(seq[:prefix_len], skip_special_tokens=True)
-                    merged_text += "\n" + final_search_block + "\n" + final_obs_block
+                    merged_text += final_search_block + "\n" + final_obs_block
 
                     # step 3: 计算 token 位置（仅针对 search key）
                     # 为了计算绝对位置，重新对 merged_text 分词一次
@@ -707,7 +709,7 @@ class AgenticRAGModel(PreTrainedModel):
                         add_special_tokens=False
                     ))
 
-                    current_offset = prefix_ids_len + 1 # merged_text 中 search 部分的起点 token idx（在这里加1，算入换行符
+                    current_offset = prefix_ids_len
 
                     for idx_beam, line in enumerate(search_lines):
                         # 对这一行单独编码（包括标签），计算长度
