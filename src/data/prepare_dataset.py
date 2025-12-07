@@ -5,9 +5,9 @@ config = load_config("src/config/config.yaml")
 # Robustly read SSRL flag from config (support both use_SSRL and use_ssrl)
 use_ssrl = getattr(config.training, "use_SSRL", getattr(config.training, "use_ssrl", False))
 if use_ssrl:
-    from src.data.prompt import SYSTEM_PROMPT_TOOLS_SSRL as SYSTEM_PROMPT
+    from src.data.prompt import SYSTEM_PROMPT_TOOLS_SSRL_EN as SYSTEM_PROMPT
 else:
-    from src.data.prompt import SYSTEM_PROMPT_TOOLS_BACKTRACK as SYSTEM_PROMPT
+    from src.data.prompt import SYSTEM_PROMPT_TOOLS_BACKTRACK_EN as SYSTEM_PROMPT
 
 from src.data.prompt import build_prompt, build_system_tools
 

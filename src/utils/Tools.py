@@ -78,14 +78,27 @@ class Tools:
             #         }
             #     ],
             # },
+            # {
+            #     "name_for_human": "医学维基百科知识检索模块",
+            #     "name_for_model": "Wiki_RAG",
+            #     "description_for_model": "使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。",
+            #     "parameters": [
+            #         {
+            #             "name": "input",
+            #             "description": "规范名称的医学实体",
+            #             "required": True,
+            #             "schema": {"type": "string"},
+            #         }
+            #     ],
+            # },
             {
-                "name_for_human": "医学维基百科知识检索模块",
+                "name_for_human": "WikiPedia",
                 "name_for_model": "Wiki_RAG",
-                "description_for_model": "使用这个工具可以查询百科知识，请结合检索的到的部分知识来辅助你回答。",
+                "description_for_model": "Using this tool, you can search for wikipedia knowledge. Please combine the retrieved knowledge to assist you in answering.",
                 "parameters": [
                     {
                         "name": "input",
-                        "description": "规范名称的医学实体",
+                        "description": "A normalized name of an entity.",
                         "required": True,
                         "schema": {"type": "string"},
                     }
