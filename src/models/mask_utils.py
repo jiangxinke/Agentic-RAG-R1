@@ -57,7 +57,7 @@ def get_masked_spans_from_text(full_seq: str, tokenizer) -> List[Tuple[int, int,
     Returns:
         List of tuples: (prev_action_start, prev_action_end, backtrack_end)
     """
-    from neuron.action_utils import get_last_two_action_span
+    from src.neuron.action_utils import get_last_two_action_span
 
     # TODO: 根据 full_text 解析真实 span
     result = get_last_two_action_span(full_seq, tokenizer)
