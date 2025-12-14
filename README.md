@@ -23,7 +23,7 @@ step03: install flash-attn
 download proper version wheel from [flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels/releases)
 
 ```
-pip install flash_attn-2.7.4+cu128torch2.9-cp312-cp312-linux_x86_64.whl
+python -m pip install flash_attn-2.7.4+cu128torch2.9-cp312-cp312-linux_x86_64.whl
 ```
 
 step04: install sglang
@@ -37,6 +37,6 @@ python -m pip install --no-deps vllm==0.12.0
 ```
 Note that dependencies must not be added here; otherwise, it will cause changes in the torch version
 
-## Wiki
+## wiki
 
 参考：[ArtSearch](https://github.com/Artessay/ArtSearch)
