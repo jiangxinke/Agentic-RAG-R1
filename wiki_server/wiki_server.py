@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 from elasticsearch import Elasticsearch
 from dotenv import load_dotenv      
 from typing import Optional
@@ -76,9 +78,10 @@ class QueryRequest(BaseModel):
 
 
 class Config:
-    def __init__(self, index_name: str, retrieval_topk: int = 10):
+    def __init__(self, index_name: str, retrieval_topk: int = 10, max_return_chars: int = 0):
         self.index_name = index_name
         self.retrieval_topk = retrieval_topk
+        self.max_return_chars = max_return_chars
 
 
 class ElasticRetriever:
@@ -99,7 +102,22 @@ class ElasticRetriever:
             }
             resp = self.es.search(index=self.config.index_name, body=body)
             hits = resp.get("hits", {}).get("hits", [])
-            docs = [h.get("_source", {}) for h in hits]
+            docs = []
+            for h in hits:
+                src = h.get("_source", {}) or {}
+                title = src.get("title", "")
+                text = src.get("text", "")
+                if isinstance(title, str) and isinstance(text, str) and title and text:
+                    contents = f"{title}\n{text}"
+                elif isinstance(text, str) and text:
+                    contents = text
+                elif isinstance(title, str) and title:
+                    contents = title
+                else:
+                    contents = json.dumps(src, ensure_ascii=False)
+                if isinstance(contents, str) and self.config.max_return_chars and self.config.max_return_chars > 0:
+                    contents = contents[: self.config.max_return_chars]
+                docs.append({"title": title, "text": text, "contents": contents})
             scs = [h.get("_score", 0.0) for h in hits]
             results.append(docs)
             scores.append(scs)
@@ -118,11 +136,14 @@ retriever: ElasticRetriever = None
 def retrieve_endpoint(request: QueryRequest):
     if not request.topk:
         request.topk = config.retrieval_topk
+    logging.info(f"request queries={request.queries} topk={request.topk} return_scores={request.return_scores}")
     results, score_list = retriever.batch_search(
         query_list=request.queries, num=request.topk, return_score=request.return_scores
     )
     resp = []
     for i, single_result in enumerate(results):
+        previews = [str(doc.get("contents", ""))[:10] for doc in single_result]
+        logging.info(f"result[{i}] previews={previews}")
         if request.return_scores:
             combined = []
             for doc, score in zip(single_result, score_list[i], strict=True):
@@ -140,9 +161,11 @@ if __name__ == "__main__":
     parser.add_argument("--topk", type=int, default=10)
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--max_return_chars", type=int, default=0)
     args = parser.parse_args()
 
     idx = args.index_name or f"wiki_{args.language}"
-    config = Config(index_name=idx, retrieval_topk=args.topk)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
+    config = Config(index_name=idx, retrieval_topk=args.topk, max_return_chars=args.max_return_chars)
     retriever = ElasticRetriever(config)
     uvicorn.run(app, host=args.host, port=args.port)
