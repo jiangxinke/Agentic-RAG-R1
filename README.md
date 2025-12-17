@@ -1,5 +1,31 @@
 # README
 
+## train
+
+```
+cd verl
+./spr1_scripts/run_qwen2.5-3b_instruct_search_multiturn.sh
+```
+
+NOTE: You can update the private information below by editing `./verl/spr1_scripts/local_config.sh`.
+```
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+export RAY_TMPDIR=""
+export SWANLAB_API_KEY=""
+
+PROJECT_DIR="$(pwd)"
+CONFIG_PATH="$PROJECT_DIR/examples/sglang_multiturn/config"
+TOOL_CONFIG="$CONFIG_PATH/tool_config/search_tool_config.yaml"
+
+
+PROJECT_NAME=''
+EXPERIMENT_NAME=''
+
+MODEL_PATH=""
+TRAIN_DATA_PATH=""
+TEST_DATA_PATH=""
+```
+
 ## environment
 
 step01: create new conda environment
