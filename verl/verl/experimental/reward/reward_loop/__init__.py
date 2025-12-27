@@ -15,12 +15,14 @@
 from .registry import get_reward_loop_manager_cls, register  # noqa: I001
 from .dapo import DAPORewardLoopManager
 from .naive import NaiveRewardLoopManager
+from .naive_process import NaiveProcessRewardManager
 from .limited import RateLimitedRewardLoopManager
 
 __all__ = [
     "DAPORewardLoopManager",
     "NaiveRewardLoopManager",
     "RateLimitedRewardLoopManager",
+    "NaiveProcessRewardManager",
     "register",
     "get_reward_loop_manager_cls",
 ]

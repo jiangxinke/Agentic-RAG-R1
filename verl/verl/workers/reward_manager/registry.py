@@ -50,6 +50,7 @@ def get_reward_manager_cls(name: str) -> type[AbstractRewardManager]:
     Returns:
         `(type)`: The reward manager class.
     """
+    print(REWARD_MANAGER_REGISTRY)
     if name not in REWARD_MANAGER_REGISTRY:
         raise ValueError(f"Unknown reward manager: {name}")
     return REWARD_MANAGER_REGISTRY[name]

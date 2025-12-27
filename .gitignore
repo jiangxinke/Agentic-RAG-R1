@@ -86,4 +86,5 @@ archive/
 data/
 swanlog/
 outputs/
-verl/script_spr1/local_config.sh
+verl/spr1_scripts/local_config.sh
+verl/checkpoints/

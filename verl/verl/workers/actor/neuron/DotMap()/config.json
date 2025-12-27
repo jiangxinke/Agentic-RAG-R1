@@ -1,0 +1,89 @@
+{
+    "_map": {
+        "swanlab": true,
+        "project": {
+            "name": "agentic-rag-r1",
+            "description": "under-construction"
+        },
+        "experiment": {
+            "name": "qwen2.5-3B-noSSRL-nodecouple-4GPU",
+            "random_seed": 42
+        },
+        "model": {
+            "name": "/data/xiaobei/Common_LLM_Base/Qwen2.5-3B-Instruct/Qwen/Qwen2___5-3B-Instruct",
+            "torch_dtype": "bfloat16",
+            "device_map": null
+        },
+        "dataset": {
+            "name": "medqa",
+            "num_eval": 1000
+        },
+        "training": {
+            "train_method": "grpo",
+            "continue_training": false,
+            "current_step": 0,
+            "num_epochs": 3,
+            "steps_per_epoch": 500,
+            "use_lora": true,
+            "use_quant": false,
+            "use_KV_Cache": false,
+            "batch_size": 1,
+            "learning_rate": 5e-06,
+            "num_iterations": 1,
+            "steps_per_iteration": 300,
+            "save_interval": 10,
+            "reward_token_level": true,
+            "decouple_layer": false,
+            "use_SSRL": false,
+            "generation": {
+                "num_generations": {
+                    "mode": "constant",
+                    "constant": 8,
+                    "range": [
+                        4,
+                        8
+                    ],
+                    "function": [
+                        {
+                            "lambda x": "x * 2"
+                        }
+                    ]
+                },
+                "max_new_tokens": 100,
+                "max_length_for_gather": 100000,
+                "max_generate_iterations": 3,
+                "temperature": 0.7,
+                "do_sample": true,
+                "use_diverse_sampling": true,
+                "diversity_penalty": 1.0
+            },
+            "optimizer": {
+                "beta": 0.04,
+                "mu": 1,
+                "epsilon": 0.1
+            }
+        },
+        "lora": {
+            "r": 8,
+            "lora_alpha": 32,
+            "target_modules": [
+                "q_proj",
+                "v_proj"
+            ],
+            "lora_dropout": 0.1,
+            "bias": "none",
+            "task_type": "CAUSAL_LM"
+        },
+        "qlora": {
+            "load_in_4bit": false,
+            "bnb_4bit_quant_type": "nf4",
+            "bnb_4bit_compute_dtype": "bfloat16",
+            "bnb_4bit_use_double_quant": false,
+            "load_in_8bit": true,
+            "llm_int8_threshold": 6.0
+        },
+        "exp": {}
+    },
+    "_dynamic": true,
+    "_prevent_method_masking": false
+}

@@ -42,11 +42,6 @@ from verl.workers.config import ActorConfig
 
 from verl.workers.actor.decouple_layer import *
 
-try:
-    from verl.spr1_special_tokens.recognition import TokenRecognizer
-except ImportError:
-    TokenRecognizer = None
-
 __all__ = ["DataParallelPPOActor"]
 
 logger = logging.getLogger(__file__)
@@ -97,20 +92,6 @@ class DataParallelPPOActor(BasePPOActor):
             self.scaler = ShardedGradScaler(growth_interval=400)
         else:
             self.scaler = None
-
-        # Initialize TokenRecognizer
-        self.recognizer = None
-        if TokenRecognizer is not None and hasattr(self.config, 'model_config') and self.config.model_config.tokenizer is not None:
-             try:
-                self.recognizer = TokenRecognizer(tokenizer=self.config.model_config.tokenizer)
-                if torch.distributed.get_rank() == 0:
-                    print(f"TokenRecognizer initialized successfully with tokenizer.")
-             except Exception as e:
-                if torch.distributed.get_rank() == 0:
-                    print(f"[Warning] Failed to initialize TokenRecognizer: {e}")
-        else:
-             if torch.distributed.get_rank() == 0:
-                print(f"[Warning] TokenRecognizer or Tokenizer not available. Action/Args masks will be empty.")
 
     def _forward_micro_batch(
         self, micro_batch, temperature, calculate_entropy=False
@@ -299,10 +280,6 @@ class DataParallelPPOActor(BasePPOActor):
                 if self.use_fused_kernels:
                     extra_args["temperature"] = temperature
                     extra_args["return_dict"] = True
-                # [UPDATE zzx] 对 attention 的修改提前到 agent_loop 中完成。
-                # if micro_batch.get("attention_mask_4d", None) is not None:
-                #     attention_mask = micro_batch["attention_mask_4d"]
-                attention_mask = micro_batch["attention_mask_4d"]
 
                 output = self.actor_module(
                     input_ids=input_ids,
@@ -420,15 +397,7 @@ class DataParallelPPOActor(BasePPOActor):
         return log_probs, entropys
 
     @GPUMemoryLogger(role="dp actor", logger=logger)
-    def update_policy(self, data: DataProto) -> dict:
-        is_decoupling = os.environ.get("DECOUPLING", "0") == "1"
-        if is_decoupling:
-            return self.decouple_update_policy(data)
-        else:
-            return self.old_update_policy(data)
-
-    @GPUMemoryLogger(role="dp actor", logger=logger)
-    def decouple_update_policy(self, data: DataProto) -> dict:
+    def jxk_update_policy(self, data: DataProto):
         # make sure we are in training mode
         self.actor_module.train()
 
@@ -458,37 +427,32 @@ class DataParallelPPOActor(BasePPOActor):
         mini_batches = data.split(self.config.ppo_mini_batch_size)
         on_policy = len(mini_batches) == 1 and self.config.ppo_epochs == 1
 
+
         ### NOTE SP-R1
         # build action / args parameter groups
-        print(self.actor_module.__repr__())
-# FullyShardedDataParallel( [repeated 2x across cluster]
-#          (_fsdp_wrapped_module): Qwen2DecoderLayer( [repeated 4x across cluster]
-#      (model): Qwen2Model( [repeated 2x across cluster]
-#       (embed_tokens): Embedding(151936, 2048, padding_idx=151643) [repeated 2x across cluster]
-#      (layers): ModuleList( [repeated 2x across cluster]
-#         (0-35): 36 x FullyShardedDataParallel( [repeated 2x across cluster]
-#            (self_attn): Qwen2Attention( [repeated 2x across cluster]
-#              (q_proj): Linear(in_features=2048, out_features=2048, bias=True) [repeated 2x across cluster]
-#                (k_proj): Linear(in_features=2048, out_features=256, bias=True) [repeated 2x across cluster]
-#               (v_proj): Linear(in_features=2048, out_features=256, bias=True) [repeated 2x across cluster]
-#               (o_proj): Linear(in_features=2048, out_features=2048, bias=False) [repeated 2x across cluster]
-#  ) [repeated 16x across cluster]
-#              (mlp): Qwen2MLP( [repeated 2x across cluster]
-#                (gate_proj): Linear(in_features=2048, out_features=11008, bias=False) [repeated 2x across cluster]
-#                (up_proj): Linear(in_features=2048, out_features=11008, bias=False) [repeated 2x across cluster]
-#                (down_proj): Linear(in_features=11008, out_features=2048, bias=False) [repeated 2x across cluster]
-#                (act_fn): SiLUActivation() [repeated 2x across cluster]
-#              (input_layernorm): Qwen2RMSNorm((2048,), eps=1e-06) [repeated 2x across cluster]
-#              (post_attention_layernorm): Qwen2RMSNorm((2048,), eps=1e-06) [repeated 2x across cluster]
-#        (norm): Qwen2RMSNorm((2048,), eps=1e-06) [repeated 2x across cluster]
-#        (rotary_emb): Qwen2RotaryEmbedding() [repeated 2x across cluster]
-#      (lm_head): Linear(in_features=2048, out_features=151936, bias=False) [repeated 2x across cluster]
-
-        action_params, args_params = generate_grad_control_dicts(
+        action_train_dict, args_train_dict = generate_grad_control_dicts(
             model=self.actor_module,
             param_importance_path="/data2/gjr/workshop/r1/verl/verl/workers/actor/neuron/neuron_active_ratio.json",
             top_k=8
         )
+        action_params, _ = split_params_by_train_dict(self.actor_module, action_train_dict)
+        args_params, _ = split_params_by_train_dict(self.actor_module, args_train_dict)
+
+        # FIXME MOCK
+        if len(action_params) == 0:
+            print("[Warning] action_params 为空，mock 使用第一层参数")
+            for name, p in model.named_parameters():
+                if ".layers.0." in name:
+                    action_params = [p]
+                    break
+        # FIXME MOCK
+        if len(args_params) == 0:
+            print("[Warning] args_params 为空，mock 使用最后一层参数")
+            for name, p in reversed(list(model.named_parameters())):
+                if f".layers.{model.config.num_hidden_layers-1}." in name:
+                    args_params = [p]
+                    break
+
         ### NOTE SP-R1
 
         metrics = {}
@@ -562,88 +526,49 @@ class DataParallelPPOActor(BasePPOActor):
 
                     ### NOTE SP-R1
                     # ---- build action / args masks ----
-                    action_mask, args_mask = build_action_args_masks_from_model_inputs(model_inputs, recognizer=self.recognizer)       
+                    action_mask, args_mask = build_action_args_masks_from_model_inputs(model_inputs)       
                     loss_action = agg_loss(policy_loss, loss_mask=response_mask*action_mask, loss_agg_mode=loss_agg_mode)
                     loss_args = agg_loss(policy_loss, loss_mask=response_mask*args_mask, loss_agg_mode=loss_agg_mode)
 
-                    # # 修复闭包迟绑定：用默认参数固化param的值
-                    # def hook_factory(param):
-                    #     def hook(grad, param=param):  # 新增默认参数param=param，固化当前值
-                    #         # if param.numel() == 0:  # size=0 shard 不处理
-                    #         #     return grad
-                    #         return torch.zeros_like(param)
-                    #     return hook
-
-                    # # action梯度钩子
-                    # handles = []
-                    # for p in self.actor_module.parameters():
-                    #     if p not in action_params:
-                    #         handles.append(p.register_hook(hook_factory(p)))
-
-                    # loss_action.backward(retain_graph=True)
-                    # for h in handles:
-                    #     h.remove()
-
-                    # # args梯度钩子
-                    # handles = []
-                    # for p in self.actor_module.parameters():
-                    #     if p not in args_params:
-                    #         handles.append(p.register_hook(hook_factory(p)))
-
-                    # loss_args.backward()
-                    # for h in handles:
-                    #     h.remove()
-
-                    ### NOTE SP-R1 (soft update, single backward)
-
-                    policy_loss.backward()
-
-                    import torch.distributed as dist
-                    u = torch.rand((), device=policy_loss.device)
-                    if dist.is_available() and dist.is_initialized():
-                        dist.broadcast(u, src=0)
-                    u = float(u.item())
-
-                    hi, lo = 2.0, 0.5
-
-                    if u > 0.5:
-                        action_scale, args_scale = hi, lo
-                    else:
-                        action_scale, args_scale = lo, hi
-
-                    other_scale = 0.1
-
-                    def _to_param_id_set(x):
-                        if x is None:
-                            return set()
-                        if isinstance(x, dict):
-                            it = x.keys()
-                        else:
-                            it = x
-                        return {id(p) for p in it}
-
-                    action_ids = _to_param_id_set(action_params)
-                    args_ids = _to_param_id_set(args_params)
-
+                    # ---- backward with parameter isolation using hooks ----
+                    # zero grads first
                     for p in self.actor_module.parameters():
-                        g = p.grad
-                        if g is None:
-                            continue
-                        if g.numel() == 0:
-                            continue
+                        if p.grad is not None:
+                            p.grad.detach_()
+                            p.grad.zero_()
 
-                        pid = id(p)
-                        if pid in action_ids:
-                            g.mul_(action_scale)
-                        elif pid in args_ids:
-                            g.mul_(args_scale)
-                        else:
-                            g.mul_(other_scale)
+                    handles = []
 
-                    micro_batch_metrics["actor/sp_r1_u"] = u
-                    micro_batch_metrics["actor/sp_r1_action_scale"] = action_scale
-                    micro_batch_metrics["actor/sp_r1_args_scale"] = args_scale
-                    micro_batch_metrics["actor/sp_r1_other_scale"] = other_scale
+                    # register hooks to zero out gradients of frozen parameters
+                    for p in self.actor_module.parameters():
+                        if p not in action_params:
+                            # for action_loss backward, freeze non-action params
+                            handles.append(p.register_hook(lambda grad: torch.zeros_like(grad)))
+
+                    if self.scaler is not None:
+                        self.scaler.scale(loss_action).backward(retain_graph=True)
+                    else:
+                        loss_action.backward(retain_graph=True)
+
+                    # remove hooks after backward
+                    for h in handles:
+                        h.remove()
+
+                    # ---- backward for args_loss ----
+                    handles = []
+                    for p in self.actor_module.parameters():
+                        if p not in args_params:
+                            # for args_loss backward, freeze non-args params
+                            handles.append(p.register_hook(lambda grad: torch.zeros_like(grad)))
+
+                    if self.scaler is not None:
+                        self.scaler.scale(loss_args).backward()
+                    else:
+                        loss_args.backward()
+
+                    # remove hooks after backward
+                    for h in handles:
+                        h.remove()
 
                     micro_batch_metrics["actor/pg_loss"] = pg_loss.detach().item() * loss_scale_factor
                     append_to_dict(metrics, micro_batch_metrics)
@@ -656,7 +581,7 @@ class DataParallelPPOActor(BasePPOActor):
         return metrics
 
     @GPUMemoryLogger(role="dp actor", logger=logger)
-    def old_update_policy(self, data: DataProto):
+    def update_policy(self, data: DataProto):
         # make sure we are in training mode
         self.actor_module.train()
 

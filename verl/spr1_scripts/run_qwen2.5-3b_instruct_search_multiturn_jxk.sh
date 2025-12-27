@@ -27,12 +27,22 @@ echo "TRAIN_DATA_PATH: $TRAIN_DATA_PATH"
 echo "TEST_DATA_PATH: $TEST_DATA_PATH"
 
 echo "TOOL_CONFIG: $TOOL_CONFIG"
+echo "DECOUPLING: $DECOUPLING"
+
+# python3 -m recipe.dapo.main_dapo \
+#     reward_model.reward_manager=dapo \
+
+
+
 
 
 python3 -m verl.trainer.main_ppo \
     --config-path="$CONFIG_PATH" \
     --config-name='search_multiturn_grpo' \
     algorithm.adv_estimator=grpo \
+    reward_model.reward_manager=$REWARD_MANAGER \
+    custom_reward_function.path=$CUSTOM_REWARD_FUNCTION_PATH \
+    custom_reward_function.name=$CUSTOM_REWARD_FUNCTION_NAME \
     data.train_batch_size=8 \
     data.val_batch_size=8 \
     data.max_prompt_length=5096 \
@@ -57,13 +67,17 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=sglang \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.85 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
     actor_rollout_ref.rollout.n=16 \
     actor_rollout_ref.rollout.multi_stage_wake_up=True \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=5 \
     actor_rollout_ref.rollout.multi_turn.enable=True \
     actor_rollout_ref.rollout.multi_turn.format=hermes \
-    actor_rollout_ref.rollout.agent.default_agent_loop=tool_agent \
+    actor_rollout_ref.rollout.agent.use_4d_mask=$USE_4D_MASK \
+    actor_rollout_ref.rollout.agent.spr1_parallel_search_num_paths=$SPR1_PARALLEL_SEARCH_NUM_PATHS \
+    actor_rollout_ref.rollout.agent.spr1_max_one_step_length=$SPR1_MAX_ONE_STEP_LENGTH \
+    actor_rollout_ref.rollout.agent.spr1_max_num_turns=$SPR1_MAX_NUM_TURNS \
+    actor_rollout_ref.rollout.agent.default_agent_loop=$AGENT_LOOP \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \

@@ -198,7 +198,12 @@ calculate_log_probs: False
 
 # [Experimental] agent loop based rollout configs
 agent:
-
+  # SPR1 specific configs
+  use_4d_mask: False
+  spr1_parallel_search_num_paths: 3
+  spr1_max_one_step_length: 128
+  spr1_max_num_turns: 10
+  
   # Required when using verl.utils.omega_conf_to_dataclass to instantiate dataclass configs
   _target_: verl.workers.config.AgentLoopConfig
 

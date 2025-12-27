@@ -352,6 +352,11 @@ class RayPPOTrainer:
 
         self._create_dataloader(train_dataset, val_dataset, collate_fn, train_sampler)
 
+        self.use_ole = os.environ.get("PPO_USE_OLE", "0") == "1"
+        self.ole_threshold_percent = float(os.environ.get("PPO_OLE_THRESHOLD_PERCENT", "0.4"))
+        self.ole_threshold_value = float(os.environ.get("PPO_OLE_INIT_THRESHOLD", "0.0"))
+        self.ole_k = float(os.environ.get("PPO_OLE_K", "1.0"))
+
     def _create_dataloader(self, train_dataset, val_dataset, collate_fn, train_sampler: Optional[Sampler]):
         """
         Creates the train and validation dataloaders.
@@ -785,19 +790,29 @@ class RayPPOTrainer:
         # create async rollout manager and request scheduler
         self.async_rollout_mode = False
         if self.config.actor_rollout_ref.rollout.mode == "async":
-            from verl.experimental.agent_loop import AgentLoopManager
+            # [MODIFIED] 改为 spr1_loop
+            if self.config.actor_rollout_ref.rollout.agent.default_agent_loop=="spr1_agent":
+                from verl.spr1_generation.agent_loop import AgentLoopManager
 
-            self.async_rollout_mode = True
-            if self.config.reward_model.enable and self.config.reward_model.enable_resource_pool:
-                rm_resource_pool = self.resource_pool_manager.get_resource_pool(Role.RewardModel)
+                self.async_rollout_mode = True
+                self.async_rollout_manager = AgentLoopManager(
+                    config=self.config,
+                    worker_group=self.actor_rollout_wg,
+                )
             else:
-                rm_resource_pool = None
+                from verl.experimental.agent_loop import AgentLoopManager
 
-            self.async_rollout_manager = AgentLoopManager(
-                config=self.config,
-                worker_group=self.actor_rollout_wg,
-                rm_resource_pool=rm_resource_pool,
-            )
+                self.async_rollout_mode = True
+                if self.config.reward_model.enable and self.config.reward_model.enable_resource_pool:
+                    rm_resource_pool = self.resource_pool_manager.get_resource_pool(Role.RewardModel)
+                else:
+                    rm_resource_pool = None
+
+                self.async_rollout_manager = AgentLoopManager(
+                    config=self.config,
+                    worker_group=self.actor_rollout_wg,
+                    rm_resource_pool=rm_resource_pool,
+                )
 
     def _save_checkpoint(self):
         from verl.utils.fs import local_mkdir_safe
@@ -1117,6 +1132,7 @@ class RayPPOTrainer:
         )
 
         self.global_steps = 0
+        self.ole_discarded_total = 0
 
         # load checkpoint before doing anything
         self._load_checkpoint()
@@ -1353,6 +1369,36 @@ class RayPPOTrainer:
                             config=self.config.algorithm,
                         )
 
+                        # NOTE (gjr): ole
+                        if self.use_ole:
+                            seq_rewards = batch.batch["token_level_rewards"].sum(dim=-1).detach().cpu().numpy()
+                            uids = batch.non_tensor_batch["uid"]
+                            uid2rewards = defaultdict(list)
+                            for uid, r in zip(uids, seq_rewards, strict=True):
+                                uid2rewards[uid].append(r)
+                            uid2ole = {}
+                            for uid, rs in uid2rewards.items():
+                                m = np.mean(rs)
+                                s = np.std(rs)
+                                uid2ole[uid] = m + self.ole_k * s
+                            if len(uid2ole) > 0:
+                                ole_vals = np.array(list(uid2ole.values()), dtype=np.float32)
+                                next_ole_threshold_value = np.quantile(ole_vals, 1 - self.ole_threshold_percent)
+                            else:
+                                next_ole_threshold_value = self.ole_threshold_value
+
+                            discarded_in_step = 0
+                            to_zero_indices = [
+                                i for i, uid in enumerate(uids) if uid2ole.get(uid, float("inf")) < self.ole_threshold_value
+                            ]
+                            if len(to_zero_indices) > 0:
+                                idx_t = torch.tensor(to_zero_indices, device=batch.batch["advantages"].device, dtype=torch.long)
+                                batch.batch["advantages"][idx_t] = 0
+                                discarded_in_step = len(to_zero_indices)
+                            
+                            self.ole_discarded_total += discarded_in_step
+                            metrics["ole/discarded_total"] = self.ole_discarded_total
+
                     # update critic
                     if self.use_critic:
                         with marked_timer("update_critic", timing_raw, color="pink"):
@@ -1367,6 +1413,10 @@ class RayPPOTrainer:
                             actor_output = self._update_actor(batch)
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
+                    
+                    # NOTE (gjr): ole
+                    if self.use_ole:
+                        self.ole_threshold_value = next_ole_threshold_value
 
                     # Log rollout generations if enabled
                     rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

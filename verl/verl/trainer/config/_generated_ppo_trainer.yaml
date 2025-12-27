@@ -243,6 +243,11 @@ actor_rollout_ref:
       num_repeat_rollouts: null
     calculate_log_probs: false
     agent:
+      # SPR1 specific configs
+      use_4d_mask: false
+      spr1_parallel_search_num_paths: 3
+      spr1_max_one_step_length: 128
+      spr1_max_num_turns: 10
       _target_: verl.workers.config.AgentLoopConfig
       num_workers: 8
       default_agent_loop: single_turn_agent

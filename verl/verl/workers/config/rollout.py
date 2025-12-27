@@ -71,6 +71,10 @@ class AgentLoopConfig(BaseConfig):
     default_agent_loop: str = "single_turn_agent"
     agent_loop_config_path: Optional[str] = None
     custom_async_server: CustomAsyncServerConfig = field(default_factory=CustomAsyncServerConfig)
+    use_4d_mask : Optional[bool] = False
+    spr1_parallel_search_num_paths: Optional[int] = 3
+    spr1_max_one_step_length: Optional[int] = 128
+    spr1_max_num_turns: Optional[int] = 10
 
 
 @dataclass

@@ -19,6 +19,7 @@ import random
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 from uuid import uuid4
+from rich import print
 
 import hydra
 import numpy as np
@@ -164,6 +165,8 @@ class _InternalAgentLoopOutput(AgentLoopOutput):
     response_mask: torch.Tensor
     """Padded response mask."""
     attention_mask: torch.Tensor
+    """Padded response mask 1d"""
+    attention_mask_1d: torch.Tensor
     """Padded attention mask."""
     response_logprobs: Optional[torch.Tensor] = None
     """Padded log probabilities for the response tokens."""
@@ -285,7 +288,13 @@ class AgentLoopWorkerBase:
         local_path = copy_to_local(config.actor_rollout_ref.model.path)
         self.tokenizer = hf_tokenizer(local_path, trust_remote_code=True)
         self.processor = hf_processor(local_path, trust_remote_code=True)
-
+        
+        self.use_4d_mask = config.actor_rollout_ref.rollout.agent.get("use_4d_mask", False)
+        if self.use_4d_mask == False:
+            print(f"[Warning] Using 1D attention mask in AgentLoopWorkerBase")
+        else:
+            print(f"[Info] Using 4D attention mask in AgentLoopWorkerBase")
+        
         agent_loop_config_path = config.actor_rollout_ref.rollout.agent.agent_loop_config_path
         if agent_loop_config_path:
             resolved_path = resolve_config_path(agent_loop_config_path)
@@ -427,31 +436,52 @@ class AgentLoopWorkerBase:
             )
             output: AgentLoopOutput = await agent_loop.run(sampling_params, **kwargs)
             return await self._agent_loop_postprocess(output, **kwargs)
-
+    
     async def _agent_loop_postprocess(self, output, **kwargs) -> _InternalAgentLoopOutput:
         """Perform post-processing operations on the output of each individual agent loop."""
+        import numpy as np
+        import torch
+
         output.extra_fields["raw_prompt"] = kwargs["raw_prompt"]
 
-        # Some AgentLoop may have already computed the reward score, e.g SWE-agent.
+        # -----------------------
+        # helpers (local)
+        # -----------------------
+        def clamp(x: int, S: int) -> int:
+            if x < 0:
+                return 0
+            if x >= S:
+                return S - 1
+            return x
 
-        # NOTE: consistent with the legacy batch version of generate_sequences that existed in the
-        # deprecated vLLM SPMD rollout implementation.
-        # prompt_ids: left padded with zeros (e.g., [0,0,0,0,1,2,3,4])
-        # response_ids: right padded with zeros (e.g., [5,6,7,8,0,0,0,0])
-        # input_ids: concatenation of prompt + response
-        # Mask:
-        # For example, if the prompt is [1,2,3,4] and the response is [5,6,7,(tool start)8,9(tool end),10,11,12]
-        # - prompt_attention_mask: 0s for padding, 1s for tokens
-        #   e.g., [0,0,0,0,1,1,1,1]
-        # - response_attention_mask: 0s for padding, 1s for tokens
-        #   e.g., [1,1,1,1,1,1,1,1,1,1,1,0,0,0,0]
-        # attention_mask: concatenation of prompt_attention_mask and response_attention_mask
-        #   e.g., [0,0,0,0,1,1,1,1(prompt),1,1,1,1,1,1,1,1,1,1,1,0,0,0,0(response)]
-        # - response_mask: 1s for LLM generated tokens, 0 for tool response/padding tokens
-        #   e.g., [1,1,1,1,1,1,1,(tool start),0,0(tool end),1,1,0,0,0,0]
-        # - position_ids: sequential positions for tokens, starting at 0
-        #   e.g., [0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,0,0,0]
+        def tril_mask(B: int, S: int, dev):
+            return torch.tril(torch.ones((B, S, S), dtype=torch.bool, device=dev))
 
+        def blk(bool_mask, b: int, q: int, kl: int, kr: int):
+            # block keys [kl, kr] for query q (closed interval)
+            if kl <= kr:
+                bool_mask[b, q, kl : kr + 1] = False
+
+        def bool_to_additive_4d(bool_mask: torch.Tensor) -> torch.Tensor:
+            # bool_mask: [B,S,S] True = allowed, False = blocked
+            attn = torch.zeros_like(bool_mask, dtype=torch.bfloat16)
+            attn.masked_fill_(~bool_mask, float("-inf"))
+            return attn.unsqueeze(1)  # [B,1,S,S]
+
+        def normalize_override(pos_override, full_len: int):
+            if pos_override is None:
+                return None
+            pos_override = list(pos_override)
+            if len(pos_override) < full_len:
+                last = pos_override[-1] if pos_override else -1
+                pos_override = pos_override + [last + i + 1 for i in range(full_len - len(pos_override))]
+            elif len(pos_override) > full_len:
+                pos_override = pos_override[:full_len]
+            return pos_override
+
+        # -----------------------
+        # pad prompt/response exactly like legacy code
+        # -----------------------
         self.tokenizer.padding_side = "left"
         prompt_output = self.tokenizer.pad(
             {"input_ids": output.prompt_ids},
@@ -492,9 +522,12 @@ class AgentLoopWorkerBase:
             response_logprobs = torch.tensor(output.response_logprobs + [0.0] * pad_size).unsqueeze(0)
 
         response_mask = response_mask_output["input_ids"] * response_output["attention_mask"]
-        attention_mask = torch.cat([prompt_output["attention_mask"], response_output["attention_mask"]], dim=1)
-        input_ids = torch.cat([prompt_output["input_ids"], response_output["input_ids"]], dim=1)
+        attention_mask_1d = torch.cat([prompt_output["attention_mask"], response_output["attention_mask"]], dim=1)  # [1,S]
+        input_ids = torch.cat([prompt_output["input_ids"], response_output["input_ids"]], dim=1)  # [1,S]
 
+        # -----------------------
+        # routed_experts: keep legacy behavior
+        # -----------------------
         routed_experts = None
         if output.routed_experts is not None:
             total_length = input_ids.shape[1]
@@ -502,11 +535,9 @@ class AgentLoopWorkerBase:
             experts_tensor = torch.from_numpy(output.routed_experts)
             routed_experts = torch.zeros(1, total_length, layer_num, topk_num, dtype=experts_tensor.dtype)
 
-            # Calculate start position: left padding means original prompt starts at the end
             start_pos = prompt_output["input_ids"].shape[1] - len(output.prompt_ids)
             end_pos = min(start_pos + length, total_length)
 
-            # Add boundary checks for robustness
             if start_pos < 0 or end_pos > total_length:
                 raise ValueError(
                     f"Invalid position range: start_pos={start_pos}, end_pos={end_pos}, total_length={total_length}"
@@ -514,9 +545,9 @@ class AgentLoopWorkerBase:
 
             routed_experts[:, start_pos:end_pos] = experts_tensor.unsqueeze(0)
 
-        # Handle multi-modal inputs and position_ids calculation
-        # Only support Qwen2VLImageProcessor for multi-modal processing currently
-        # TODO: support other multi-modal inputs
+        # -----------------------
+        # multi_modal_inputs: keep legacy behavior, but use 1D mask for rope index
+        # -----------------------
         multi_modal_inputs = None
         if self.processor is not None:
             images = getattr(output, "multi_modal_data", {}).get("image", None)
@@ -524,13 +555,54 @@ class AgentLoopWorkerBase:
             multi_modal_inputs = self.processor(text=[current_text], images=images, return_tensors="pt")
             multi_modal_inputs.pop("input_ids", None)
             multi_modal_inputs.pop("attention_mask", None)
-
-            # We must use dict(multi_modal_inputs) to convert BatchFeature values to a new dict
-            # because np.array() only keeps the keys for BatchFeature.
             multi_modal_inputs = dict(multi_modal_inputs.convert_to_tensors("pt"))
+
+        # -----------------------
+        # position_ids: use override if provided (FULL coords), with correct pad/trunc alignment
+        # -----------------------
+        P = int(self.config.actor_rollout_ref.rollout.prompt_length)
+        R = int(self.config.actor_rollout_ref.rollout.response_length)
+        S = P + R
+
+        p0_full = len(output.prompt_ids)
+        r0_full = len(output.response_ids)
+        full0 = p0_full + r0_full
+
+        # prompt padding/trunc params
+        prompt_keep = min(p0_full, P)
+        prompt_keep_start = max(0, p0_full - P)  # keep last P if truncated
+        lp = P - prompt_keep                    # left pad length in padded prompt
+
+        # response trunc params (right pad, keep first R if truncated)
+        resp_keep = min(r0_full, R)
+
+        pos_override = normalize_override(output.extra_fields.get("position_ids_override", None), full0)
+
         if self.processor is not None and "Qwen2VLImageProcessor" in self.processor.image_processor.__class__.__name__:
             from verl.models.transformers.qwen2_vl import get_rope_index
 
+            # build text position_ids as (1,1,S) first
+            valid_mask = attention_mask_1d[0].bool()
+            text_position_ids = torch.ones((1, S), dtype=torch.long, device=input_ids.device)
+
+            if pos_override is None:
+                text_position_ids[0, valid_mask] = torch.arange(valid_mask.sum().item(), device=input_ids.device)
+            else:
+                # fill prompt kept tokens
+                for i_full in range(prompt_keep_start, p0_full):
+                    j = (i_full - prompt_keep_start) + lp  # pad coord in [0,P)
+                    if 0 <= j < P:
+                        text_position_ids[0, j] = int(pos_override[i_full])
+                # fill response kept tokens
+                for t in range(resp_keep):
+                    i_full = p0_full + t
+                    j = P + t
+                    if P <= j < S:
+                        text_position_ids[0, j] = int(pos_override[i_full])
+
+            text_position_ids = text_position_ids.unsqueeze(0)  # (1,1,S)
+
+            # vision position ids need 1D attention mask
             image_grid_thw = multi_modal_inputs.get("image_grid_thw")
             video_grid_thw = multi_modal_inputs.get("video_grid_thw")
             second_per_grid_ts = multi_modal_inputs.get("second_per_grid_ts")
@@ -541,26 +613,119 @@ class AgentLoopWorkerBase:
                 image_grid_thw=image_grid_thw,
                 video_grid_thw=video_grid_thw,
                 second_per_grid_ts=second_per_grid_ts,
-                attention_mask=attention_mask.squeeze(0),
-            ).unsqueeze(0)  # (1, 3, seq_len)
+                attention_mask=attention_mask_1d.squeeze(0),
+            ).unsqueeze(0)  # (1,3,S)
 
-            valid_mask = attention_mask[0].bool()
-            text_position_ids = torch.ones((1, len(input_ids[0])), dtype=torch.long)
-            text_position_ids[0, valid_mask] = torch.arange(valid_mask.sum().item())
-            text_position_ids = text_position_ids.unsqueeze(0)
-            position_ids = torch.cat((text_position_ids, vision_position_ids), dim=1)  # (1, 4, seq_length)
+            position_ids = torch.cat((text_position_ids, vision_position_ids), dim=1)  # (1,4,S)
         else:
-            position_ids = compute_position_id_with_mask(attention_mask)  # (1, seq_len)
+            if pos_override is None:
+                position_ids = compute_position_id_with_mask(attention_mask_1d)  # (1,S)
+            else:
+                position_ids = torch.zeros((1, S), dtype=torch.long, device=input_ids.device)
+                # prompt kept tokens
+                for i_full in range(prompt_keep_start, p0_full):
+                    j = (i_full - prompt_keep_start) + lp
+                    if 0 <= j < P:
+                        position_ids[0, j] = int(pos_override[i_full])
+                # response kept tokens
+                for t in range(resp_keep):
+                    i_full = p0_full + t
+                    j = P + t
+                    if P <= j < S:
+                        position_ids[0, j] = int(pos_override[i_full])
+
+        # -----------------------
+        # attention_mask: build 4D additive mask, keep 1D mask separately
+        #   - causal
+        #   - padding (block PAD KEYS globally)
+        #   - prm blocks (coords are FULL, need remap to PAD)
+        # -----------------------
+        dev = input_ids.device
+        bool_mask = tril_mask(1, S, dev)  # [1,S,S]
+
+        # block PAD KEYS everywhere
+        key_valid = attention_mask_1d.to(dev).bool()  # [1,S]
+        bool_mask &= key_valid.unsqueeze(1)  # [1,S,S] : for any query, disallow pad keys
+
+        # Apply PRM (full coords -> pad coords)
+        prm_full = output.extra_fields.get("position_required_masks", None)
+
+        def map_full_to_pad(x: int) -> int:
+            x = int(x)
+            if x < 0:
+                return -1
+
+            # prompt part in full coords: [0, p0_full)
+            if x < p0_full:
+                # dropped by left truncation
+                if x < prompt_keep_start:
+                    return -1
+                # kept prompt token
+                j = (x - prompt_keep_start) + lp
+                return j if 0 <= j < P else -1
+
+            # response part in full coords: [p0_full, p0_full + r0_full)
+            t = x - p0_full
+            if 0 <= t < resp_keep:
+                j = P + t
+                return j if P <= j < S else -1
+
+            # beyond kept window
+            return -1
+
+        if prm_full is not None:
+            # normalize as list-of-masks; support both [ [l,r,L,R], ... ] and nested
+            if len(prm_full) > 0 and isinstance(prm_full[0], (list, tuple)) and len(prm_full[0]) > 0 and isinstance(
+                prm_full[0][0], (list, tuple)
+            ):
+                # nested: take first batch element (single-turn) if provided that way
+                prm_list = prm_full[0]
+            else:
+                prm_list = prm_full
+
+            for m in prm_list:
+                if not m or len(m) < 4:
+                    continue
+                l_full, r_full, L_full, R_full = m[:4]
+                l = map_full_to_pad(l_full)
+                r = map_full_to_pad(r_full)
+                L = map_full_to_pad(L_full)
+                R = map_full_to_pad(R_full)
+                if l < 0 or r < 0 or L < 0 or R < 0:
+                    continue
+                l = clamp(l, S)
+                r = clamp(r, S)
+                L = clamp(L, S)
+                R = clamp(R, S)
+                if l > r or L > R:
+                    continue
+
+                # For each query q in [L,R], if q is NOT inside [l,r], block keys [l,r]
+                for q in range(L, R + 1):
+                    if not (l <= q <= r):
+                        blk(bool_mask, 0, q, l, r)
+
+            # keep old behavior: non-pad queries cannot attend to left-pad keys of prompt
+            # (already covered by key_valid, but keep explicit semantics)
+            if lp > 0:
+                bool_mask[0, lp:, :lp] = False
+
+        attention_mask = bool_to_additive_4d(bool_mask)  # [1,1,S,S] bf16 additive
+
+        # -----------------------
+        # reward loop: feed 1D attention mask (legacy expectation)
+        # -----------------------
         enable_async_reward = (
             self.reward_router_address is not None and self.config.reward_model.enable_resource_pool
         ) or not self.config.reward_model.enable
+
         if output.reward_score is None and enable_async_reward and self.use_reward_loop:
             batch = TensorDict(
                 {
-                    "prompts": prompt_output["input_ids"],  # [1, prompt_length]
-                    "responses": response_output["input_ids"],  # [1, response_length]
-                    "attention_mask": attention_mask,  # [1, prompt_length + response_length]
-                    "input_ids": input_ids,  # [1, prompt_length + response_length]
+                    "prompts": prompt_output["input_ids"],          # [1,P]
+                    "responses": response_output["input_ids"],      # [1,R]
+                    "attention_mask": attention_mask_1d,            # IMPORTANT: 1D for reward loop
+                    "input_ids": input_ids,                         # [1,S]
                     "position_ids": position_ids,
                 },
                 batch_size=1,
@@ -579,13 +744,26 @@ class AgentLoopWorkerBase:
             output.reward_score = result["reward_score"]
             output.extra_fields["reward_extra_info"] = result["reward_extra_info"]
 
+        # consume SPR1 fields if you want downstream clean (optional, keep if you rely on them later)
+        output.extra_fields.pop("position_ids_override", None)
+        output.extra_fields.pop("position_required_masks", None)
+        output.extra_fields.pop("left_pad_len", None)
+        output.extra_fields.pop("left_pad_lens", None)
+
+        # -----------------------
+        # return: keep legacy fields, but attention_mask is now 4D and 1D kept in attention_mask_1d
+        # -----------------------
+        if self.use_4d_mask == False:
+            attention_mask = attention_mask_1d # 不使用计算好的 4d-mask
+            
         return _InternalAgentLoopOutput(
             prompt_ids=prompt_output["input_ids"],
             response_ids=response_output["input_ids"],
             input_ids=input_ids,
             position_ids=position_ids,
             response_mask=response_mask,
-            attention_mask=attention_mask,
+            attention_mask=attention_mask,          # 4D additive
+            attention_mask_1d=attention_mask_1d,    # 1D legacy (REMOVE if schema doesn't have it)
             response_logprobs=response_logprobs,
             routed_experts=routed_experts,
             multi_modal_inputs=multi_modal_inputs,
@@ -596,13 +774,14 @@ class AgentLoopWorkerBase:
             extra_fields=output.extra_fields,
         )
 
+    
     def _postprocess(self, inputs: list[_InternalAgentLoopOutput]) -> DataProto:
         """Process the padded outputs from _run_agent_loop and combine them into a batch."""
         # Convert lists back to tensors and stack them to create a batch.
+        # print(f"[DEBUG] Postprocessing {inputs}")
         prompt_ids = torch.cat([input.prompt_ids for input in inputs], dim=0)
         response_ids = torch.cat([input.response_ids for input in inputs], dim=0)
         response_mask = torch.cat([input.response_mask for input in inputs], dim=0)
-        attention_mask = torch.cat([input.attention_mask for input in inputs], dim=0)
         input_ids = torch.cat([input.input_ids for input in inputs], dim=0)
         position_ids = torch.cat([input.position_ids for input in inputs], dim=0)
         optional_outputs = {}
@@ -611,15 +790,20 @@ class AgentLoopWorkerBase:
         if inputs[0].routed_experts is not None:
             optional_outputs["routed_experts"] = torch.cat([input.routed_experts for input in inputs], dim=0)
 
+        attn_4d = torch.cat([inp.attention_mask for inp in inputs], dim=0)        # [bs,1,S,S]
+        attn_1d = torch.cat([inp.attention_mask_1d for inp in inputs], dim=0)     # [bs,S]
+
+        
+
         batch = TensorDict(
             {
-                "prompts": prompt_ids,  # [bsz, prompt_length]
-                "responses": response_ids,  # [bsz, response_length]
-                "response_mask": response_mask,  # [bsz, response_length]
-                "input_ids": input_ids,  # [bsz, prompt_length + response_length]
-                "attention_mask": attention_mask,  # [bsz, prompt_length + response_length]
-                # position_ids: [bsz, 3, prompt_length + response_length] or [bsz, prompt_length + response_length]
-                "position_ids": position_ids,
+                "prompts": prompt_ids,               # [bs, P]
+                "responses": response_ids,           # [bs, R]
+                "response_mask": response_mask,      # [bs, R]
+                "input_ids": input_ids,              # [bs, S]
+                "attention_mask_4d": attn_4d,           # [bs,1,S,S]  (你现在的4D)
+                "attention_mask": attn_1d,        # [bs,S]      (必须加！框架要用)
+                "position_ids": position_ids,        # [bs, S]
                 **optional_outputs,
             },
             batch_size=len(inputs),
@@ -638,7 +822,7 @@ class AgentLoopWorkerBase:
             for i, input in enumerate(inputs):
                 # 1) outcome reward: 保留旧逻辑
                 prompt_length = prompt_ids.size(1)
-                response_length = attention_mask[:, prompt_length:].sum(dim=1) - 1
+                response_length = attn_1d[:, prompt_length:].sum(dim=1) - 1
                 rm_scores = torch.zeros_like(response_mask, dtype=torch.float32)
                 rm_scores[torch.arange(response_mask.size(0)), response_length] = torch.tensor(scores, dtype=torch.float32)
                 # 2) process reward: 如果存在 process_reward，就覆盖 token-level
