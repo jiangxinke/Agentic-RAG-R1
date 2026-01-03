@@ -40,14 +40,6 @@ def test_index(index_name):
 
 
 def semantic_search(query, index_name, num_results=10):
-    """
-    Perform a semantic search on Elasticsearch.
-
-    :param query: user query string.
-    :param index_name: Elasticsearch index name.
-    :param num_results: number of top results to return.
-    :return: list of top search results.
-    """
     es = create_es_client()
     search_body = {
         "query": {
@@ -64,6 +56,15 @@ def semantic_search(query, index_name, num_results=10):
     relevant_docs = [hit['_source'] for hit in hits]
     return relevant_docs
 
+def Search(query: str) -> str:
+    results = semantic_search(query, index_name='wiki_en', num_results=1)
+    res = ""
+    id = 1
+    for doc in results:
+        res = res + f"{id}. " + str(doc) + "\n"
+        id += 1
+    return res
+
 
 if __name__ == "__main__":
     import argparse
@@ -74,8 +75,7 @@ if __name__ == "__main__":
 
     # Test the index with a sample query
     index_name = f'wiki_{args.language}'
-    test_index(index_name)
+    # test_index(index_name)
+    print (args.query)
     results = semantic_search(args.query, index_name, num_results=3)
-    for doc in results:
-        print(doc)
-    
+    print (Search(args.query))

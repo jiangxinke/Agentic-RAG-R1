@@ -30,7 +30,7 @@ def acc_reward(predict_str: str, ground_truth: str, use_boxed: bool = True) -> f
     return 1.0 if grade_answer(answer, ground_truth) else 0.0
 
 
-def compute_score(predict_str: str, ground_truth: str, use_boxed: bool = True, format_score: float = 0.1) -> float:
+def compute_score(data_source, predict_str: str, ground_truth: str, use_boxed: bool = True, format_score: float = 0.1) -> float:
     return (1.0 - format_score) * acc_reward(predict_str, ground_truth, use_boxed) + format_score * format_reward(
         predict_str
     )

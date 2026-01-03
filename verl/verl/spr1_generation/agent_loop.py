@@ -19,7 +19,6 @@ import random
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 from uuid import uuid4
-from rich import print
 
 import hydra
 import numpy as np
@@ -778,7 +777,6 @@ class AgentLoopWorkerBase:
     def _postprocess(self, inputs: list[_InternalAgentLoopOutput]) -> DataProto:
         """Process the padded outputs from _run_agent_loop and combine them into a batch."""
         # Convert lists back to tensors and stack them to create a batch.
-        # print(f"[DEBUG] Postprocessing {inputs}")
         prompt_ids = torch.cat([input.prompt_ids for input in inputs], dim=0)
         response_ids = torch.cat([input.response_ids for input in inputs], dim=0)
         response_mask = torch.cat([input.response_mask for input in inputs], dim=0)
@@ -1000,8 +998,6 @@ class AgentLoopManager:
             self._run_all([server.init_standalone() for server in self.rollout_replicas])
         self.server_handles = [server._server_handle for server in self.rollout_replicas]
         self.server_addresses = [server._server_address for server in self.rollout_replicas]
-
-        print(f"AgentLoopManager: {self.server_addresses}")
 
         # Update Prometheus configuration with server addresses
         if rollout_config.prometheus.enable:

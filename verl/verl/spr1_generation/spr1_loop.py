@@ -13,16 +13,7 @@ from verl.utils.profiler import simple_timer
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
-
-# -----------------------------
-# Dummy tool (replace with real)
-# -----------------------------
 from elasticsearch import Elasticsearch
-from dotenv import load_dotenv      
-from rich import print
-
-load_dotenv('.env')   
-
 def create_es_client() -> Elasticsearch:
     """Initialize Elasticsearch client with environment configuration."""
     if not os.environ.get('ELASTIC_PASSWORD'):
@@ -36,14 +27,6 @@ def create_es_client() -> Elasticsearch:
     )
 
 def semantic_search(query, index_name, num_results=10):
-    """
-    Perform a semantic search on Elasticsearch.
-
-    :param query: user query string.
-    :param index_name: Elasticsearch index name.
-    :param num_results: number of top results to return.
-    :return: list of top search results.
-    """
     es = create_es_client()
     search_body = {
         "query": {
@@ -58,11 +41,20 @@ def semantic_search(query, index_name, num_results=10):
     
     hits = response['hits']['hits']
     relevant_docs = [hit['_source'] for hit in hits]
-    return str(relevant_docs)
+    return relevant_docs
 
 def Search(query: str) -> str:
-    res =  semantic_search(query, index_name="wiki_en", num_results=3)
-    print(res)
+    if query == "":
+        return ""
+    results = semantic_search(query, index_name='wiki_en', num_results=1)
+    res = ""
+    id = 1
+    for doc in results:
+        text = doc.get("text", "")
+        if text and len(text) > 256:
+            text = text[:256] + "...(truncated)"
+        res = res + f"{id}. " + text + "\n"
+        id += 1
     return res
 
 
@@ -183,10 +175,10 @@ class SPR1AgentLoop(AgentLoopBase):
             data_cfg = config.data
         except Exception:
             data_cfg = {}
-        try:
-            cls.apply_chat_template_kwargs = dict(data_cfg.get("apply_chat_template_kwargs", {}))
-        except Exception:
-            cls.apply_chat_template_kwargs = {}
+        # try:
+        #     cls.apply_chat_template_kwargs = dict(data_cfg.get("apply_chat_template_kwargs", {}))
+        # except Exception:
+        cls.apply_chat_template_kwargs = {}
             
         cls.prompt_length = data_cfg.get("max_prompt_length", 4096)
         cls.response_length = data_cfg.get("max_response_length", 2048)
@@ -319,9 +311,9 @@ class SPR1AgentLoop(AgentLoopBase):
                 return acc, matched
 
             # short output => backend likely stopped early; do not spin
-            if len(new_ids) < sp["max_new_tokens"]:
+            if len(new_ids) > 0 and len(new_ids) < sp["max_new_tokens"]:
                 break
-
+        
         return acc, None
 
     # -----------------------------
@@ -353,9 +345,10 @@ class SPR1AgentLoop(AgentLoopBase):
         # boundary needles: stop immediately once close-prefix appears, or newline, or </tool_call> (leak guard)
         needles: list[list[int]] = []
         needles += self.V_PATH_CLOSE_PREFIX
-        if self.NEWLINE:
-            needles.append(self.NEWLINE)
         needles += self.V_TOOL_CALL_END
+        needles += self.V_ANSWER
+        needles += self.V_REFLECT
+        needles += self.V_TOOL_RESP
 
         sp = copy.deepcopy(sampling_params)
         sp["n"] = 1
@@ -406,6 +399,9 @@ class SPR1AgentLoop(AgentLoopBase):
         open_stack: list[_OpSpan] = []
 
         def _append_ids(new_ids: list[int], gen_by_model: bool) -> tuple[int, int]:
+            # text = self.tokenizer.decode(new_ids, skip_special_tokens=False)
+            # text = text.replace("\n", "")
+            # print(f"[ADD] |||| {text} |||| gen_by_model={gen_by_model}")
             start = len(full_ids)
             full_ids.extend(new_ids)
             resp_mask.extend(([1] if gen_by_model else [0]) * len(new_ids))
@@ -533,7 +529,6 @@ class SPR1AgentLoop(AgentLoopBase):
 
             while iters < max_iters:
                 iters += 1
-
                 seg_ids, matched_seq = await self._generate_segment_until_boundary(
                     request_id=request_id,
                     prompt_ids=full_ids + self.NEWLINE,
@@ -542,15 +537,11 @@ class SPR1AgentLoop(AgentLoopBase):
                     max_tokens_total=int(base_sp["max_new_tokens"]),
                     chunk_tokens=chunk_tokens,
                 )
-
                 if not seg_ids:
                     break
 
                 seg_s, seg_e = _append_ids(seg_ids, gen_by_model=True)
                 _scan_ops_until(seg_e)
-
-                print(self.tokenizer.decode(seg_ids, skip_special_tokens=False))
-                print("--------------------------------------------------")
 
                 # helper: locate exact tag inside matched (handles leading/trailing ws variants)
                 def _locate_exact(exact_tag: list[int], matched: Optional[list[int]]) -> Optional[int]:
@@ -668,6 +659,10 @@ class SPR1AgentLoop(AgentLoopBase):
             raise ValueError("resp_ids and resp_mask length mismatch")
         if len(pos_ids) != len(prompt_ids) + len(resp_ids):
             raise ValueError("pos_ids length mismatch")
+        
+        final_text = self.tokenizer.decode(resp_ids, skip_special_tokens=False)
+        final_text = final_text.replace("\n", "")
+        print(f"Final generated response: {final_text}")
 
         out = AgentLoopOutput(
             prompt_ids=prompt_ids,

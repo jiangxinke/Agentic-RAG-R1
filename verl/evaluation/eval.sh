@@ -2,50 +2,43 @@
 set -euo pipefail
 
 export PYTHONNOUSERSITE=1
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=6,7
+export PYTHONWARNINGS="ignore::UserWarning:multiprocessing.resource_tracker"
 
-MODEL_DIR="/data2/gjr/models/Qwen2.5-3B-Instruct"
+NAME="sp_r1_like_async_rl_after_2026_01_03/3B_w-ole-0.6_wo-decoupling_tool-agent_2D-mask_w-naive-process_bs16"
+STEP="300"
+# SRC_DIR="/data1/sp/spr1-checkpoints/"${NAME}"/global_step_"${STEP}"/actor"
+SRC_DIR="/data2/gjr/workshop/r1/verl/checkpoints/"${NAME}"/global_step_"${STEP}"/actor"
+MODEL_DIR=${SRC_DIR}"/output"
+
+# MODEL_DIR="/data2/gjr/models/Qwen2.5-3B-Instruct"
+# MODEL_DIR="/data2/gjr/models/Qwen2.5-3B-Instruct-spr1-mean-v2"
 PARQUET_PATH="/data2/gjr/workshop/r1/data/searchR1_processed_direct/test.parquet"
+LORA_PATH=""
 
-EVAL_PY="eval.py"
+if [ ! -d "${MODEL_DIR}" ]; then
+  echo "[INFO] MODEL_DIR not found, merging model..."
+  python -m verl.model_merger merge \
+    --backend fsdp \
+    --local_dir "${SRC_DIR}" \
+    --target_dir "${MODEL_DIR}"
+else
+  echo "[INFO] MODEL_DIR exists, skip merging."
+fi
 
-# 推理相关配置
-N=8 # 中断次数
-MAX_NEW_TOKENS=256
-TEMPERATURE=0.7
-TOP_P=0.9
-ATTN_IMPL="flash_attention_2"
+wait
 
-# 工具调用相关配置
-SEARCH_PATHS=3
-SEARCH_MAX_NEW_TOKENS=96
-SEARCH_TEMPERATURE=1.5
-SEARCH_TOP_P=0.5
-SEARCH_REPETITION_PENALTY=1.1
-SEARCH_NO_REPEAT_NGRAM=3
+EVAL_PY="evaluation/eval.py"
 
-# 测试样本
-LIMIT=10          # -1 表示全量
-PRINT_EVERY=50
-DUMP_ERRORS=0     # >0 会打印前 K 个错误样本
-
-NO_SAMPLE="--no_sample"
+N=10 # number of iterations
+SEARCH_PATHS=1
+LIMIT=16 # -1 for all
 
 python "${EVAL_PY}" \
-  --model_dir "${MODEL_DIR}" \
-  --parquet_path "${PARQUET_PATH}" \
-  --N "${N}" \
-  --max_new_tokens "${MAX_NEW_TOKENS}" \
-  --temperature "${TEMPERATURE}" \
-  --top_p "${TOP_P}" \
-  ${NO_SAMPLE} \
-  --attn_impl "${ATTN_IMPL}" \
-  --search_paths "${SEARCH_PATHS}" \
-  --search_max_new_tokens "${SEARCH_MAX_NEW_TOKENS}" \
-  --search_temperature "${SEARCH_TEMPERATURE}" \
-  --search_top_p "${SEARCH_TOP_P}" \
-  --search_repetition_penalty "${SEARCH_REPETITION_PENALTY}" \
-  --search_no_repeat_ngram "${SEARCH_NO_REPEAT_NGRAM}" \
+  --model-dir "${MODEL_DIR}" \
+  --parquet "${PARQUET_PATH}" \
+  --lora-path "${LORA_PATH}" \
+  --device "cuda" \
+  --num-iter "${N}" \
   --limit "${LIMIT}" \
-  --print_every "${PRINT_EVERY}" \
-  --dump_errors "${DUMP_ERRORS}"
+  --out-dir "evaluation/res"

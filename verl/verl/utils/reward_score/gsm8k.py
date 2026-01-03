@@ -49,7 +49,7 @@ def extract_solution(solution_str, method="strict"):
     return final_answer
 
 
-def compute_score(solution_str, ground_truth, method="strict", format_score=0.0, score=1.0):
+def compute_score(data_source, solution_str, ground_truth, method="strict", format_score=0.0, score=1.0):
     """The scoring function for GSM8k.
 
     Reference: Trung, Luong, et al. "Reft: Reasoning with reinforced fine-tuning." Proceedings of the 62nd Annual

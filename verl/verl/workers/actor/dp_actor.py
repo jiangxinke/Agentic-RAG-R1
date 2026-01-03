@@ -42,16 +42,20 @@ from verl.workers.config import ActorConfig
 
 from verl.workers.actor.decouple_layer import *
 
-try:
-    from verl.spr1_special_tokens.recognition import TokenRecognizer
-except ImportError:
-    TokenRecognizer = None
+from verl.spr1_special_tokens.recognition import TokenRecognizer
 
 __all__ = ["DataParallelPPOActor"]
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
+
+def load_tokenizer():
+    import os
+    tokenizer_path = os.getenv("TOKENIZER_PATH")
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    return tokenizer
 
 class DataParallelPPOActor(BasePPOActor):
     """FSDP DataParallel PPO Actor or Ref worker
@@ -99,18 +103,31 @@ class DataParallelPPOActor(BasePPOActor):
             self.scaler = None
 
         # Initialize TokenRecognizer
-        self.recognizer = None
-        if TokenRecognizer is not None and hasattr(self.config, 'model_config') and self.config.model_config.tokenizer is not None:
-             try:
-                self.recognizer = TokenRecognizer(tokenizer=self.config.model_config.tokenizer)
-                if torch.distributed.get_rank() == 0:
-                    print(f"TokenRecognizer initialized successfully with tokenizer.")
-             except Exception as e:
-                if torch.distributed.get_rank() == 0:
-                    print(f"[Warning] Failed to initialize TokenRecognizer: {e}")
-        else:
-             if torch.distributed.get_rank() == 0:
-                print(f"[Warning] TokenRecognizer or Tokenizer not available. Action/Args masks will be empty.")
+        print("debug load_tokenizer")
+        try:    
+            self.recognizer = TokenRecognizer(tokenizer=load_tokenizer())
+            print(f"TokenRecognizer initialized successfully with tokenizer.")
+        except Exception as e:
+            if torch.distributed.get_rank() == 0:
+                print(f"[Warning] Failed to initialize TokenRecognizer: {e}")
+            self.recognizer = None
+
+        # print("TokenRecognizer [debug] ===============================")
+        # print("self.tokenizer=", self.tokenizer)
+        # print("TokenRecognizer [debug] ===============================")
+        # if TokenRecognizer is not None and hasattr(self.config, 'model_config') and self.config.model_config.tokenizer is not None:
+        #      try:
+        #         self.recognizer = TokenRecognizer(tokenizer=self.config.model_config.tokenizer)
+        #         if torch.distributed.get_rank() == 0:
+        #             print(f"TokenRecognizer initialized successfully with tokenizer.")
+        #      except Exception as e:
+        #         if torch.distributed.get_rank() == 0:
+        #             print(f"[Warning] Failed to initialize TokenRecognizer: {e}")
+        # else:
+        #      if torch.distributed.get_rank() == 0:
+        #         print(f"[Warning] TokenRecognizer or Tokenizer not available. Action/Args masks will be empty.")
+        #         print(f"[Warning] hasattr(self.config, 'model_config')={hasattr(self.config, 'model_config')}")
+        #         print(f"[Warning] self.config.model_config.tokenizer={self.config.model_config.tokenizer}")
 
     def _forward_micro_batch(
         self, micro_batch, temperature, calculate_entropy=False

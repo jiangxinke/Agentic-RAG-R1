@@ -44,11 +44,11 @@ def default_compute_score(
     if data_source == "openai/gsm8k":
         from . import gsm8k
 
-        res = gsm8k.compute_score(solution_str, ground_truth)
+        res = gsm8k.compute_score(data_source, solution_str, ground_truth)
     elif data_source in ["lighteval/MATH", "DigitalLearningGmbH/MATH-lighteval", "HuggingFaceH4/MATH-500"]:
         from . import math_reward
 
-        res = math_reward.compute_score(solution_str, ground_truth)
+        res = math_reward.compute_score(data_source, solution_str, ground_truth)
         # [Optional] Math-Verify Integration
         # For enhanced accuracy, consider utilizing Math-Verify (https://github.com/huggingface/Math-Verify).
         # Note: Math-Verify needs to be manually installed via pip: `pip install math-verify`.
@@ -90,22 +90,23 @@ def default_compute_score(
         from . import geo3k
 
         res = geo3k.compute_score(solution_str, ground_truth)
-    elif data_source in [
-        "searchR1_nq",
-        "searchR1_triviaqa",
-        "searchR1_popqa",
-        "searchR1_hotpotqa",
-        "searchR1_2wikimultihopqa",
-        "searchR1_musique",
-        "searchR1_bamboogle",
-        "searchR1_asearcher",
-    ]:
+    # elif data_source in [
+    #     "searchR1_nq",
+    #     "searchR1_triviaqa",
+    #     "searchR1_popqa",
+    #     "searchR1_hotpotqa",
+    #     "searchR1_2wikimultihopqa",
+    #     "searchR1_musique",
+    #     "searchR1_bamboogle",
+    #     "searchR1_asearcher",
+    # ]:
+    else:
         from . import search_r1_like_qa_em
 
         res = search_r1_like_qa_em.compute_score(solution_str, ground_truth)
 
-    else:
-        raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
+    # else:
+    #     raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
 
     if isinstance(res, dict):
         return res

@@ -241,11 +241,14 @@ class SearchTool(BaseTool):
         """
         timeout = self.timeout
         query_list_from_params = parameters.get("query_list")
-
-        if not query_list_from_params or not isinstance(query_list_from_params, list):
-            error_msg = "Error: 'query_list' is missing, empty, or not a list in parameters."
-            logger.error(f"[SearchTool] {error_msg} Received parameters: {parameters}")
-            return ToolResponse(text=json.dumps({"result": error_msg})), 0.0, {}
+        if not query_list_from_params:
+            single_query = parameters.get("query") or parameters.get("text") or parameters.get("q")
+            if isinstance(single_query, str) and single_query.strip():
+                query_list_from_params = [single_query.strip()]
+            else:
+                query_list_from_params = [""]
+        if not isinstance(query_list_from_params, list):
+            query_list_from_params = [str(query_list_from_params)]
 
         # Execute search using Ray execution pool
         try:

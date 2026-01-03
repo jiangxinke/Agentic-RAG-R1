@@ -942,7 +942,19 @@ class DataProto:
 
         non_tensor_batch = list_of_dict_to_dict_of_list(list_of_dict=[d.non_tensor_batch for d in data])
         for key, val in non_tensor_batch.items():
-            non_tensor_batch[key] = np.concatenate(val, axis=0)
+            try:
+                non_tensor_batch[key] = np.concatenate(val, axis=0)
+            except ValueError:
+                flattened = []
+                for arr in val:
+                    if arr.ndim == 0:
+                        flattened.append(arr.item())
+                        continue
+                    for i in range(arr.shape[0]):
+                        flattened.append(arr[i])
+                out = np.empty(len(flattened), dtype=object)
+                out[:] = flattened
+                non_tensor_batch[key] = out
 
         # Merge meta_info with special handling for metrics
         merged_meta_info = {}

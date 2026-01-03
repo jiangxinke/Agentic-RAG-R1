@@ -1,24 +1,73 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import argparse
+import json
+import os
 import re
-from collections import defaultdict
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional, List
 
+import numpy as np
 import pandas as pd
-from infer import ProtocolRunner, GenConfig, SearchConfig
+from tqdm import tqdm
+import multiprocessing as mp
 
-ANSWER_RE = re.compile(r"<answer>\s*(.*?)\s*</answer>\s*$", re.DOTALL)
-
-
-def extract_answer(text: str) -> Optional[str]:
-    m = ANSWER_RE.search(text.strip())
-    if not m:
-        return None
-    return m.group(1).strip()
+# 注意：infer2 在子进程中 import（避免主进程加载 sglang/engine）
+# from infer2 import build_engine, infer
 
 
-def normalize(s: str) -> str:
-    return re.sub(r"\s+", " ", s.strip().lower())
+# -----------------------------
+# Prompt template utils
+# -----------------------------
 
+def apply_template(messages: List[Dict[str, str]]) -> str:
+    text = ""
+    if not messages or (messages and messages[0].get("role") != "system"):
+        text += "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n"
+    for m in messages:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        text += f"<|im_start|>{role}\n{content}<|im_end|>\n"
+    text += "<|im_start|>assistant\n"
+    return text
+
+
+def prompt_to_messages(prompt_obj: Any) -> List[Dict[str, str]]:
+    if isinstance(prompt_obj, np.ndarray):
+        prompt_obj = prompt_obj.tolist()
+
+    if isinstance(prompt_obj, list):
+        msgs: List[Dict[str, str]] = []
+        for m in prompt_obj:
+            if isinstance(m, dict):
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                msgs.append({"role": str(role), "content": str(content)})
+        if msgs:
+            return msgs
+
+    if isinstance(prompt_obj, str):
+        return [{"role": "user", "content": prompt_obj}]
+
+    return [{"role": "user", "content": str(prompt_obj)}]
+
+
+def apply_prompt(prompt_obj: Any) -> str:
+    return apply_template(prompt_to_messages(prompt_obj))
+
+
+def extract_user_from_prompt_str(prompt_str: str) -> str:
+    pattern = r"<\|im_start\|>user\s*(.*?)<\|im_end\|>"
+    matches = re.findall(pattern, prompt_str, flags=re.DOTALL)
+    if not matches:
+        return ""
+    return matches[-1].strip()
+
+
+# -----------------------------
+# Ground truth & eval utils
+# -----------------------------
 
 def get_ground_truth(row: Dict[str, Any]) -> Optional[str]:
     rm = row.get("reward_model", None)
@@ -41,163 +90,215 @@ def get_ground_truth(row: Dict[str, Any]) -> Optional[str]:
     return str(t)
 
 
-def build_prompt(prompt_value: Any) -> Optional[str]:
-    if prompt_value is None:
-        return None
-    if isinstance(prompt_value, str):
-        return prompt_value
-    try:
-        messages = prompt_value.tolist()
-    except Exception:
-        messages = prompt_value
-    parts = []
-    for m in messages:
-        if not isinstance(m, dict):
-            continue
-        content = m.get("content", "")
-        if content:
-            parts.append(content.strip())
-
-    return "\n".join(parts).strip()
+def norm(s: Any) -> str:
+    if s is None:
+        return ""
+    s = str(s).strip()
+    s = " ".join(s.split())
+    return s
 
 
-
-def update_stats(stats: Dict[str, Dict[str, int]], key: str, correct: bool) -> None:
-    stats[key]["total"] += 1
-    if correct:
-        stats[key]["correct"] += 1
+def exact_match(pred: str, gt: str) -> bool:
+    return norm(pred) == norm(gt)
 
 
-def accuracy_from_stats(stats: Dict[str, Dict[str, int]]) -> Dict[str, float]:
-    out = {}
-    for k, v in stats.items():
-        total = v["total"]
-        corr = v["correct"]
-        out[k] = (corr / total) if total > 0 else 0.0
-    return out
+def dump_json(path: str, obj: Any) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--model_dir", type=str, default="/data2/gjr/models/Qwen2.5-3B-Instruct")
-    ap.add_argument("--N", type=int, default=8, help="最大中断次数")
+# -----------------------------
+# Worker: run eval in subprocess
+# -----------------------------
 
-    ap.add_argument("--max_new_tokens", type=int, default=256)
-    ap.add_argument("--temperature", type=float, default=0.7)
-    ap.add_argument("--top_p", type=float, default=0.9)
-    ap.add_argument("--no_sample", action="store_true")
-    ap.add_argument("--attn_impl", type=str, default="flash_attention_2", choices=["sdpa", "flash_attention_2", "eager"])
+def eval_worker(args_dict: Dict[str, Any], out_queue: "mp.Queue") -> None:
+    """
+    Entire evaluation runs here (subprocess).
+    Create sgl.Engine inside this process and destroy it when process exits.
+    """
+    # 子进程内 import，避免主进程加载 sglang/engine 相关资源
+    from infer2 import build_engine, infer
 
-    ap.add_argument("--search_paths", type=int, default=3)
-    ap.add_argument("--search_max_new_tokens", type=int, default=96)
-    ap.add_argument("--search_temperature", type=float, default=1.0)
-    ap.add_argument("--search_top_p", type=float, default=0.5)
-    ap.add_argument("--search_repetition_penalty", type=float, default=1.1)
-    ap.add_argument("--search_no_repeat_ngram", type=int, default=3)
+    model_dir = args_dict["model_dir"]
+    parquet = args_dict["parquet"]
+    lora_path = args_dict["lora_path"]
+    device = args_dict["device"]
+    num_iter = int(args_dict["num_iter"])
+    limit = int(args_dict["limit"])
+    chunk_size = int(args_dict["chunk_size"])
 
-    ap.add_argument("--parquet_path", type=str, required=True, help="/data2/gjr/workshop/r1/data/searchR1_processed_direct/test.parquet")
-    ap.add_argument("--limit", type=int, default=10, help="Only evaluate first N samples; -1 means all")
-    ap.add_argument("--print_every", type=int, default=50, help="Progress logging interval")
-    ap.add_argument("--dump_errors", type=int, default=0, help="Dump first K mismatches (0 disables)")
+    df = pd.read_parquet(parquet)
+    if limit != -1:
+        df = df.iloc[:limit].copy()
 
-    args = ap.parse_args()
+    total = len(df)
+    print(f"[worker] Load datasets: len = {total}", flush=True)
 
-    search_cfg = SearchConfig(
-        num_paths=args.search_paths,
-        max_new_tokens=args.search_max_new_tokens,
-        temperature=args.search_temperature,
-        top_p=args.search_top_p,
-        repetition_penalty=args.search_repetition_penalty,
-        no_repeat_ngram_size=args.search_no_repeat_ngram,
-    )
+    lora = lora_path.strip() or None
+    llm = build_engine(model_dir, lora, device=device)
 
-    runner = ProtocolRunner(
-        model_dir=args.model_dir,
-        attn_impl=args.attn_impl,
-        search_cfg=search_cfg,
-    )
-
-    gen_cfg = GenConfig(
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        do_sample=(not args.no_sample),
-    )
-
-    df = pd.read_parquet(args.parquet_path)
-    if args.limit is not None and args.limit > 0:
-        df = df.iloc[: args.limit].copy()
-
-    total = 0
+    results: List[Dict[str, Any]] = []
     correct = 0
 
-    by_data_source = defaultdict(lambda: {"total": 0, "correct": 0})
-    by_ability = defaultdict(lambda: {"total": 0, "correct": 0})
+    num_chunks = (total + chunk_size - 1) // chunk_size if total > 0 else 0
 
-    dumped = 0
+    for chunk_id in range(num_chunks):
+        start = chunk_id * chunk_size
+        end = min((chunk_id + 1) * chunk_size, total)
+        chunk_df = df.iloc[start:end]
 
-    for i in range(len(df)):
-        row = df.iloc[i].to_dict()
+        pbar = tqdm(
+            total=(end - start),
+            desc=f"Chunk {chunk_id + 1}/{num_chunks} [{start}:{end}]",
+            ncols=110,
+        )
 
-        prompt_value = row.get("prompt", None)
-        prompt_text = build_prompt(prompt_value)
-        gt = get_ground_truth(row)
+        for idx, row in chunk_df.iterrows():
+            row_dict = row.to_dict()
 
-        data_source = str(row.get("data_source", "UNKNOWN"))
-        ability = str(row.get("ability", "UNKNOWN"))
+            prompt_obj = row_dict["prompt"]
+            prompt_str = apply_prompt(prompt_obj)
+            question = extract_user_from_prompt_str(prompt_str)
 
-        if prompt_text is None or gt is None:
-            continue
+            gt = get_ground_truth(row_dict) or ""
 
-        pred_full = runner.Generate(prompt_text, N=args.N, gen_cfg=gen_cfg)
-        pred_ans = extract_answer(pred_full)
+            out = infer(llm=llm, prompt=prompt_str, num_iter=num_iter)
 
-        if pred_ans is None:
-            is_correct = False
-        else:
-            is_correct = (normalize(pred_ans) == normalize(gt))
+            proc_out = out.get("text", "")
+            raw_out = out.get("raw_text", "")
+            pred_ans = out.get("answer", "")
+            iters_used = out.get("iters", 0)
 
-        total += 1
-        if is_correct:
-            correct += 1
+            ok = exact_match(pred_ans, gt)
+            correct += int(ok)
 
-        update_stats(by_data_source, data_source, is_correct)
-        update_stats(by_ability, ability, is_correct)
+            done_global = len(results) + 1
 
-        if args.print_every > 0 and total % args.print_every == 0:
-            print(f"[{total}/{len(df)}] running_acc={correct/total:.4f}")
+            results.append({
+                "index": int(len(results)),
+                "row_index": int(idx),
+                "question": question,
+                "ground_truth": gt,
+                "raw_output": raw_out,
+                "proc_output": proc_out,
+                "pred_answer": pred_ans,
+                "correct": bool(ok),
+                "data_source": row_dict.get("data_source", None),
+                "ability": row_dict.get("ability", None),
+                "iters": int(iters_used),
+                "if_tool_call" : out.get("if_tool_call", False)
+            })
 
-        if args.dump_errors > 0 and (not is_correct) and dumped < args.dump_errors:
-            dumped += 1
-            print("----- MISMATCH -----")
-            print(f"index: {row.get('extra_info', {}).get('index', i)}")
-            print(f"data_source: {data_source} | ability: {ability}")
-            print(f"Q(extra_info.question): {row.get('extra_info', {}).get('question', None)}")
-            print(f"GT: {gt}")
-            print(f"PRED(<answer>): {pred_ans}")
-            print("--------------------")
+            pbar.update(1)
+            pbar.set_postfix(
+                acc=f"{correct / done_global:.4f}",
+                done=f"{done_global}/{total}"
+            )
+
+        pbar.close()
 
     overall_acc = (correct / total) if total > 0 else 0.0
-    print("\n===== RESULTS =====")
-    print(f"Total evaluated: {total}")
-    print(f"Overall accuracy: {overall_acc:.6f}")
 
-    print("\n--- Accuracy by data_source ---")
-    acc_ds = accuracy_from_stats(by_data_source)
-    for k in sorted(acc_ds.keys()):
-        v = acc_ds[k]
-        t = by_data_source[k]["total"]
-        c = by_data_source[k]["correct"]
-        print(f"{k:30s}  acc={v:.6f}  ({c}/{t})")
+    def group_acc(key: str) -> Dict[str, Dict[str, Any]]:
+        stat: Dict[str, Dict[str, Any]] = {}
+        for r in results:
+            kk = str(r.get(key, ""))
+            stat.setdefault(kk, {"count": 0, "correct": 0, "acc": 0.0})
+            stat[kk]["count"] += 1
+            stat[kk]["correct"] += int(r["correct"])
+        for kk, v in stat.items():
+            v["acc"] = v["correct"] / v["count"] if v["count"] else 0.0
+        return stat
 
-    print("\n--- Accuracy by ability ---")
-    acc_ab = accuracy_from_stats(by_ability)
-    for k in sorted(acc_ab.keys()):
-        v = acc_ab[k]
-        t = by_ability[k]["total"]
-        c = by_ability[k]["correct"]
-        print(f"{k:30s}  acc={v:.6f}  ({c}/{t})")
+    summary = {
+        "model_dir": model_dir,
+        "lora_path": lora_path,
+        "parquet": parquet,
+        "num_iter": num_iter,
+        "limit": limit,
+        "chunk_size": chunk_size,
+        "total": total,
+        "correct": correct,
+        "overall_acc": overall_acc,
+        "acc_by_data_source": group_acc("data_source"),
+        "acc_by_ability": group_acc("ability"),
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    # best-effort engine shutdown (optional; process exit is the real cleanup)
+    for name in ("shutdown", "close", "terminate", "stop"):
+        fn = getattr(llm, name, None)
+        if callable(fn):
+            try:
+                fn()
+            except Exception:
+                pass
+
+    payload = {"summary": summary, "results": results}
+    out_queue.put(payload)
+
+
+# -----------------------------
+# Main (parent process)
+# -----------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-dir", type=str, required=True)
+    parser.add_argument("--parquet", type=str, required=True)
+    parser.add_argument("--lora-path", type=str, default="")
+    parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--num-iter", type=int, default=10)
+    parser.add_argument("--limit", type=int, default=-1)
+    parser.add_argument("--out-dir", type=str, default="./res")
+    parser.add_argument("--chunk-size", type=int, default=128)
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    # Spawn worker
+    out_queue: mp.Queue = mp.Queue()
+    args_dict = {
+        "model_dir": args.model_dir,
+        "parquet": args.parquet,
+        "lora_path": args.lora_path,
+        "device": args.device,
+        "num_iter": args.num_iter,
+        "limit": args.limit,
+        "chunk_size": args.chunk_size,
+    }
+
+    p = mp.Process(target=eval_worker, args=(args_dict, out_queue), daemon=False)
+    p.start()
+
+    payload = None
+    try:
+        payload = out_queue.get()  # block until worker finishes and puts result
+    finally:
+        p.join()
+
+    if p.exitcode != 0:
+        raise SystemExit(f"[parent] Worker exited with code {p.exitcode}")
+
+    # Save results in parent (avoid worker writing + potential partial files)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_path = os.path.join(args.out_dir, f"eval_{ts}.json")
+    dump_json(out_path, payload)
+
+    summary = payload.get("summary", {})
+    print("\n==== SUMMARY ====")
+    print(
+        f"Total={summary.get('total', 0)}, "
+        f"Correct={summary.get('correct', 0)}, "
+        f"Overall Acc={summary.get('overall_acc', 0.0):.6f}"
+    )
+    print(f"Saved: {out_path}")
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
+
     main()
+
+
+# system\nYou are a helpful and harmless assistant.\n\n# Tools\n\nYou may call one or more functions to assist with the user query.\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>\n{\"type\": \"function\", \"function\": {\"name\": \"search\", \"description\": \"Searches the web for relevant information based on the given query.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"query_list\": {\"type\": \"array\", \"description\": \"A list of fully-formed semantic queries. The tool will return search results for each query.\"}}, \"required\": [\"query_list\"]}}}\n</tools>\n\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\n<tool_call>\n{\"name\": <function-name>, \"arguments\": <args-json-object>}\n</tool_call>\nuser\n\n

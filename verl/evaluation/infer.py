@@ -19,9 +19,47 @@ CLOSE_TAGS = ["</tool_call>", "</backtrack>", "</summary>", "</answer>", "</refl
 
 MODEL_TAGS = ["think", "answer", "summary", "backtrack", "tool_call", "reflect"]
 
+from dotenv import load_dotenv      
 
-def Search(_: str) -> str:
-    return "Cannot Search Now"
+load_dotenv('.env')   
+from elasticsearch import Elasticsearch
+def create_es_client() -> Elasticsearch:
+    """Initialize Elasticsearch client with environment configuration."""
+    if not os.environ.get('ELASTIC_PASSWORD'):
+        raise ValueError('ELASTIC_PASSWORD environment variable not set')
+
+    return Elasticsearch(
+        os.getenv("ELASTIC_URL"),
+        basic_auth=("elastic", os.getenv("ELASTIC_PASSWORD")),
+        verify_certs=False,
+        ssl_show_warn=False,
+    )
+
+def semantic_search(query, index_name, num_results=10):
+    es = create_es_client()
+    search_body = {
+        "query": {
+            "multi_match": {
+                "query": query,
+                "fields": ["title", "text"]
+            }
+        },
+        "size": num_results
+    }
+    response = es.search(index=index_name, body=search_body)
+    
+    hits = response['hits']['hits']
+    relevant_docs = [hit['_source'] for hit in hits]
+    return relevant_docs
+
+def Search(query: str) -> str:
+    results = semantic_search(query, index_name='wiki_en', num_results=1)
+    res = ""
+    id = 1
+    for doc in results:
+        res = res + f"{id}. " + str(doc) + "\n"
+        id += 1
+    return res
 
 
 class ActionTagStoppingCriteria(StoppingCriteria):
@@ -93,7 +131,7 @@ class GenConfig:
 
 @dataclass
 class SearchConfig:
-    num_paths: int = 3
+    num_paths: int = 1
     max_new_tokens: int = 96
     temperature: float = 1.0
     top_p: float = 0.5
@@ -333,7 +371,7 @@ class ProtocolRunner:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model_dir", type=str, default="Your Model Path")
+    ap.add_argument("--model_dir", type=str, default="/data2/gjr/models/Qwen2.5-3B-Instruct")
     ap.add_argument("--N", type=int, default=8, help="最大中断次数")
 
     ap.add_argument("--max_new_tokens", type=int, default=256)
@@ -342,7 +380,7 @@ def main():
     ap.add_argument("--no_sample", action="store_true")
     ap.add_argument("--attn_impl", type=str, default="flash_attention_2", choices=["sdpa", "flash_attention_2", "eager"])
 
-    ap.add_argument("--search_paths", type=int, default=3)
+    ap.add_argument("--search_paths", type=int, default=1)
     ap.add_argument("--search_max_new_tokens", type=int, default=96)
     ap.add_argument("--search_temperature", type=float, default=1.0)
     ap.add_argument("--search_top_p", type=float, default=0.5)

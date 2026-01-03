@@ -42,7 +42,7 @@ if str(_PKG_ROOT) not in sys.path:
 # ----------------------------
 # Test config
 # ----------------------------
-MODEL_PATH = "/root/zzx/models/Qwen2.5-7B-Instruct"
+MODEL_PATH = "/data2/gjr/models/Qwen2.5-3B-Instruct"
 
 PROMPT_TEXT = """You are a helpful and harmless assistant.
 <system instruction>

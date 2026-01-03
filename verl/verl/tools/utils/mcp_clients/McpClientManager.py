@@ -31,6 +31,7 @@ class MCPClientManager:
     clients = []
     tool_client_mapping = {}
     rate_limiter = None
+    clients_opened = False
 
     async def initialize(self, config_path, rate_limit: float = 10.0):
         if self.initialized:
@@ -54,6 +55,10 @@ class MCPClientManager:
         # Initialize rate limiter
         self.rate_limiter = TokenBucket(rate_limit)
         self.initialized = True
+        if not self.clients_opened:
+            for client in self.clients:
+                await client.__aenter__()
+            self.clients_opened = True
 
     async def call_tool(self, tool_name, parameters, timeout):
         # Apply rate limiting
@@ -61,13 +66,16 @@ class MCPClientManager:
             await asyncio.sleep(0.1)
 
         client = self.get_client_with_tool_name(tool_name)
-        async with client:
+        if self.clients_opened:
             return await client.call_tool_mcp(tool_name, parameters)
+        else:
+            async with client:
+                return await client.call_tool_mcp(tool_name, parameters)
 
     async def fetch_tool_schemas(self, tool_selected_list: list[str]) -> list[dict]:
         tool_schemas = []
         for client in self.clients:
-            async with client:
+            if self.clients_opened:
                 tools = await client.list_tools_mcp()
                 for tool in tools.tools:
                     if not tool_selected_list:
@@ -76,6 +84,16 @@ class MCPClientManager:
                     elif tool.name in tool_selected_list:
                         self.tool_client_mapping[tool.name] = client
                         tool_schemas.append(mcp2openai(tool))
+            else:
+                async with client:
+                    tools = await client.list_tools_mcp()
+                    for tool in tools.tools:
+                        if not tool_selected_list:
+                            self.tool_client_mapping[tool.name] = client
+                            tool_schemas.append(mcp2openai(tool))
+                        elif tool.name in tool_selected_list:
+                            self.tool_client_mapping[tool.name] = client
+                            tool_schemas.append(mcp2openai(tool))
 
         return tool_schemas
 
@@ -92,6 +110,15 @@ class MCPClientManager:
             logger.error(f'there was an error reading the "{file}" file')
 
         return {}
+
+    async def shutdown(self):
+        if self.clients_opened:
+            for client in self.clients:
+                try:
+                    await client.__aexit__(None, None, None)
+                except Exception:
+                    pass
+            self.clients_opened = False
 
 
 ClientManager = MCPClientManager()
