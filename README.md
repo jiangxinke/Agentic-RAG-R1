@@ -1,14 +1,55 @@
-# README
+# AgenticRAG-R1
 
-## train
+## 🛠️ Environment Setup
 
-```
-cd verl
-./spr1_scripts/run_qwen2.5-3b_instruct_search_multiturn.sh
+Follow the steps below to set up the development environment.
+
+### 1. Create Conda Environment
+```bash
+conda create -n verl-sglang python=3.12 -y
+conda activate verl-sglang
 ```
 
-NOTE: You can update the private information below by editing `./verl/spr1_scripts/local_config.sh`.
+### 2. Install PyTorch
+Install PyTorch and related components using the specific Aliyun mirror sources:
+```bash
+python -m pip install -U pip wheel setuptools
+
+python -m pip install \
+"https://mirrors.aliyun.com/pytorch-wheels/cu129/torch-2.9.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl" \
+"https://mirrors.aliyun.com/pytorch-wheels/cu129/torchvision-0.24.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl" \
+"https://mirrors.aliyun.com/pytorch-wheels/cu129/torchaudio-2.9.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl"
 ```
+
+### 3. Install Flash Attention
+Download the appropriate wheel version from [flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels/releases) and install it:
+
+```bash
+# Example command (ensure the filename matches your download)
+python -m pip install flash_attn-2.7.4+cu128torch2.9-cp312-cp312-linux_x86_64.whl
+```
+
+### 4. Install SGLang
+```bash
+python -m pip install --pre sglang
+```
+
+### 5. Install vLLM
+> **⚠️ Important:** Install vLLM with `--no-deps`. Do **NOT** add dependencies here, otherwise it may alter the Torch version and cause conflicts.
+
+```bash
+python -m pip install --no-deps vllm==0.12.0
+```
+
+---
+
+## 🚀 Training
+
+### 1. Configuration
+Before running the training script, update the environment variables and paths in `./verl/spr1_scripts/local_config.sh`.
+
+**Key configurations to check:**
+```bash
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export RAY_TMPDIR=""
 export SWANLAB_API_KEY=""
@@ -16,7 +57,6 @@ export SWANLAB_API_KEY=""
 PROJECT_DIR="$(pwd)"
 CONFIG_PATH="$PROJECT_DIR/examples/sglang_multiturn/config"
 TOOL_CONFIG="$CONFIG_PATH/tool_config/search_tool_config.yaml"
-
 
 PROJECT_NAME=''
 EXPERIMENT_NAME=''
@@ -26,44 +66,17 @@ TRAIN_DATA_PATH=""
 TEST_DATA_PATH=""
 ```
 
-## environment
+### 2. Run Training
+Navigate to the `verl` directory and execute the script:
 
-step01: create new conda environment
-```
-conda create -n verl-sglang python=3.12 -y
-conda activate verl-sglang
-```
-
-step02: install torch
-```
-python -m pip install -U pip wheel setuptools
-
-python -m pip install \
-  "https://mirrors.aliyun.com/pytorch-wheels/cu129/torch-2.9.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl" \
-  "https://mirrors.aliyun.com/pytorch-wheels/cu129/torchvision-0.24.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl" \
-  "https://mirrors.aliyun.com/pytorch-wheels/cu129/torchaudio-2.9.1%2Bcu129-cp312-cp312-manylinux_2_28_x86_64.whl"
+```bash
+cd verl
+./spr1_scripts/run_qwen2.5-3b_instruct_search_multiturn.sh
 ```
 
-step03: install flash-attn
+---
 
-download proper version wheel from [flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels/releases)
+## 📚 Acknowledgement
 
-```
-python -m pip install flash_attn-2.7.4+cu128torch2.9-cp312-cp312-linux_x86_64.whl
-```
-
-step04: install sglang
-```
-python -m pip install --pre sglang
-```
-
-step05: install vllm with –no-deps
-```
-python -m pip install --no-deps vllm==0.12.0
-```
-Note that dependencies must not be added here; otherwise, it will cause changes in the torch version
-
-## acknowledgement
-
-* [VeRL](https://github.com/volcengine/verl)
-* [ArtSearch](https://github.com/Artessay/ArtSearch)
+*   [VeRL](https://github.com/volcengine/verl)
+*   [ArtSearch](https://github.com/Artessay/ArtSearch)
