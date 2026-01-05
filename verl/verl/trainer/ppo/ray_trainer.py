@@ -1369,7 +1369,7 @@ class RayPPOTrainer:
                             config=self.config.algorithm,
                         )
 
-                        # NOTE (gjr): ole
+                        # NOTE: ole
                         if self.use_ole:
                             seq_rewards = batch.batch["token_level_rewards"].sum(dim=-1).detach().cpu().numpy()
                             uids = batch.non_tensor_batch["uid"]
@@ -1414,7 +1414,7 @@ class RayPPOTrainer:
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
                     
-                    # NOTE (gjr): ole
+                    # NOTE: ole
                     if self.use_ole:
                         self.ole_threshold_value = next_ole_threshold_value
 

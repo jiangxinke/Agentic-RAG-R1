@@ -63,6 +63,7 @@ python -m pip install --no-deps vllm==0.12.0
 ```
 Note that dependencies must not be added here; otherwise, it will cause changes in the torch version
 
-## wiki
+## acknowledgement
 
-参考：[ArtSearch](https://github.com/Artessay/ArtSearch)
+* [VeRL](https://github.com/volcengine/verl)
+* [ArtSearch](https://github.com/Artessay/ArtSearch)

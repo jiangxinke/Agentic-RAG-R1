@@ -27,7 +27,7 @@ from omegaconf import OmegaConf, DictConfig
 # ----------------------------
 _THIS_FILE = Path(__file__).resolve()
 # .../verl/verl/spr1_generation/test.py -> parents:
-# 0 spr1_generation, 1 verl (python package root), 2 repo root (/root/zzx/verl)
+# 0 spr1_generation, 1 verl (python package root), 2 repo root 
 _REPO_ROOT = _THIS_FILE.parents[2]
 _PKG_ROOT = _THIS_FILE.parents[1]
 

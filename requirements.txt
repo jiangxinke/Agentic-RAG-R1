@@ -47,7 +47,6 @@ executing==2.2.1
 fancycompleter==0.11.1
 fastapi==0.124.4
 filelock==3.20.0
-flash_attn @ file:///data2/gjr/workshop/r1/flash_attn-2.7.4%2Bcu128torch2.9-cp312-cp312-linux_x86_64.whl#sha256=e9c8691489e8ed08f3694790836bbaaa0bded486497aa6672ab04b246573900e
 flashinfer-cubin==0.5.3
 flashinfer-python==0.5.3
 frozenlist==1.8.0
