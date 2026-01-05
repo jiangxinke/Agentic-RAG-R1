@@ -78,5 +78,5 @@ cd verl
 
 ## 📚 Acknowledgement
 
-*   [VeRL](https://github.com/volcengine/verl)
-*   [ArtSearch](https://github.com/Artessay/ArtSearch)
+*   [VeRL: Volcano Engine Reinforcement Learning for LLMs](https://github.com/volcengine/verl)
+*   [ArtSearch: A Local Search System for Wikipedia](https://github.com/Artessay/ArtSearch)
