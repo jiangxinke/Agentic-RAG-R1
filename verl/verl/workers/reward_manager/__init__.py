@@ -16,7 +16,7 @@ from .registry import get_reward_manager_cls, register  # noqa: I001
 from .batch import BatchRewardManager
 from .dapo import DAPORewardManager
 from .naive import NaiveRewardManager
-# NOTE [jxk] 新增过程奖励
+# NOTE: 新增过程奖励
 from .naive_process import NaiveProcessRewardManager
 from .prime import PrimeRewardManager
 

@@ -316,7 +316,7 @@ class DataParallelPPOActor(BasePPOActor):
                 if self.use_fused_kernels:
                     extra_args["temperature"] = temperature
                     extra_args["return_dict"] = True
-                # [UPDATE zzx] 对 attention 的修改提前到 agent_loop 中完成。
+                # [UPDATE] 对 attention 的修改提前到 agent_loop 中完成。
                 # if micro_batch.get("attention_mask_4d", None) is not None:
                 #     attention_mask = micro_batch["attention_mask_4d"]
                 attention_mask = micro_batch["attention_mask_4d"]
