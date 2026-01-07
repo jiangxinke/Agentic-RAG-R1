@@ -191,7 +191,7 @@ def build_engine(base_model: str, lora_path: Optional[str] = None, device: str =
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-model", type=str, default="/data2/gjr/models/Qwen2.5-3B-Instruct-spr1-mean-v2", help="Base model path or HF repo id")
+    parser.add_argument("--base-model", type=str, default="models/Qwen2.5-3B-Instruct-spr1-mean-v2", help="Base model path or HF repo id")
     parser.add_argument("--lora", type=str, default=None, help="LoRA adapter path (optional)")
     parser.add_argument("--device", type=str, default="cuda", help="cuda/cpu, etc.")
     parser.add_argument("--num-iter", type=int, default=8, help="Max generation iterations")

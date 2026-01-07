@@ -16,6 +16,7 @@ import json
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pathlib import Path
 
 # Try to import TokenRecognizer
 try:
@@ -148,7 +149,7 @@ def build_action_args_masks_from_model_inputs(
 # ============================================================
 def generate_grad_control_dicts(
     model: nn.Module,
-    param_importance_path: str = r"/data2/gjr/workshop/r1/verl/verl/workers/actor/neuron/neuron_active_ratio.json",
+    param_importance_path: str = str(Path(__file__).resolve().parent / "neuron" / "neuron_active_ratio.json"),
     top_k: int = 8):
     """
     为Qwen2.5-1.5B-Instruct模型生成action和args的参数集合（FSDP 兼容）
@@ -201,7 +202,7 @@ def generate_grad_control_dicts(
 
     return action_params, args_params
 
-def import_grad_control_dicts(model, param_importance_path=r"/data2/gjr/workshop/r1/verl/verl/workers/actor/neuron/neuron_active_ratio.json", top_k=8):
+def import_grad_control_dicts(model, param_importance_path=str(Path(__file__).resolve().parent / "neuron" / "neuron_active_ratio.json"), top_k=8):
     """
     为Qwen2.5-1.5B-Instruct模型生成action和args的梯度控制字典
     基于参数重要性字典，汇总tag/args得分后选择Top-K层参数，仅保留原始可训练参数的更新权限

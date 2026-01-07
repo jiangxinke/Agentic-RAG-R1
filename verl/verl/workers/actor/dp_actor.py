@@ -19,6 +19,7 @@ Single Process Actor
 
 import logging
 import os
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -503,7 +504,7 @@ class DataParallelPPOActor(BasePPOActor):
 
         action_params, args_params = generate_grad_control_dicts(
             model=self.actor_module,
-            param_importance_path="/data2/gjr/workshop/r1/verl/verl/workers/actor/neuron/neuron_active_ratio.json",
+            param_importance_path=str(Path(__file__).resolve().parent / "neuron" / "neuron_active_ratio.json"),
             top_k=8
         )
         ### NOTE SP-R1

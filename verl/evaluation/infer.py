@@ -371,7 +371,7 @@ class ProtocolRunner:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model_dir", type=str, default="/data2/gjr/models/Qwen2.5-3B-Instruct")
+    ap.add_argument("--model_dir", type=str, default="models/Qwen2.5-3B-Instruct")
     ap.add_argument("--N", type=int, default=8, help="最大中断次数")
 
     ap.add_argument("--max_new_tokens", type=int, default=256)

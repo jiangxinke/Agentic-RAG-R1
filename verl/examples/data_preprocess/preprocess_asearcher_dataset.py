@@ -126,14 +126,12 @@ def process_single_row(row, current_split_name, row_index, data_source_tagged="s
     )
 
 def process_split(parquet_files, split_name, output_dir):
-    l = len("/data2/gjr/workshop/r1/data/ASearcher/test_")
-    r = len(".parquet")
     print(f"Processing {split_name} split with files: {parquet_files}")
     dfs = []
     src_names = []
     for p in parquet_files:
         dfs.append(pd.read_parquet(p))
-        src_names.append((p[l:])[:-r])
+        src_names.append(os.path.splitext(os.path.basename(p))[0].removeprefix("test_"))
         
     df_raw = pd.concat(dfs, ignore_index=True)
     logger.info(f"Merged {split_name} rows: {len(df_raw)}")
@@ -183,12 +181,12 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--asearcher_dir",
-        default="/data2/gjr/workshop/r1/data/ASearcher",
+        default="data/ASearcher",
         help="Directory containing train*.parquet and test_*.parquet",
     )
     parser.add_argument(
         "--local_dir",
-        default="/data2/gjr/workshop/r1/data/searchR1_processed_direct",
+        default="data/searchR1_processed_direct",
         help="Output directory",
     )
 

@@ -98,7 +98,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
-    trainer.rollout_data_dir="/data2/gjr/workshop/r1/rollout_saver/$EXPERIMENT_NAME/" \
+    trainer.rollout_data_dir="rollout_saver/$EXPERIMENT_NAME/" \
     trainer.val_before_train=False \
     trainer.logger='["console", "swanlab"]' \
     trainer.project_name=$PROJECT_NAME \

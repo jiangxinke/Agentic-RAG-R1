@@ -7,13 +7,10 @@ export PYTHONWARNINGS="ignore::UserWarning:multiprocessing.resource_tracker"
 
 NAME="sp_r1_like_async_rl_after_2026_01_03/3B_w-ole-0.6_wo-decoupling_tool-agent_2D-mask_w-naive-process_bs16"
 STEP="300"
-# SRC_DIR="/data1/sp/spr1-checkpoints/"${NAME}"/global_step_"${STEP}"/actor"
-SRC_DIR="/data2/gjr/workshop/r1/verl/checkpoints/"${NAME}"/global_step_"${STEP}"/actor"
+SRC_DIR="checkpoints/${NAME}/global_step_${STEP}/actor"
 MODEL_DIR=${SRC_DIR}"/output"
 
-# MODEL_DIR="/data2/gjr/models/Qwen2.5-3B-Instruct"
-# MODEL_DIR="/data2/gjr/models/Qwen2.5-3B-Instruct-spr1-mean-v2"
-PARQUET_PATH="/data2/gjr/workshop/r1/data/searchR1_processed_direct/test.parquet"
+PARQUET_PATH="data/searchR1_processed_direct/test.parquet"
 LORA_PATH=""
 
 if [ ! -d "${MODEL_DIR}" ]; then
