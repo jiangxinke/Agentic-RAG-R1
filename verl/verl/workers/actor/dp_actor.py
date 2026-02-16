@@ -317,10 +317,33 @@ class DataParallelPPOActor(BasePPOActor):
                 if self.use_fused_kernels:
                     extra_args["temperature"] = temperature
                     extra_args["return_dict"] = True
-                # [UPDATE] 对 attention 的修改提前到 agent_loop 中完成。
+
+                # [UPDATE] use 2d mask to construct 4d mask
                 # if micro_batch.get("attention_mask_4d", None) is not None:
                 #     attention_mask = micro_batch["attention_mask_4d"]
-                attention_mask = micro_batch["attention_mask_4d"]
+                
+                if "2d_attention_mask" in micro_batch.keys():
+                    batch_size = len(input_ids)
+                    max_len = len(input_ids[0])
+                    bool_mask = torch.tril(torch.ones(batch_size, max_len, max_len, dtype=torch.bool))
+                    spans = micro_batch["2d_attention_mask"]
+                    
+                    for i in range(batch_size):
+                        spansi = spans[i]
+                        print(f"[zzx debug] create 4d-attn-mask with 2d-attn-mask = {spansi}")
+                        for l, r, L, R in spansi:
+                            if l >= L:
+                                bool_mask[i][L:l][l:r+1] = False
+                                bool_mask[i][l:r+1][L:l] = False
+                                bool_mask[i][r+1:R+1][l:r+1] = False
+                                bool_mask[i][l:r+1][r+1:R+1] = False
+                            else:
+                                bool_mask[i][l:r+1][L:R+1] = False
+                                bool_mask[i][L:R+1][l:r+1] = False
+                
+                    attention_mask = torch.zeros_like(bool_mask, dtype=torch.bfloat16)
+                    attention_mask.masked_fill_(~bool_mask, float("-inf"))
+                    attention_mask = attention_mask.unsqueeze(1)
 
                 output = self.actor_module(
                     input_ids=input_ids,
@@ -396,13 +419,14 @@ class DataParallelPPOActor(BasePPOActor):
         """
         # set to eval
         self.actor_module.eval()
-
         micro_batch_size = data.meta_info["micro_batch_size"]
         temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
         use_dynamic_bsz = data.meta_info["use_dynamic_bsz"]
         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
         select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
         non_tensor_select_keys = ["multi_modal_inputs"] if has_multi_modal_inputs else []
+        if "2d_attention_mask" in data.non_tensor_batch.keys():
+            non_tensor_select_keys.append("2d_attention_mask")
 
         data = data.select(batch_keys=select_keys, non_tensor_batch_keys=non_tensor_select_keys)
 

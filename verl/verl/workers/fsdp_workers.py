@@ -316,9 +316,20 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
 
         # override model kwargs
         attn_implementation = override_model_config.get("attn_implementation", "flash_attention_2")
-        actor_model_config = AutoConfig.from_pretrained(
-            local_path, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation
-        )
+        
+        # print("[zzx debug] sadasdasdasd"*10)
+        if os.environ.get("USE_4D_MASK", "0") == "1":
+            print("[zzx debug] turn off flash_attention_2")
+            actor_model_config = AutoConfig.from_pretrained(
+                local_path, trust_remote_code=trust_remote_code, 
+                # attn_implementation=attn_implementation
+            )
+        else:
+            actor_model_config = AutoConfig.from_pretrained(
+                local_path, trust_remote_code=trust_remote_code, 
+                attn_implementation=attn_implementation
+            )
+            
         # TODO: VL models use VisionAttention, which directly uses flash_attention in transformers>=4.53
         # which will be patched by _ulysses_flash_attention_forward, but errorly misses position_ids
         # Maybe support Ulysses in VisionAttention in the future and remove this patch
@@ -379,7 +390,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
                 torch_dtype=torch_dtype,
                 config=actor_model_config,
                 trust_remote_code=trust_remote_code,
-                attn_implementation=attn_implementation,
+                # attn_implementation=attn_implementation,
             )
 
             # Apply Liger kernel to the model if use_liger is set to True

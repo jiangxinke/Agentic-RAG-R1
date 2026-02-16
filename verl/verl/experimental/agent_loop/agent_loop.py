@@ -285,6 +285,12 @@ class AgentLoopWorkerBase:
         local_path = copy_to_local(config.actor_rollout_ref.model.path)
         self.tokenizer = hf_tokenizer(local_path, trust_remote_code=True)
         self.processor = hf_processor(local_path, trust_remote_code=True)
+        
+        self.use_4d_mask = config.actor_rollout_ref.rollout.agent.get("use_4d_mask", False)
+        if self.use_4d_mask == False:
+            print(f"[Warning] Using normal attention mask in AgentLoopWorkerBase")
+        else:
+            print(f"[Info] Using 4D attention mask in AgentLoopWorkerBase")
 
         agent_loop_config_path = config.actor_rollout_ref.rollout.agent.agent_loop_config_path
         if agent_loop_config_path:
@@ -431,6 +437,74 @@ class AgentLoopWorkerBase:
     async def _agent_loop_postprocess(self, output, **kwargs) -> _InternalAgentLoopOutput:
         """Perform post-processing operations on the output of each individual agent loop."""
         output.extra_fields["raw_prompt"] = kwargs["raw_prompt"]
+        
+        ### Process for 4D Mask ####
+        if self.use_4d_mask == True:
+            # print("[zzx debug] begin 4d mask processing")
+            prompt_len = self.config.actor_rollout_ref.rollout.prompt_length
+            response_len = self.config.actor_rollout_ref.rollout.response_length
+            # print (f"[zzx debug] len1 = {prompt_len}, len2= {response_len}")
+            response_text = self.tokenizer.decode(output.response_ids)
+            # print(f"[zzx debug] response_text = {response_text}")
+            ## just for test
+            # response_text = "<think> This is think ... </think>\
+            # <tool_call> This is tool_call </tool_call>\
+            # <tool_response> This is tool_response </tool_response>\
+            # <reflect> This is the first reflect </reflect>\
+            # <think> This is think again .. </think>\
+            # <reflect> This is the seconde reflect </reflect>\
+            # <answer> This is the final answer. </answer>"
+            import re
+            _SPLIT_TAGS = ("<reflect>", "<answer>", "<tool_call>", "<tool_response>", "<think>")
+            pattern = re.compile(r"(?=(?:%s))" % "|".join(map(re.escape, _SPLIT_TAGS)))
+            split_points = [m.start() for m in pattern.finditer(response_text)]
+            if 0 not in split_points:
+                split_points = [0] + split_points
+            split_points = sorted(set(split_points))
+            resp_text_splits = []
+            for i, s in enumerate(split_points):
+                e = split_points[i + 1] if i + 1 < len(split_points) else len(response_text)
+                seg = response_text[s:e]
+                if seg:
+                    resp_text_splits.append(seg)
+
+            # print(f"[zzx debug] resp_text_splits = {resp_text_splits}")
+            spans: list[tuple[int, int, int]] = []
+            new_response_ids: list[int] = []
+            new_response_mask: list[int] = []
+
+            cur = 0
+            lastl = -1
+            lastr = -1
+            for seg in resp_text_splits:
+                seg_ids = self.tokenizer.encode(seg, add_special_tokens=False)
+                if len(seg_ids) == 0:
+                    continue
+                e = cur + len(seg_ids)
+                if seg.startswith("<reflect>") and lastl != -1:
+                    spans.append((lastl, lastr, e))
+                if not seg.startswith("<tool_response>"):
+                    lastl = cur
+                    lastr = e - 1
+                    new_response_mask.extend([1] * len(seg_ids))
+                else:
+                    new_response_mask.extend([0] * len(seg_ids))
+                new_response_ids.extend(seg_ids)
+                cur = e
+            
+            spans = [(l + prompt_len, r + prompt_len, L + prompt_len, min(prompt_len + cur - 1, prompt_len + response_len - 1)) for l, r, L in spans]
+            output.response_ids = new_response_ids[: response_len]
+            output.response_mask = new_response_mask[: response_len]
+
+            # print(f"[zzx debug] spans (closed intervals) = {spans}")
+            # print(f"[zzx debug] new response_ids (len={len(output.response_ids)}) = {output.response_ids}")
+            # print(f"[zzx debug] new response_mask = {output.response_mask}, len1 = {len(output.response_mask)}, len2 = {len(output.response_ids)}")
+            # response_text = self.tokenizer.decode(output.response_ids)
+            # print(f"[zzx debug] after_response_text = {response_text}")
+            
+            output.extra_fields["2d_attention_mask"] = spans
+
+        ### End Process for 4D Mask ###
 
         # Some AgentLoop may have already computed the reward score, e.g SWE-agent.
 
@@ -610,7 +684,7 @@ class AgentLoopWorkerBase:
             optional_outputs["rollout_log_probs"] = torch.cat([input.response_logprobs for input in inputs], dim=0)
         if inputs[0].routed_experts is not None:
             optional_outputs["routed_experts"] = torch.cat([input.routed_experts for input in inputs], dim=0)
-
+        
         batch = TensorDict(
             {
                 "prompts": prompt_ids,  # [bsz, prompt_length]
@@ -624,6 +698,8 @@ class AgentLoopWorkerBase:
             },
             batch_size=len(inputs),
         )
+        
+        # print(f"[debug zzx] batch.keys = {batch.keys()}")
 
         scores = [input.reward_score for input in inputs]
         
@@ -667,6 +743,11 @@ class AgentLoopWorkerBase:
                 print("rm_scores:", rm_scores.shape)    # bs*2048      
 
         non_tensor_batch = {"__num_turns__": np.array([input.num_turns for input in inputs], dtype=np.int32)}
+        if self.use_4d_mask:
+            # print(f"[zzx debug] len = {len(inputs)}, all = {[inp.extra_fields["2d_attention_mask"] for inp in inputs]}")
+            non_tensor_batch["2d_attention_mask"] = np.array([inp.extra_fields["2d_attention_mask"] for inp in inputs], dtype=object)
+            # print(f"[zzx debug] optional_outputs[2d_attention_mask] = {optional_outputs["2d_attention_mask"]}")
+
         # add reward_extra_info to non_tensor_batch
         reward_extra_infos = [input.extra_fields.get("reward_extra_info", {}) for input in inputs]
         reward_extra_keys = list(reward_extra_infos[0].keys())

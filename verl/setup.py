@@ -74,7 +74,10 @@ extras_require = {
 
 
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+readme_path = this_directory / "README.md"
+if not readme_path.exists():
+    readme_path = this_directory.parent / "README.md"
+long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
 
 setup(
     name="verl",

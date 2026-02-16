@@ -32,13 +32,29 @@ python -m pip install flash_attn-2.7.4+cu128torch2.9-cp312-cp312-linux_x86_64.wh
 ### 4. Install SGLang
 ```bash
 python -m pip install --pre sglang
+python -m pip install --no-deps "sglang[openai,srt]==0.5.5"   
+python -m pip install "sglang[openai,srt]==0.5.6.post2"
 ```
+
 
 ### 5. Install vLLM
 > **⚠️ Important:** Install vLLM with `--no-deps`. Do **NOT** add dependencies here, otherwise it may alter the Torch version and cause conflicts.
 
 ```bash
 python -m pip install --no-deps vllm==0.12.0
+```
+
+```bash
+python -m pip install ray
+python -m pip install tensordict
+python -m pip install omegaconf
+python -m pip install hydra-core
+python -m pip install torchdata
+python -m pip install codetiming
+python -m pip install peft
+python -m pip install cachetools
+python -m pip install cbor2
+python -m pip install swanlab
 ```
 
 ---
