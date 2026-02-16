@@ -18,27 +18,25 @@ TEST_DATA_PATH=""
 MODEL_PATH="" # 新增了 tag 作为 token
 
 # OLE part
-export PPO_USE_OLE=0 # 1 为启用 OLE
-export PPO_OLE_THRESHOLD_PERCENT=0.4
+export PPO_USE_OLE=0 # 1 是启用 OLE
+export PPO_OLE_THRESHOLD_PERCENT=0.8 # OLE 百分比  越大 保留的数据越多  
 export PPO_OLE_INIT_THRESHOLD=0.0
 export PPO_OLE_K=1.0
 
 # decoupling part
-export DECOUPLING=0 # 是否启用 decoupling
+export DECOUPLING=0 # 1 是启用 decoupling
 
 # agent loop part
-export AGENT_LOOP=spr1_agent # 可以选择 spr1_agent 或 tool_agent
+export AGENT_LOOP=tool_agent # 可以选择 spr1_agent 或 tool_agent
 # 如果选择 spr1_agent, 可以调节
-export USE_4D_MASK=0
 export SPR1_PARALLEL_SEARCH_NUM_PATHS=3
 export SPR1_MAX_ONE_STEP_LENGTH=128
 export SPR1_MAX_NUM_TURNS=10
+# 是否开启 4D MASK (tool_agent也可以用)
+export USE_4D_MASK=1    # 1 是启用 4d mask
 
 # reward part
-export REWARD_MANAGER=naive_process
+export REWARD_MANAGER=naive_process # naive_process 或 naive
 export CUSTOM_REWARD_FUNCTION_PATH="verl/utils/reward_score/sp_r1_process_reward.py"
 export CUSTOM_REWARD_FUNCTION_NAME="compute_score"
-
-# 是否启动 4d mask
-export USE_4D_MASK=0
 
